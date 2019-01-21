@@ -7,6 +7,6 @@ describe('index formats', () => {
       filehandle: new LocalFile(require.resolve('./data/test.bw')),
     })
     const indexData = await ti.getHeader()
-    console.log(indexData)
+    expect(indexData).toMatchSnapshot()
   })
 })
