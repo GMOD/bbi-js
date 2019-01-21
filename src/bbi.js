@@ -1,5 +1,5 @@
 const LRU = require('quick-lru')
-const Parser = require('@gmod/binary-parser')
+const { Parser } = require('@gmod/binary-parser')
 
 const LocalFile = require('./localFile')
 
@@ -11,8 +11,8 @@ const BIG_WIG_TYPE_FSTEP = 3
 
 class BBIFile {
   constructor({
-    bbiFilehandle,
-    bbiPath,
+    filehandle,
+    path,
     cacheSize,
     fetchSizeLimit,
     chunkSizeLimit,
@@ -20,10 +20,12 @@ class BBIFile {
   }) {
     this.renameRefSeq = renameRefSeqs
 
-    if (bbiFilehandle) {
-      this.bbi = bbiFilehandle
-    } else if (bbiPath) {
-      this.bbi = new LocalFile(bbiPath)
+    if (filehandle) {
+      this.bbi = filehandle
+    } else if (path) {
+      this.bbi = new LocalFile(path)
+    } else {
+      throw new Error('no file given')
     }
 
     this.featureCache = new LRU({
@@ -37,12 +39,9 @@ class BBIFile {
 
   async getHeader() {
     const p = new Parser().string('magic', { length: 4 })
-    this._read(0, 2000, bytes => {
-      p.parse(bytes)
-      if (!bytes) {
-        this._failAllDeferred('BBI header not readable')
-      }
-    })
+    const buf = Buffer.alloc(2000)
+    const bytesRead = await this.bbi.read(buf, 0, 2000, 0)
+    console.log(p.parse(buf))
   }
 }
 

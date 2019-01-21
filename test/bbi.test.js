@@ -6,7 +6,7 @@ describe('index formats', () => {
     const ti = new BBI({
       filehandle: new LocalFile(require.resolve('./data/test.bw')),
     })
-    const indexData = await ti.parse()
+    const indexData = await ti.getHeader()
       console.log(indexData)
   })
 })
