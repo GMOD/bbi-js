@@ -8,5 +8,6 @@ describe('index formats', () => {
     })
     const indexData = await ti.getHeader()
     expect(indexData).toMatchSnapshot()
+    console.log(indexData)
   })
 })

@@ -1,3 +1,54 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`index formats loads small bigwig header 1`] = `undefined`;
+exports[`index formats loads small bigwig header 1`] = `
+Object {
+  "asOffset64": 0,
+  "chromTreeOffset64": 344,
+  "definedFieldCount": 0,
+  "fieldCount": 0,
+  "magic": -2003829722,
+  "numZoomLevels": 7,
+  "totalSummaryOffset64": 304,
+  "uncompressBufSize64": 0,
+  "unzoomedDataOffset64": 392,
+  "unzoomedIndexOffset64": 142735,
+  "version": 4,
+  "zoomLevels": Array [
+    Object {
+      "zlData64": 40,
+      "zlIndex64": 149323,
+      "zlReduction64": 0,
+    },
+    Object {
+      "zlData64": 160,
+      "zlIndex64": 170704,
+      "zlReduction64": 164492,
+    },
+    Object {
+      "zlData64": 640,
+      "zlIndex64": 181027,
+      "zlReduction64": 174823,
+    },
+    Object {
+      "zlData64": 2560,
+      "zlIndex64": 188360,
+      "zlReduction64": 182156,
+    },
+    Object {
+      "zlData64": 10240,
+      "zlIndex64": 194915,
+      "zlReduction64": 188711,
+    },
+    Object {
+      "zlData64": 40960,
+      "zlIndex64": 201235,
+      "zlReduction64": 195031,
+    },
+    Object {
+      "zlData64": 163840,
+      "zlIndex64": 207501,
+      "zlReduction64": 201297,
+    },
+  ],
+}
+`;
