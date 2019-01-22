@@ -5,10 +5,6 @@ const LocalFile = require('./localFile')
 
 const BIG_WIG_MAGIC = -2003829722
 const BIG_BED_MAGIC = -2021002517
-const BIG_WIG_TYPE_GRAPH = 1
-const BIG_WIG_TYPE_VSTEP = 2
-const BIG_WIG_TYPE_FSTEP = 3
-
 class BBIFile {
   constructor({
     filehandle,
@@ -77,7 +73,7 @@ class BBIFile {
       header.totalSummary = ret.totalSummaryParser.parse(tail).result
       this.convert64Bits(header.totalSummary)
     }
-    var chroms = await this.readChromTree(header)
+    const chroms = await this.readChromTree(header)
     Object.assign(header, chroms)
     return header
   }
@@ -188,8 +184,8 @@ class BBIFile {
     const refsByName = {}
 
     let unzoomedDataOffset = header.unzoomedDataOffset
-    while (unzoomedDataOffset % 4 != 0) {
-      unzoomedDataOffset+=1
+    while (unzoomedDataOffset % 4 !== 0) {
+      unzoomedDataOffset += 1
     }
 
     const data = Buffer.alloc(unzoomedDataOffset - header.chromTreeOffset)
@@ -212,13 +208,13 @@ class BBIFile {
       const cnt = data.readUInt16LE(offset + 2)
       // dlog('ReadNode: ' + offset + '     type=' + isLeafNode + '   count=' + cnt);
       offset += 4
-      for (let n = 0; n < cnt; n+=1) {
+      for (let n = 0; n < cnt; n += 1) {
         if (isLeafNode) {
           // parse leaf node
           let key = ''
-          for (let ki = 0; ki < ret.keySize; ki+=1,offset+=1) {
+          for (let ki = 0; ki < ret.keySize; ki += 1, offset += 1) {
             const charCode = data.readUInt8(offset)
-            if (charCode != 0) {
+            if (charCode !== 0) {
               key += String.fromCharCode(charCode)
             }
           }
@@ -247,6 +243,8 @@ class BBIFile {
       refsByNumber,
     }
   }
+
+  getFeatures(refName, start, end, opts) {}
 }
 
 module.exports = BBIFile
