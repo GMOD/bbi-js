@@ -54,8 +54,9 @@ export default class Window {
         await this.bwg.bbi.read(buffer, 0, 48, this.cirTreeOffset)
         this.cirHeader = buffer
         this.cirBlockSize = buffer.readUInt32LE(4) // TODO little endian?
-        return Promise.all(this.cirHeaderLoading.map(c => c())).finally(() => {
+        return Promise.all(this.cirHeaderLoading.map(c => c())).then(res => {
           delete this.cirHeaderLoading
+          return res.reduce((acc, val) => acc.concat(val), [])
         })
       }
     }
