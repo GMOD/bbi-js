@@ -8,7 +8,7 @@ describe('bigwig formats', () => {
       filehandle: new LocalFile(require.resolve('./data/volvox.bw')),
     })
     await ti.getHeader()
-    const feats = await ti.getFeatures('ctgA', 0, 100, { scale: 0.01 })
+    const feats = await ti.getFeatures('ctgA', 0, 100, { scale: 1 })
     console.log(feats)
     expect(feats).toMatchSnapshot()
   })

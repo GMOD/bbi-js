@@ -64,8 +64,10 @@ class BBIFile {
     const buf = Buffer.alloc(2000)
     await this.bbi.read(buf, 0, 2000, 0)
     const res = ret.headerParser.parse(buf)
+
     const header = res.result
     this.convert64Bits(header)
+    this.type = header.magic == BIG_BED_MAGIC ? 'bigbed' : 'bigwig'
 
     if (header.asOffset) {
       header.autoSql = buf

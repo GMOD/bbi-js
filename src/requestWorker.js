@@ -7,10 +7,6 @@ const { Parser } = require('@gmod/binary-parser')
 const unzip = require('./unzip')
 // const BED = require('@gmod/bed')
 
-const BIG_WIG_TYPE_GRAPH = 1
-const BIG_WIG_TYPE_VSTEP = 2
-const BIG_WIG_TYPE_FSTEP = 3
-
 export default class RequestWorker {
   /**
    * Worker object for reading data from a bigwig or bigbed file.
@@ -24,6 +20,7 @@ export default class RequestWorker {
   constructor(win, chr, min, max) {
     this.window = win
     this.source = win.bwg.name || undefined
+    this.le = this.window.bwg.isBigEndian ? 'big' : 'little'
 
     this.blocksToFetch = []
     this.outstanding = 0
@@ -51,25 +48,25 @@ export default class RequestWorker {
     // dlog('fetching ' + fr.min() + '-' + fr.max() + ' (' + Util.humanReadableNumber(length) + ')');
     const resultBuffer = Buffer.alloc(length)
     await this.window.bwg.bbi.read(resultBuffer, 0, length, fr.min())
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
       for (let i = 0; i < offset.length; i += 1) {
         if (fr.contains(offset[i])) {
-          this.cirFobRecur2(resultBuffer, offset[i] - fr.min(), level)
+          await this.cirFobRecur2(resultBuffer, offset[i] - fr.min(), level)
           this.outstanding -= 1
           if (this.outstanding === 0) {
             resolve(this.cirCompleted())
           }
         }
       }
+      reject('loop finished without completion')
     })
   }
 
   cirFobRecur2(cirBlockData, offset, level) {
     const data = cirBlockData.slice(offset)
 
-    const le = this.window.bwg.isBigEndian ? 'big' : 'little'
     const parser = new Parser()
-      .endianess(le)
+      .endianess(this.le)
       .uint8('isLeaf')
       .skip(1)
       .uint16('cnt')
@@ -124,7 +121,7 @@ export default class RequestWorker {
     console.log('cirCompleted')
     // merge contiguous blocks
     this.blockGroupsToFetch = RequestWorker.groupBlocks(this.blocksToFetch)
-    console.log('blocks', this.blockGroupsToFetch, this.blocksToFetch)
+    console.log('post', this.blockGroupsToFetch)
 
     if (this.blockGroupsToFetch.length === 0) {
       return []
@@ -185,95 +182,133 @@ export default class RequestWorker {
   }
 
   parseSummaryBlock(bytes, startOffset) {
+    console.log(bytes.byteLength, startOffset)
     const data = bytes.slice(startOffset)
-    const le = this.window.bwg.isBigEndian ? 'big' : 'little'
-    const p = new Parser().endianess(le)
-    .array('summary', { length: bytes.byteLength/32, type: new Parser()
-      .int32('chromId')
-      .int32('start')
-      .int32('end')
-      .int32('validCnt') // default to 1?
-      .float('minVal')
-      .float('maxVal')
-      .float('sumData')
-      .float('symSqData')
+    const p = new Parser().endianess(this.le).array('summary', {
+      length: data.byteLength / 64,
+      type: new Parser()
+        .int32('chromId')
+        .int32('start')
+        .int32('end')
+        .int32('validCnt') // default to 1?
+        .float('minVal')
+        .float('maxVal')
+        .float('sumData')
+        .float('symSqData'),
     })
-    var ret = p.parse(data).result
-    ret.summary.filter(elt => elt.chromId == this.chr).forEach(elt => {
-
-      const summaryOpts = {
-          score: elt.sumData / elt.validCnt||1,
+    const ret = p.parse(data).result
+    console.log(ret)
+    ret.summary
+      .filter(elt => elt.chromId === this.chr)
+      .forEach(elt => {
+        const summaryOpts = {
+          score: elt.sumData / elt.validCnt || 1,
           maxScore: elt.maxVal,
           minScore: elt.minVal,
         }
-      this.maybeCreateFeature(start,end,summaryOpts)
-    })
+        this.maybeCreateFeature(elt.start, elt.end, summaryOpts)
+      })
 
-//     const itemCount = bytes.byteLength / 32
-//     for (let i = 0; i < itemCount; i += 1) {
-//       const chromId = data.getInt32()
-//       const start = data.getInt32()
-//       const end = data.getInt32()
-//       const validCnt = data.getInt32() || 1
-//       const minVal = data.getFloat32()
-//       const maxVal = data.getFloat32()
-//       const sumData = data.getFloat32()
-//       const sumSqData = data.getFloat32()
+    //     const itemCount = bytes.byteLength / 32
+    //     for (let i = 0; i < itemCount; i += 1) {
+    //       const chromId = data.getInt32()
+    //       const start = data.getInt32()
+    //       const end = data.getInt32()
+    //       const validCnt = data.getInt32() || 1
+    //       const minVal = data.getFloat32()
+    //       const maxVal = data.getFloat32()
+    //       const sumData = data.getFloat32()
+    //       const sumSqData = data.getFloat32()
 
-//       if (chromId === this.chr) {
-//         const summaryOpts = {
-//           score: sumData / validCnt,
-//           sumSqData,
-//           maxScore: maxVal,
-//           minScore: minVal,
-//         }
-//         if (this.window.bwg.header.type === 'bigbed') {
-//           summaryOpts.type = 'density'
-//         }
-//         this.maybeCreateFeature(start, end, summaryOpts)
-//       }
-//     }
+    //       if (chromId === this.chr) {
+    //         const summaryOpts = {
+    //           score: sumData / validCnt,
+    //           sumSqData,
+    //           maxScore: maxVal,
+    //           minScore: minVal,
+    //         }
+    //         if (this.window.bwg.header.type === 'bigbed') {
+    //           summaryOpts.type = 'density'
+    //         }
+    //         this.maybeCreateFeature(start, end, summaryOpts)
+    //       }
+    //     }
   }
 
   parseBigWigBlock(bytes, startOffset) {
-    const data = this.window.bwg.newDataView(bytes, startOffset)
+    const data = bytes.slice(startOffset)
+    const parser = new Parser()
+      .endianess(this.le)
+      .skip(4)
+      .int32('blockStart')
+      .skip(4)
+      .uint32('itemStep')
+      .uint32('itemSpan')
+      .uint8('blockType')
+      .skip(1)
+      .uint16('itemCount')
+      .choice({
+        tag: 'blockType',
+        choices: {
+          3: new Parser().array('items', {
+            /* FSTEP */
+            length: 'itemCount',
+            type: new Parser().float('score'),
+          }),
+          2: new Parser().array('items', {
+            /* VSTEP */
+            length: 'itemCount',
+            type: new Parser().int32('start').float('score'),
+          }),
+          1: new Parser().array('items', {
+            /* GRAPH */
+            length: 'itemCount',
+            type: new Parser()
+              .int32('start')
+              .int32('end')
+              .float('score'),
+          }),
+        },
+      })
+    parser.parse(data)
+    console.log(data)
 
-    const itemSpan = data.getUint32(16)
-    const blockType = data.getUint8(20)
-    const itemCount = data.getUint16(22)
+    //     const itemSpan = data.getUint32(16)
+    //     const blockType = data.getUint8(20)
+    //     const itemCount = data.getUint16(22)
 
-    // dlog('processing bigwig block, type=' + blockType + '; count=' + itemCount);
+    //     // dlog('processing bigwig block, type=' + blockType + '; count=' + itemCount);
 
-    if (blockType === BIG_WIG_TYPE_FSTEP) {
-      const blockStart = data.getInt32(4)
-      const itemStep = data.getUint32(12)
-      for (let i = 0; i < itemCount; i += 1) {
-        const score = data.getFloat32(4 * i + 24)
-        this.maybeCreateFeature(
-          blockStart + i * itemStep,
-          blockStart + i * itemStep + itemSpan,
-          { score },
-        )
-      }
-    } else if (blockType === BIG_WIG_TYPE_VSTEP) {
-      for (let i = 0; i < itemCount; i += 1) {
-        const start = data.getInt32(8 * i + 24)
-        const score = data.getFloat32()
-        this.maybeCreateFeature(start, start + itemSpan, { score })
-      }
-    } else if (blockType === BIG_WIG_TYPE_GRAPH) {
-      for (let i = 0; i < itemCount; i += 1) {
-        let start = data.getInt32(12 * i + 24)
-        const end = data.getInt32()
-        const score = data.getFloat32()
-        if (start > end) {
-          start = end
-        }
-        this.maybeCreateFeature(start, end, { score })
-      }
-    } else {
-      console.warn(`Currently not handling bwgType=${blockType}`)
-    }
+    //     if (blockType === BIG_WIG_TYPE_FSTEP) {
+    //       const blockStart = data.getInt32(4)
+    //       const itemStep = data.getUint32(12)
+    //       for (let i = 0; i < itemCount; i += 1) {
+    //         const score = data.getFloat32(4 * i + 24)
+    //         this.maybeCreateFeature(
+    //           blockStart + i * itemStep,
+    //           blockStart + i * itemStep + itemSpan,
+    //           { score },
+    //         )
+    //       }
+    //     } else if (blockType === BIG_WIG_TYPE_VSTEP) {
+    //       for (let i = 0; i < itemCount; i += 1) {
+    //         const start = data.getInt32(8 * i + 24)
+    //         const score = data.getFloat32()
+    //         this.maybeCreateFeature(start, start + itemSpan, { score })
+    //       }
+    //     } else if (blockType === BIG_WIG_TYPE_GRAPH) {
+    //       for (let i = 0; i < itemCount; i += 1) {
+    //         let start = data.getInt32(12 * i + 24)
+    //         const end = data.getInt32()
+    //         const score = data.getFloat32()
+    //         if (start > end) {
+    //           start = end
+    //         }
+    //         this.maybeCreateFeature(start, end, { score })
+    //       }
+    //     } else {
+    //       console.warn(`Currently not handling bwgType=${blockType}`)
+    //     }
   }
 
   // parseBigBedBlock(bytes, startOffset) {
@@ -367,43 +402,40 @@ export default class RequestWorker {
   async readFeatures() {
     const blockFetches = this.blockGroupsToFetch.map(blockGroup => {
       const data = Buffer.alloc(blockGroup.size)
-      return this.window.bwg.bbi.read(
-        data,
-        0,
-        blockGroup.size,
-        blockGroup.offset,
-      ).then(() => {
-        blockGroup.data = data
-        return blockGroup
-      })
+      return this.window.bwg.bbi
+        .read(data, 0, blockGroup.size, blockGroup.offset)
+        .then(() => {
+          blockGroup.data = data
+          return blockGroup
+        })
     })
 
     const blockGroups = await Promise.all(blockFetches)
-    console.log(blockGroups)
     blockGroups.forEach(blockGroup => {
-      console.log(blockGroup,'wooooo')
       blockGroup.blocks.forEach(block => {
         let data
+
+        console.log('blockoffsets', block.offset, blockGroup.offset)
         let offset = block.offset - blockGroup.offset
-        if (this.window.bwg.uncompressBufSize > 0) {
-          // var beforeInf = new Date();
+
+        if (this.window.bwg.header.uncompressBufSize > 0) {
+          console.log('fdsafsadfdasfsad')
           data = unzip(blockGroup.data.slice(offset + 2, block.size - 2))
           offset = 0
-          // console.log( 'inflate', 2, block.size - 2);
-          // var afterInf = new Date();
-          // dlog('inflate: ' + (afterInf - beforeInf) + 'ms');
         } else {
           // eslint-disable-next-line
           data = blockGroup.data
         }
 
         if (this.window.isSummary) {
+          console.log(data.byteLength, offset)
           this.parseSummaryBlock(data, offset)
         } else if (this.window.bwg.type === 'bigwig') {
           this.parseBigWigBlock(data, offset)
         } else if (this.window.bwg.type === 'bigbed') {
           // this.parseBigBedBlock(data, offset)
         } else {
+          console.log(this.window.bwg.header)
           console.warn(`Don't know what to do with ${this.window.bwg.type}`)
         }
       })
