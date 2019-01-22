@@ -99,12 +99,12 @@ export default class RequestWorker {
       })
     const p = parser.parse(data).result
     this.window.bwg.convert64Bits(p)
+    console.log(this.max, this.min, this.chr)
 
-    const m = l =>
-      (l.startChrom < this.chr ||
-        (l.startChrom === this.chr && l.startBase <= this.max)) &&
-      (l.endChrom > this.chr ||
-        (l.endChrom === this.chr && l.endBase >= this.min))
+    // prettier-ignore
+    const m = block =>
+      (block.startChrom < this.chr || (block.startChrom === this.chr && block.startBase <= this.max)) &&
+      (block.endChrom > this.chr || (block.endChrom === this.chr && block.endBase >= this.min))
 
     if (p.blocksToFetch) {
       this.blocksToFetch = p.blocksToFetch
@@ -250,7 +250,9 @@ export default class RequestWorker {
           }),
         },
       })
-    return parser.parse(data).result.items
+    const ret = parser.parse(data).result
+    console.log(ret)
+    return ret.items
   }
 
   // parseBigBedBlock(bytes, startOffset) {
