@@ -67,7 +67,7 @@ class BBIFile {
 
     const header = res.result
     this.convert64Bits(header)
-    this.type = header.magic == BIG_BED_MAGIC ? 'bigbed' : 'bigwig'
+    this.type = header.magic === BIG_BED_MAGIC ? 'bigbed' : 'bigwig'
 
     if (header.asOffset) {
       header.autoSql = buf
@@ -296,7 +296,7 @@ class BBIFile {
       if (nzl) {
         cirLen = nzl.dataOffset - header.unzoomedIndexOffset
       }
-      console.log('unzoomed',cirLen)
+      console.log('unzoomed', cirLen)
       this.unzoomedView = new Window(
         this,
         header.unzoomedIndexOffset,

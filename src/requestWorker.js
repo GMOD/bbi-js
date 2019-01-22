@@ -7,7 +7,6 @@ const { Parser } = require('@gmod/binary-parser')
 const { promisify } = require('es6-promisify')
 const zlib = require('zlib')
 
-const gunzip = promisify(zlib.gunzip)
 // const BED = require('@gmod/bed')
 
 export default class RequestWorker {
@@ -158,7 +157,6 @@ export default class RequestWorker {
 
     return blockGroups
   }
-
 
   maybeCreateFeature(fmin, fmax, opts) {
     if (fmin <= this.max && fmax >= this.min) {
@@ -358,13 +356,15 @@ export default class RequestWorker {
     })
 
     const blockGroups = await Promise.all(blockFetches)
-    let ret = blockGroups.map(blockGroup => {
-      return blockGroup.blocks.map(block => {
+    const ret = blockGroups.map(blockGroup =>
+      blockGroup.blocks.map(block => {
         let data
         let offset = block.offset - blockGroup.offset
 
         if (this.window.bwg.header.uncompressBufSize > 0) {
-          data = zlib.inflateRawSync(blockGroup.data.slice(offset + 2, block.size - 2))
+          data = zlib.inflateRawSync(
+            blockGroup.data.slice(offset + 2, block.size - 2),
+          )
           offset = 0
         } else {
           // eslint-disable-next-line
@@ -373,19 +373,19 @@ export default class RequestWorker {
 
         if (this.window.isSummary) {
           return this.parseSummaryBlock(data, offset)
-        } else if (this.window.bwg.type === 'bigwig') {
-          return this.parseBigWigBlock(data, offset)
-        } else if (this.window.bwg.type === 'bigbed') {
-          return this.parseBigBedBlock(data, offset)
-        } else {
-          console.warn(`Don't know what to do with ${this.window.bwg.type}`)
-          return undefined
         }
-      })
-    })
-    const flatten = list => list.reduce(
-        (a, b) => a.concat(Array.isArray(b) ? flatten(b) : b), []
-    );
+        if (this.window.bwg.type === 'bigwig') {
+          return this.parseBigWigBlock(data, offset)
+        }
+        if (this.window.bwg.type === 'bigbed') {
+          return this.parseBigBedBlock(data, offset)
+        }
+        console.warn(`Don't know what to do with ${this.window.bwg.type}`)
+        return undefined
+      }),
+    )
+    const flatten = list =>
+      list.reduce((a, b) => a.concat(Array.isArray(b) ? flatten(b) : b), [])
     return flatten(ret)
   }
 }

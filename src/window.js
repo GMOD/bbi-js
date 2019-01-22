@@ -64,9 +64,8 @@ export default class Window {
 
     const worker = new RequestWorker(this, chr, min, max)
 
-
-    return Promise.all(worker.cirFobRecur([this.cirTreeOffset + 48], 1)).then(arr =>
-      arr.reduce((acc, val) => acc.concat(val), [])
+    return Promise.all(worker.cirFobRecur([this.cirTreeOffset + 48], 1)).then(
+      arr => arr.reduce((acc, val) => acc.concat(val), []),
     )
   }
 }
