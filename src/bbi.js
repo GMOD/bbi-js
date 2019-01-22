@@ -153,6 +153,7 @@ class BBIFile {
       .double('scoreSum')
       .double('scoreSumSquares')
 
+    /* istanbul ignore next */
     const chromTreeParser = new Parser()
       .endianess(le)
       .uint32('magic', { assert: s => s === 2026540177 })

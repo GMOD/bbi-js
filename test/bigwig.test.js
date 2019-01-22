@@ -9,7 +9,6 @@ describe('bigwig formats', () => {
     })
     await ti.getHeader()
     const feats = await ti.getFeatures('ctgA', 0, 100, { scale: 1 })
-    console.log(feats)
     expect(feats).toMatchSnapshot()
   })
 })
