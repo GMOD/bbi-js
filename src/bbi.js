@@ -129,6 +129,7 @@ class BBIFile {
         length: 8,
       })
       .uint32('uncompressBufSize64')
+      .skip(8) // reserved
       .array('zoomLevels', {
         length: 'numZoomLevels',
         type: new Parser()
@@ -268,12 +269,13 @@ class BBIFile {
     const basesPerPx = 1 / scale
     // console.log('getting view for '+basesPerSpan+' bases per span');
     let maxLevel = header.zoomLevels.length
-    if (!this.fileSize)
+    if (!header.fileSize) {
       // if we don't know the file size, we can't fetch the highest zoom level :-(
       maxLevel -= 1
+    }
+
     for (let i = maxLevel; i > 0; i -= 1) {
       const zh = header.zoomLevels[i]
-      console.log(zh, 'here')
       if (zh && zh.reductionLevel <= 2 * basesPerPx) {
         const indexLength =
           i < header.zoomLevels.length - 1
@@ -292,7 +294,7 @@ class BBIFile {
       let cirLen = 4000
       const nzl = header.zoomLevels[0]
       if (nzl) {
-        cirLen = header.zoomLevels[0].dataOffset - header.unzoomedIndexOffset
+        cirLen = nzl.dataOffset - header.unzoomedIndexOffset
       }
       this.unzoomedView = new Window(
         this,

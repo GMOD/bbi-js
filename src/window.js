@@ -42,8 +42,8 @@ export default class Window {
 
   readWigData(chrName, min, max, callback, errorCallback) {
     // console.log( 'reading wig data from '+chrName+':'+min+'..'+max);
-    const chr = this.bwg.refsByName[chrName]
-    console.log(this.bwg)
+    const chr = this.bwg.header.refsByName[chrName]
+    console.log(chr,'test')
     if (!chr) {
       callback([])
     } else {
