@@ -1,7 +1,10 @@
 /* eslint no-bitwise: ["error", { "allow": ["|"] }] */
 
-const unzip = require('./unzip')
 import Range from './range'
+
+const { Parser } = require('@gmod/binary-parser')
+
+const unzip = require('./unzip')
 // const BED = require('@gmod/bed')
 
 const BIG_WIG_TYPE_GRAPH = 1
@@ -39,10 +42,8 @@ export default class RequestWorker {
       const blockSpan = new Range(offset[i], offset[i] + maxCirBlockSpan)
       spans = spans ? spans.union(blockSpan) : blockSpan
     }
-    console.log(spans)
 
     const fetchRanges = spans.getRanges()
-    // dlog('fetchRanges: ' + fetchRanges);
     for (let r = 0; r < fetchRanges.length; r += 1) {
       const fr = fetchRanges[r]
       this.cirFobStartFetch(offset, fr, level)
@@ -52,87 +53,86 @@ export default class RequestWorker {
   async cirFobStartFetch(offset, fr, level) {
     const length = fr.max() - fr.min()
     // dlog('fetching ' + fr.min() + '-' + fr.max() + ' (' + Util.humanReadableNumber(length) + ')');
-    // console.log('cirfobstartfetch');
     const resultBuffer = Buffer.alloc(length)
-    console.log('here',length,fr.min())
-    await this.window.bwg.bbi.read(
-      buffer,
-      0,
-      length,
-      fr.min()
-    )
-      console.log('wtf3',offset)
+    await this.window.bwg.bbi.read(resultBuffer, 0, length, fr.min())
     for (let i = 0; i < offset.length; i += 1) {
-      console.log('wtf')
       if (fr.contains(offset[i])) {
-      console.log('wtf2')
         this.cirFobRecur2(resultBuffer, offset[i] - fr.min(), level)
         this.outstanding -= 1
         if (this.outstanding === 0) {
-          this.cirCompleted()
+          return this.cirCompleted()
         }
       }
     }
   }
 
   cirFobRecur2(cirBlockData, offset, level) {
-    const data = this.window.bwg.newDataView(cirBlockData, offset)
+    const data = cirBlockData.slice(offset)
 
-    const isLeaf = data.getUint8()
-    const cnt = data.getUint16(2)
-    // dlog('cir level=' + level + '; cnt=' + cnt);
+    const le = this.window.bwg.isBigEndian ? 'big' : 'little'
+    const parser = new Parser()
+      .endianess(le)
+      .uint8('isLeaf')
+      .skip(1)
+      .uint16('cnt')
+      .choice({
+        tag: 'isLeaf',
+        choices: {
+          1: new Parser().array('blocksToFetch', {
+            length: 'cnt',
+            type: new Parser()
+              .uint32('startChrom')
+              .uint32('startBase')
+              .uint32('endChrom')
+              .uint32('endBase')
+              .buffer('blockOffset64', { length: 8 })
+              .buffer('blockSize64', { length: 8 }),
+          }),
+          0: new Parser().array('recurOffsets', {
+            length: 'cnt',
+            type: new Parser()
+              .uint32('startChrom')
+              .uint32('startBase')
+              .uint32('endChrom')
+              .uint32('endBase')
+              .buffer('blockOffset64', { length: 8 }),
+          }),
+        },
+      })
+    const p = parser.parse(data).result
+    this.window.bwg.convert64Bits(p)
 
-    if (isLeaf !== 0) {
-      for (let i = 0; i < cnt; i += 1) {
-        const startChrom = data.getUint32()
-        const startBase = data.getUint32()
-        const endChrom = data.getUint32()
-        const endBase = data.getUint32()
-        const blockOffset = data.getUint64()
-        const blockSize = data.getUint64()
-        if (
-          (startChrom < this.chr ||
-            (startChrom === this.chr && startBase <= this.max)) &&
-          (endChrom > this.chr ||
-            (endChrom === this.chr && endBase >= this.min))
-        ) {
-          // dlog('Got an interesting block: startBase=' + startBase + '; endBase=' + endBase + '; offset=' + blockOffset + '; size=' + blockSize);
-          this.blocksToFetch.push({ offset: blockOffset, size: blockSize })
-        }
-      }
-    } else {
-      const recurOffsets = []
-      for (let i = 0; i < cnt; i += 1) {
-        const startChrom = data.getUint32()
-        const startBase = data.getUint32()
-        const endChrom = data.getUint32()
-        const endBase = data.getUint32()
-        const blockOffset = data.getUint64()
-        if (
-          (startChrom < this.chr ||
-            (startChrom === this.chr && startBase <= this.max)) &&
-          (endChrom > this.chr ||
-            (endChrom === this.chr && endBase >= this.min))
-        ) {
-          recurOffsets.push(blockOffset)
-        }
-      }
+    const m = l =>
+      (l.startChrom < this.chr ||
+        (l.startChrom === this.chr && l.startBase <= this.max)) &&
+      (l.endChrom > this.chr ||
+        (l.endChrom === this.chr && l.endBase >= this.min))
+
+    if (p.blocksToFetch) {
+      this.blocksToFetch = p.blocksToFetch
+        .filter(m)
+        .map(l => ({ offset: l.blockOffset, size: l.blockSize }))
+      console.log(this.blocksToFetch, this.chr, this.min, this.max)
+    }
+    if (p.recurOffsets) {
+      const recurOffsets = p.recurOffsets.filter(m).map(l => l.blockOffset)
       if (recurOffsets.length > 0) {
-        this.cirFobRecur(recurOffsets, level + 1)
+        return this.cirFobRecur(recurOffsets, level + 1)
       }
     }
   }
 
   cirCompleted() {
+    console.log('cirCompleted')
     // merge contiguous blocks
-    this.blockGroupsToFetch = this.groupBlocks(this.blocksToFetch)
+    this.blockGroupsToFetch = RequestWorker.groupBlocks(this.blocksToFetch)
+    console.log('blocks', this.blockGroupsToFetch, this.blocksToFetch)
 
     if (this.blockGroupsToFetch.length === 0) {
       return []
-    } else {
-      this.features = []
-      return this.readFeatures()
     }
+    this.features = []
+    return this.readFeatures()
   }
 
   static groupBlocks(blocks) {
