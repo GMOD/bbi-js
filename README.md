@@ -1,6 +1,6 @@
-# bigwig-js
+# bbi-js
 
-[![Build Status](https://travis-ci.com/cmdcolin/bigwig-js.svg?branch=master)](https://travis-ci.com/cmdcolin/bigwig-js)
+[![Build Status](https://travis-ci.com/GMOD/bbi-js.svg?branch=master)](https://travis-ci.com/GMOD/bbi-js)
 
 A parser for bigwig and bigbed file formats
 
