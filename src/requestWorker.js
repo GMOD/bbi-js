@@ -43,11 +43,7 @@ export default class RequestWorker {
       spans = spans ? spans.union(blockSpan) : blockSpan
     }
 
-    const fetchRanges = spans.getRanges()
-    for (let r = 0; r < fetchRanges.length; r += 1) {
-      const fr = fetchRanges[r]
-      this.cirFobStartFetch(offset, fr, level)
-    }
+    return spans.getRanges().map(fr => this.cirFobStartFetch(offset, fr, level))
   }
 
   async cirFobStartFetch(offset, fr, level) {
@@ -189,32 +185,54 @@ export default class RequestWorker {
   }
 
   parseSummaryBlock(bytes, startOffset) {
-    const data = this.window.bwg.newDataView(bytes, startOffset)
+    const data = bytes.slice(startOffset)
+    const le = this.window.bwg.isBigEndian ? 'big' : 'little'
+    const p = new Parser().endianess(le)
+    .array('summary', { length: bytes.byteLength/32, type: new Parser()
+      .int32('chromId')
+      .int32('start')
+      .int32('end')
+      .int32('validCnt') // default to 1?
+      .float('minVal')
+      .float('maxVal')
+      .float('sumData')
+      .float('symSqData')
+    })
+    var ret = p.parse(data).result
+    ret.summary.filter(elt => elt.chromId == this.chr).forEach(elt => {
 
-    const itemCount = bytes.byteLength / 32
-    for (let i = 0; i < itemCount; i += 1) {
-      const chromId = data.getInt32()
-      const start = data.getInt32()
-      const end = data.getInt32()
-      const validCnt = data.getInt32() || 1
-      const minVal = data.getFloat32()
-      const maxVal = data.getFloat32()
-      const sumData = data.getFloat32()
-      const sumSqData = data.getFloat32()
+      const summaryOpts = {
+          score: elt.sumData / elt.validCnt||1,
+          maxScore: elt.maxVal,
+          minScore: elt.minVal,
+        }
+      this.maybeCreateFeature(start,end,summaryOpts)
+    })
 
-      if (chromId === this.chr) {
-        const summaryOpts = {
-          score: sumData / validCnt,
-          sumSqData,
-          maxScore: maxVal,
-          minScore: minVal,
-        }
-        if (this.window.bwg.header.type === 'bigbed') {
-          summaryOpts.type = 'density'
-        }
-        this.maybeCreateFeature(start, end, summaryOpts)
-      }
-    }
+//     const itemCount = bytes.byteLength / 32
+//     for (let i = 0; i < itemCount; i += 1) {
+//       const chromId = data.getInt32()
+//       const start = data.getInt32()
+//       const end = data.getInt32()
+//       const validCnt = data.getInt32() || 1
+//       const minVal = data.getFloat32()
+//       const maxVal = data.getFloat32()
+//       const sumData = data.getFloat32()
+//       const sumSqData = data.getFloat32()
+
+//       if (chromId === this.chr) {
+//         const summaryOpts = {
+//           score: sumData / validCnt,
+//           sumSqData,
+//           maxScore: maxVal,
+//           minScore: minVal,
+//         }
+//         if (this.window.bwg.header.type === 'bigbed') {
+//           summaryOpts.type = 'density'
+//         }
+//         this.maybeCreateFeature(start, end, summaryOpts)
+//       }
+//     }
   }
 
   parseBigWigBlock(bytes, startOffset) {
@@ -354,12 +372,16 @@ export default class RequestWorker {
         0,
         blockGroup.size,
         blockGroup.offset,
-      )
+      ).then(() => {
+        blockGroup.data = data
+        return blockGroup
+      })
     })
 
     const blockGroups = await Promise.all(blockFetches)
     console.log(blockGroups)
     blockGroups.forEach(blockGroup => {
+      console.log(blockGroup,'wooooo')
       blockGroup.blocks.forEach(block => {
         let data
         let offset = block.offset - blockGroup.offset
