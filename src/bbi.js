@@ -37,7 +37,8 @@ class BBIFile {
     this.chunkSizeLimit = chunkSizeLimit || 10000000
   }
 
-  // mutates obj for keys ending with '64' to longs
+  // mutates obj for keys ending with '64' to longs, and removes the '64' suffix
+  // eslint no-param-reassign: ["error", { "props": false }]
   convert64Bits(obj) {
     const tmp = obj // avoid no-param-reassign
     const keys = Object.keys(tmp)
@@ -45,7 +46,8 @@ class BBIFile {
       const key = keys[i]
       const val = tmp[key]
       if (key.endsWith('64')) {
-        tmp[key] = Long.fromBytes(val, false, !this.isBigEndian).toNumber()
+        tmp[key.slice(0, -2)] = Long.fromBytes(val, false, !this.isBigEndian).toNumber()
+        delete tmp[key]
       } else if (typeof tmp[key] === 'object' && val !== null) {
         this.convert64Bits(val)
       }
@@ -57,9 +59,17 @@ class BBIFile {
     const ret = await this._getParsers()
     const buf = Buffer.alloc(2000)
     await this.bbi.read(buf, 0, 2000, 0)
-    const m = ret.headerParser.parse(buf).result
-    this.convert64Bits(m)
-    return m
+    const header = ret.headerParser.parse(buf).result
+    this.convert64Bits(header)
+
+    if(header.asOffset) {
+      const ret = new DataView(buf, header.asOffset)
+      var end = ret.indexOf('\0')
+      var autoSql = ret.slice(0, end)
+      console.log(autoSql)
+    }
+    //const m = ret.asParser.parse(buf).result
+    return header
   }
 
   async _detectEndianness() {
