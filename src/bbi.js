@@ -46,7 +46,11 @@ class BBIFile {
       const key = keys[i]
       const val = tmp[key]
       if (key.endsWith('64')) {
-        tmp[key.slice(0, -2)] = Long.fromBytes(val, false, !this.isBigEndian).toNumber()
+        tmp[key.slice(0, -2)] = Long.fromBytes(
+          val,
+          false,
+          !this.isBigEndian,
+        ).toNumber()
         delete tmp[key]
       } else if (typeof tmp[key] === 'object' && val !== null) {
         this.convert64Bits(val)
@@ -63,17 +67,18 @@ class BBIFile {
     const header = res.result
     this.convert64Bits(header)
 
-    if(header.asOffset) {
-      var tail = buf.slice(header.asOffset)
-      header.autoSql = tail.slice(0, tail.indexOf(0)).toString('utf8')
+    if (header.asOffset) {
+      header.autoSql = buf
+        .slice(header.asOffset, buf.indexOf(0, header.asOffset))
+        .toString('utf8')
     }
-    if(header.totalSummaryOffset) {
-      var tail = buf.slice(header.totalSummaryOffset)
+    if (header.totalSummaryOffset) {
+      const tail = buf.slice(header.totalSummaryOffset)
       header.totalSummary = ret.totalSummaryParser.parse(tail).result
       this.convert64Bits(header.totalSummary)
     }
-
-
+    var chroms = await this.readChromTree(header)
+    Object.assign(header, chroms)
     return header
   }
 
@@ -136,6 +141,7 @@ class BBIFile {
       })
 
     const totalSummaryParser = new Parser()
+      .endianess(le)
       .buffer('basesCovered64', {
         length: 8,
       })
@@ -151,11 +157,94 @@ class BBIFile {
       .uint32('keySize')
       .uint32('valSize')
       .buffer('itemCount64', { length: 8 })
-      .skip({ length: 32 })
+
+    //       .uint8('isLeafNode')
+    //       .uint16('count')
+    //     .choice('result', {
+    //       tag: 'isLeafNode',
+    //       choices: {
+    //         1: new Parser().
+    //       .array('refSeqs', {
+    //         length: 'count',
+    //         type: new Parser()
+    //           .string('name', {
+    //             zeroTerminated: true,
+    //             length: 'keySize'
+    //           })
+    //           .uint32('refId')
+    //           .uint32('refSize')
+    //           .skip(8),
+    //       })
+
     return {
       chromTreeParser,
       totalSummaryParser,
       headerParser,
+    }
+  }
+
+  async readChromTree(header) {
+    const refsByNumber = {}
+    const refsByName = {}
+
+    let unzoomedDataOffset = header.unzoomedDataOffset
+    while (unzoomedDataOffset % 4 != 0) {
+      unzoomedDataOffset+=1
+    }
+
+    const data = Buffer.alloc(unzoomedDataOffset - header.chromTreeOffset)
+    const bytesRead = await this.bbi.read(
+      data,
+      0,
+      unzoomedDataOffset - header.chromTreeOffset,
+      header.chromTreeOffset,
+    )
+
+    const p = await this._getParsers()
+    const ret = p.chromTreeParser.parse(data).result
+    this.convert64Bits(ret)
+
+    const rootNodeOffset = 32
+    var bptReadNode = currentOffset => {
+      let offset = currentOffset
+      if (offset >= data.length) throw 'reading beyond end of buffer'
+      const isLeafNode = data.readUInt8(offset)
+      const cnt = data.readUInt16LE(offset + 2)
+      // dlog('ReadNode: ' + offset + '     type=' + isLeafNode + '   count=' + cnt);
+      offset += 4
+      for (let n = 0; n < cnt; n+=1) {
+        if (isLeafNode) {
+          // parse leaf node
+          let key = ''
+          for (let ki = 0; ki < ret.keySize; ki+=1,offset+=1) {
+            const charCode = data.readUInt8(offset)
+            if (charCode != 0) {
+              key += String.fromCharCode(charCode)
+            }
+          }
+          const refId = data.readUInt32LE(offset)
+          const refSize = data.readUInt32LE(offset + 4)
+          offset += 8
+
+          const refRec = { name: key, id: refId, length: refSize }
+
+          // dlog(key + ':' + refId + ',' + refSize);
+          refsByName[key] = refRec
+          refsByNumber[refId] = refRec
+        } else {
+          // parse index node
+          offset += ret.keySize
+          let childOffset = Long.fromBytes(offset).toNumber()
+          offset += 8
+          childOffset -= header.chromTreeOffset
+          bptReadNode(childOffset)
+        }
+      }
+    }
+    bptReadNode(rootNodeOffset)
+    return {
+      refsByName,
+      refsByNumber,
     }
   }
 }

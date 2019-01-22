@@ -8,7 +8,6 @@ describe('index formats', () => {
     })
     const indexData = await ti.getHeader()
     expect(indexData).toMatchSnapshot()
-    console.log(indexData)
   })
   it('loads small bigbed header', async () => {
     const ti = new BBI({
@@ -16,8 +15,5 @@ describe('index formats', () => {
     })
     const indexData = await ti.getHeader()
     expect(indexData).toMatchSnapshot()
-    console.log(indexData)
   })
 })
-
-
