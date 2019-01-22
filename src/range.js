@@ -5,7 +5,7 @@ export default class Range {
    * Dalliance Genome Explorer, (c) Thomas Down 2006-2010.
    */
   constructor() {
-    this._ranges =
+    this.ranges =
       arguments.length === 2
         ? [{ min: arguments[0], max: arguments[1] }]
         : 0 in arguments[0]
@@ -14,16 +14,16 @@ export default class Range {
   }
 
   min() {
-    return this._ranges[0].min
+    return this.ranges[0].min
   }
 
   max() {
-    return this._ranges[this._ranges.length - 1].max
+    return this.ranges[this.ranges.length - 1].max
   }
 
   contains(pos) {
-    for (let s = 0; s < this._ranges.length; s += 1) {
-      const r = this._ranges[s]
+    for (let s = 0; s < this.ranges.length; s += 1) {
+      const r = this.ranges[s]
       if (r.min <= pos && r.max >= pos) {
         return true
       }
@@ -32,15 +32,15 @@ export default class Range {
   }
 
   isContiguous() {
-    return this._ranges.length > 1
+    return this.ranges.length > 1
   }
 
   ranges() {
-    return this._ranges.map(r => new Range(r.min, r.max))
+    return this.ranges.map(r => new Range(r.min, r.max))
   }
 
   toString() {
-    return this._ranges.map(r => `[${r.min}-${r.max}]`).join(',')
+    return this.ranges.map(r => `[${r.min}-${r.max}]`).join(',')
   }
 
   union(s1) {
@@ -69,8 +69,9 @@ export default class Range {
     return new Range(oranges)
   }
 
-  intersection(s1) {
+  intersection(arg) {
     let s0 = this
+    let s1 = arg
     const r0 = s0.ranges()
     const r1 = s1.ranges()
     const l0 = r0.length
@@ -83,8 +84,7 @@ export default class Range {
 
     while (i0 < l0 && i1 < l1) {
       s0 = r0[i0]
-
-      let s1 = r1[i1]
+      s1 = r1[i1]
       const lapMin = Math.max(s0.min(), s1.min())
       const lapMax = Math.min(s0.max(), s1.max())
       if (lapMax >= lapMin) {
@@ -97,10 +97,10 @@ export default class Range {
       }
     }
 
-    if (or.length == 0) {
+    if (or.length === 0) {
       return null // FIXME
     }
-    if (or.length == 1) {
+    if (or.length === 1) {
       return or[0]
     }
     return new Range(or)
@@ -116,7 +116,9 @@ export default class Range {
     return tot
   }
 
-  rangeOrder(a, b) {
+  rangeOrder(tmpa, tmpb) {
+    let a = tmpa
+    let b = tmpb
     if (arguments.length < 2) {
       b = a
       a = this

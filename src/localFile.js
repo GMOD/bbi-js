@@ -31,10 +31,10 @@ class LocalFile {
   }
 
   async stat() {
-    if (!this._stat) {
-      this._stat = await fsFStat(await this.fd)
+    if (!this.statCache) {
+      this.statCache = await fsFStat(await this.fd)
     }
-    return this._stat
+    return this.statCache
   }
 }
 

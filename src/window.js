@@ -1,7 +1,6 @@
 const LRU = require('quick-lru')
-const RequestWorker = require('./requestWorker')
+import RequestWorker from './requestWorker'
 
-// const BED_COLOR_REGEXP = /^[0-9]+,[0-9]+,[0-9]+/
 
 export default class Window {
   /**

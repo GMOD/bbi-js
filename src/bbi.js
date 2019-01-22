@@ -2,9 +2,11 @@ const LRU = require('quick-lru')
 const { Parser } = require('@gmod/binary-parser')
 const Long = require('long')
 const LocalFile = require('./localFile')
+import Window from './window'
 
 const BIG_WIG_MAGIC = -2003829722
 const BIG_BED_MAGIC = -2021002517
+
 class BBIFile {
   constructor({
     filehandle,
@@ -56,7 +58,7 @@ class BBIFile {
   }
 
   async getHeader() {
-    const ret = await this._getParsers()
+    const ret = await this.getParsers()
     const buf = Buffer.alloc(2000)
     await this.bbi.read(buf, 0, 2000, 0)
     const res = ret.headerParser.parse(buf)
@@ -78,7 +80,7 @@ class BBIFile {
     return header
   }
 
-  async _detectEndianness() {
+  async detectEndianness() {
     const buf = Buffer.allocUnsafe(4)
     await this.bbi.read(buf, 0, 4, 0)
     let ret = buf.readInt32LE(0)
@@ -94,11 +96,11 @@ class BBIFile {
     throw new Error('not a BigWig/BigBed file')
   }
 
-  async _getParsers() {
-    await this._detectEndianness()
+  async getParsers() {
+    await this.detectEndianness()
 
     const le = this.isBigEndian ? 'big' : 'little'
-    const lebe = this.isBigEndian ? 'be' : 'le'
+    // const lebe = this.isBigEndian ? 'be' : 'le'
     const headerParser = new Parser()
       .endianess(le)
       .int32('magic')
@@ -189,21 +191,21 @@ class BBIFile {
     }
 
     const data = Buffer.alloc(unzoomedDataOffset - header.chromTreeOffset)
-    const bytesRead = await this.bbi.read(
+    await this.bbi.read(
       data,
       0,
       unzoomedDataOffset - header.chromTreeOffset,
       header.chromTreeOffset,
     )
 
-    const p = await this._getParsers()
+    const p = await this.getParsers()
     const ret = p.chromTreeParser.parse(data).result
     this.convert64Bits(ret)
 
     const rootNodeOffset = 32
-    var bptReadNode = currentOffset => {
+    const bptReadNode = currentOffset => {
       let offset = currentOffset
-      if (offset >= data.length) throw 'reading beyond end of buffer'
+      if (offset >= data.length) throw new Error('reading beyond end of buffer')
       const isLeafNode = data.readUInt8(offset)
       const cnt = data.readUInt16LE(offset + 2)
       // dlog('ReadNode: ' + offset + '     type=' + isLeafNode + '   count=' + cnt);
@@ -244,7 +246,39 @@ class BBIFile {
     }
   }
 
-  getFeatures(refName, start, end, opts) {}
+  getView(scale) {
+    if (!this.zoomLevels || !this.zoomLevels.length) return null
+
+    if (!this.viewCache || this.viewCache.scale !== scale) {
+      this.viewCache = {
+        scale,
+        view: this.getViewHelper(scale),
+      }
+    }
+    return this.viewCache.view
+  }
+
+  getViewHelper(scale) {
+    const basesPerPx = 1 / scale
+    // console.log('getting view for '+basesPerSpan+' bases per span');
+    let maxLevel = this.zoomLevels.length
+    if (!this.fileSize)
+      // if we don't know the file size, we can't fetch the highest zoom level :-(
+      maxLevel -= 1
+    for (let i = maxLevel; i > 0; i -= 1) {
+      const zh = this.zoomLevels[i]
+      if (zh && zh.reductionLevel <= 2 * basesPerPx) {
+        const indexLength =
+          i < this.zoomLevels.length - 1
+            ? this.zoomLevels[i + 1].dataOffset - zh.indexOffset
+            : this.fileSize - 4 - zh.indexOffset
+        // console.log( 'using zoom level '+i);
+        return new Window(this, zh.indexOffset, indexLength, true)
+      }
+    }
+    // console.log( 'using unzoomed level');
+    return this.getUnzoomedView()
+  }
 }
 
 module.exports = BBIFile
