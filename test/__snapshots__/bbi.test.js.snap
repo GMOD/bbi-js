@@ -1,5 +1,81 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`index formats loads small bigbed header 1`] = `
+Object {
+  "asOffset": 304,
+  "autoSql": "table hg18KGchr7
+\\"UCSC Genes for chr7 with color plus GeneSymbol and SwissProtID\\"
+(
+string  chrom;		\\"Reference sequence chromosome or scaffold\\"
+uint    chromStart;	\\"Start position of feature on chromosome\\"
+uint    chromEnd;	\\"End position of feature on chromosome\\"
+string  name;		\\"Name of gene\\"
+uint    score;		\\"Score\\"
+char[1] strand;		\\"+ or - for strand\\"
+uint    thickStart;	\\"Coding region start\\"
+uint    thickEnd;	\\"Coding region end\\"
+uint  	reserved;	\\"Green on + strand, Red on - strand\\"
+string  geneSymbol;	\\"Gene Symbol\\"
+string  spID;		\\"SWISS-PROT protein Accession number\\"
+)
+",
+  "chromTreeOffset": 1027,
+  "definedFieldCount": 9,
+  "fieldCount": 11,
+  "magic": -2021002517,
+  "numZoomLevels": 7,
+  "totalSummary": Object {
+    "basesCovered": 76490855,
+    "scoreMax": 36,
+    "scoreMin": 1,
+    "scoreSum": 220873875,
+    "scoreSumSquares": 1041293115,
+  },
+  "totalSummaryOffset": 883,
+  "uncompressBufSize": 0,
+  "unzoomedDataOffset": 1075,
+  "unzoomedIndexOffset": 70408,
+  "version": 4,
+  "zoomLevels": Array [
+    Object {
+      "zlData": 63500,
+      "zlIndex": 76660,
+      "zlReduction": 923,
+    },
+    Object {
+      "zlData": 254000,
+      "zlIndex": 103951,
+      "zlReduction": 97731,
+    },
+    Object {
+      "zlData": 1016000,
+      "zlIndex": 119274,
+      "zlReduction": 113070,
+    },
+    Object {
+      "zlData": 4064000,
+      "zlIndex": 128467,
+      "zlReduction": 122263,
+    },
+    Object {
+      "zlData": 16256000,
+      "zlIndex": 135627,
+      "zlReduction": 129423,
+    },
+    Object {
+      "zlData": 65024000,
+      "zlIndex": 142110,
+      "zlReduction": 135906,
+    },
+    Object {
+      "zlData": 260096000,
+      "zlIndex": 148408,
+      "zlReduction": 142204,
+    },
+  ],
+}
+`;
+
 exports[`index formats loads small bigwig header 1`] = `
 Object {
   "asOffset": 0,
@@ -8,6 +84,13 @@ Object {
   "fieldCount": 0,
   "magic": -2003829722,
   "numZoomLevels": 7,
+  "totalSummary": Object {
+    "basesCovered": 49984,
+    "scoreMax": 38,
+    "scoreMin": 1,
+    "scoreSum": 959592,
+    "scoreSumSquares": 19461382,
+  },
   "totalSummaryOffset": 304,
   "uncompressBufSize": 0,
   "unzoomedDataOffset": 392,

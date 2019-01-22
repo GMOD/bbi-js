@@ -59,16 +59,21 @@ class BBIFile {
     const ret = await this._getParsers()
     const buf = Buffer.alloc(2000)
     await this.bbi.read(buf, 0, 2000, 0)
-    const header = ret.headerParser.parse(buf).result
+    const res = ret.headerParser.parse(buf)
+    const header = res.result
     this.convert64Bits(header)
 
     if(header.asOffset) {
-      const ret = new DataView(buf, header.asOffset)
-      var end = ret.indexOf('\0')
-      var autoSql = ret.slice(0, end)
-      console.log(autoSql)
+      var tail = buf.slice(header.asOffset)
+      header.autoSql = tail.slice(0, tail.indexOf(0)).toString('utf8')
     }
-    //const m = ret.asParser.parse(buf).result
+    if(header.totalSummaryOffset) {
+      var tail = buf.slice(header.totalSummaryOffset)
+      header.totalSummary = ret.totalSummaryParser.parse(tail).result
+      this.convert64Bits(header.totalSummary)
+    }
+
+
     return header
   }
 
@@ -134,18 +139,10 @@ class BBIFile {
       .buffer('basesCovered64', {
         length: 8,
       })
-      .buffer('scoreMin64', {
-        length: 8,
-      })
-      .buffer('scoreMax64', {
-        length: 8,
-      })
-      .buffer('scoreSum64', {
-        length: 8,
-      })
-      .buffer('scoreSumSquares64', {
-        length: 8,
-      })
+      .double('scoreMin')
+      .double('scoreMax')
+      .double('scoreSum')
+      .double('scoreSumSquares')
 
     const chromTreeParser = new Parser()
       .endianess(le)
