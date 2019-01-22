@@ -1,9 +1,9 @@
 {
-  "name": "@gmod/bigwig",
+  "name": "@gmod/bbi",
   "version": "1.0.0",
   "description": "Parser for BigWig/BigBed files",
   "license": "MIT",
-  "repository": "GMOD/bigwig-js",
+  "repository": "GMOD/bbi-js",
   "main": "dist/index.js",
   "author": {
     "name": "Colin Diesh",
@@ -37,6 +37,7 @@
     "bionode",
     "biojs",
     "bigwig",
+    "bigbed",
     "ucsc",
     "genomics"
   ],
@@ -45,7 +46,6 @@
     "buffer-crc32": "^0.2.13",
     "es6-promisify": "^6.0.1",
     "long": "^4.0.0",
-    "pako": "^1.0.8",
     "quick-lru": "^2.0.0"
   },
   "devDependencies": {
