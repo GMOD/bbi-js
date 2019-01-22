@@ -1,8 +1,9 @@
+import Window from './window'
+
 const LRU = require('quick-lru')
 const { Parser } = require('@gmod/binary-parser')
 const Long = require('long')
 const LocalFile = require('./localFile')
-import Window from './window'
 
 const BIG_WIG_MAGIC = -2003829722
 const BIG_BED_MAGIC = -2021002517
@@ -58,7 +59,9 @@ class BBIFile {
   }
 
   async getHeader() {
-    if(this.header) { return this.header }
+    if (this.header) {
+      return this.header
+    }
     const ret = await this.getParsers()
     const buf = Buffer.alloc(2000)
     await this.bbi.read(buf, 0, 2000, 0)
@@ -129,13 +132,12 @@ class BBIFile {
       .array('zoomLevels', {
         length: 'numZoomLevels',
         type: new Parser()
-          .buffer('zlReduction64', {
+          .uint32('reductionLevel')
+          .uint32('reserved')
+          .buffer('dataOffset64', {
             length: 8,
           })
-          .buffer('zlData64', {
-            length: 8,
-          })
-          .buffer('zlIndex64', {
+          .buffer('indexOffset64', {
             length: 8,
           }),
       })
@@ -258,7 +260,6 @@ class BBIFile {
         view: this.getViewHelper(scale),
       }
     }
-    console.log(this.viewCache,'here')
     return this.viewCache.view
   }
 
@@ -272,6 +273,7 @@ class BBIFile {
       maxLevel -= 1
     for (let i = maxLevel; i > 0; i -= 1) {
       const zh = header.zoomLevels[i]
+      console.log(zh, 'here')
       if (zh && zh.reductionLevel <= 2 * basesPerPx) {
         const indexLength =
           i < header.zoomLevels.length - 1
@@ -281,21 +283,27 @@ class BBIFile {
         return new Window(this, zh.indexOffset, indexLength, true)
       }
     }
-    // console.log( 'using unzoomed level');
     return this.getUnzoomedView()
   }
-	getUnzoomedView() {
+
+  getUnzoomedView() {
     const header = this.header
-			if (!this.unzoomedView) {
-					var cirLen = 4000;
-					var nzl = header.zoomLevels[0];
-					if (nzl) {
-							cirLen = header.zoomLevels[0].dataOffset - header.unzoomedIndexOffset;
-					}
-					this.unzoomedView = new Window( this, header.unzoomedIndexOffset, cirLen, false, this.autoSql );
-			}
-			return this.unzoomedView;
-	}
+    if (!this.unzoomedView) {
+      let cirLen = 4000
+      const nzl = header.zoomLevels[0]
+      if (nzl) {
+        cirLen = header.zoomLevels[0].dataOffset - header.unzoomedIndexOffset
+      }
+      this.unzoomedView = new Window(
+        this,
+        header.unzoomedIndexOffset,
+        cirLen,
+        false,
+        this.autoSql,
+      )
+    }
+    return this.unzoomedView
+  }
 }
 
 module.exports = BBIFile

@@ -1,6 +1,6 @@
-const LRU = require('quick-lru')
 import RequestWorker from './requestWorker'
 
+const LRU = require('quick-lru')
 
 export default class Window {
   /**
