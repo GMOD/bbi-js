@@ -1,7 +1,7 @@
 /* eslint no-bitwise: ["error", { "allow": ["|"] }] */
 
 const unzip = require('./unzip')
-const Range = require('./range')
+import Range from './range'
 // const BED = require('@gmod/bed')
 
 const BIG_WIG_TYPE_GRAPH = 1
@@ -39,8 +39,9 @@ export default class RequestWorker {
       const blockSpan = new Range(offset[i], offset[i] + maxCirBlockSpan)
       spans = spans ? spans.union(blockSpan) : blockSpan
     }
+    console.log(spans)
 
-    const fetchRanges = spans.ranges()
+    const fetchRanges = spans.getRanges()
     // dlog('fetchRanges: ' + fetchRanges);
     for (let r = 0; r < fetchRanges.length; r += 1) {
       const fr = fetchRanges[r]
@@ -48,26 +49,30 @@ export default class RequestWorker {
     }
   }
 
-  cirFobStartFetch(offset, fr, level) {
+  async cirFobStartFetch(offset, fr, level) {
     const length = fr.max() - fr.min()
     // dlog('fetching ' + fr.min() + '-' + fr.max() + ' (' + Util.humanReadableNumber(length) + ')');
     // console.log('cirfobstartfetch');
-    this.window.bwg.read(
-      fr.min(),
+    const resultBuffer = Buffer.alloc(length)
+    console.log('here',length,fr.min())
+    await this.window.bwg.bbi.read(
+      buffer,
+      0,
       length,
-      resultBuffer => {
-        for (let i = 0; i < offset.length; i += 1) {
-          if (fr.contains(offset[i])) {
-            this.cirFobRecur2(resultBuffer, offset[i] - fr.min(), level)
-            this.outstanding -= 1
-            if (this.outstanding === 0) {
-              this.cirCompleted()
-            }
-          }
-        }
-      },
-      this.errorCallback,
+      fr.min()
     )
+      console.log('wtf3',offset)
+    for (let i = 0; i < offset.length; i += 1) {
+      console.log('wtf')
+      if (fr.contains(offset[i])) {
+      console.log('wtf2')
+        this.cirFobRecur2(resultBuffer, offset[i] - fr.min(), level)
+        this.outstanding -= 1
+        if (this.outstanding === 0) {
+          this.cirCompleted()
+        }
+      }
+    }
   }
 
   cirFobRecur2(cirBlockData, offset, level) {
@@ -123,10 +128,10 @@ export default class RequestWorker {
     this.blockGroupsToFetch = this.groupBlocks(this.blocksToFetch)
 
     if (this.blockGroupsToFetch.length === 0) {
-      this.callback([])
+      return []
     } else {
       this.features = []
-      this.readFeatures()
+      return this.readFeatures()
     }
   }
 
@@ -202,7 +207,7 @@ export default class RequestWorker {
           maxScore: maxVal,
           minScore: minVal,
         }
-        if (this.window.bwg.type === 'bigbed') {
+        if (this.window.bwg.header.type === 'bigbed') {
           summaryOpts.type = 'density'
         }
         this.maybeCreateFeature(start, end, summaryOpts)
@@ -340,6 +345,7 @@ export default class RequestWorker {
   // }
 
   async readFeatures() {
+    console.log('readFeatures')
     const blockFetches = this.blockGroupsToFetch.map(blockGroup => {
       const data = Buffer.unsafeAlloc(blockGroup.size)
       return this.window.bwg.read(data, 0, blockGroup.size, blockGroup.offset)

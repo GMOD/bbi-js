@@ -35,7 +35,7 @@ export default class Range {
     return this.ranges.length > 1
   }
 
-  ranges() {
+  getRanges() {
     return this.ranges.map(r => new Range(r.min, r.max))
   }
 

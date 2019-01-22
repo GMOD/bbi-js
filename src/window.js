@@ -29,58 +29,49 @@ export default class Window {
       return total
     }
     this.featureCache = new LRU({
-      name: 'feature cache',
-      fillCallback: (query, callback) => {
-        this.readWigDataById(...query, callback, err => {
-          console.error(err)
-        })
-      },
-      sizeFunction: countFeatures,
       maxSize: 500000, // cache up to 50000 features and subfeatures
     })
   }
 
-  readWigData(chrName, min, max, callback, errorCallback) {
+  readWigData(chrName, min, max) {
     // console.log( 'reading wig data from '+chrName+':'+min+'..'+max);
     const chr = this.bwg.header.refsByName[chrName]
     console.log(chr,'test')
     if (!chr) {
-      callback([])
+      return []
     } else {
-      this.readWigDataByIdWithCache(chr.id, min, max, callback, errorCallback)
+      return this.readWigDataByIdWithCache(chr.id, min, max)
     }
   }
 
-  readWigDataByIdWithCache(chr, min, max, callback, errorCallback) {
-    this.featureCache.get([chr, min, max], (result, error) => {
-      if (error) errorCallback(error)
-      else callback(result)
-    })
+  readWigDataByIdWithCache(chr, min, max) {
+    let ret = this.featureCache.get([chr, min, max])
+    if(!ret) {
+      ret = this.readWigDataById(chr, min, max)
+      this.featureCache.set([chr, min, max], ret)
+    }
+    return ret
   }
 
-  readWigDataById(chr, min, max, callback, errorCallback) {
+  async readWigDataById(chr, min, max) {
     if (!this.cirHeader) {
-      const readCallback = () => {
-        this.readWigDataById(chr, min, max, callback, errorCallback)
+      const readCallback = async () => {
+        return this.readWigDataById(chr, min, max)
       }
       if (this.cirHeaderLoading) {
         this.cirHeaderLoading.push(readCallback)
       } else {
         this.cirHeaderLoading = [readCallback]
         // dlog('No CIR yet, fetching');
-        this.bwg.data.read(
-          this.cirTreeOffset,
+        const buffer = Buffer.alloc(48)
+        await this.bwg.bbi.read(buffer,
+          0,
           48,
-          result => {
-            this.cirHeader = result
-            this.cirBlockSize = this.bwg.newDataView(result, 4, 4).getUint32()
-            this.cirHeaderLoading.forEach(c => {
-              c()
-            })
-            delete this.cirHeaderLoading
-          },
-          errorCallback,
-        )
+          this.cirTreeOffset)
+        this.cirHeader = buffer
+        this.cirBlockSize = buffer.readUInt32LE(4) //TODO little endian?
+        return Promise.all(this.cirHeaderLoading.map(c => c()))
+        delete this.cirHeaderLoading
       }
       return
     }
@@ -91,9 +82,7 @@ export default class Window {
       this,
       chr,
       min,
-      max,
-      callback,
-      errorCallback,
+      max
     )
     worker.cirFobRecur([this.cirTreeOffset + 48], 1)
   }
