@@ -4,7 +4,6 @@ import Range from './range'
 
 const { Parser } = require('@gmod/binary-parser')
 
-const { promisify } = require('es6-promisify')
 const zlib = require('zlib')
 
 // const BED = require('@gmod/bed')
@@ -53,14 +52,16 @@ export default class RequestWorker {
     return new Promise(async (resolve, reject) => {
       for (let i = 0; i < offset.length; i += 1) {
         if (fr.contains(offset[i])) {
-          await this.cirFobRecur2(resultBuffer, offset[i] - fr.min(), level)
+          this.cirFobRecur2(resultBuffer, offset[i] - fr.min(), level)
           this.outstanding -= 1
           if (this.outstanding === 0) {
             resolve(this.cirCompleted())
           }
         }
       }
-      reject('loop finished without completion')
+      if (this.outstanding !== 0) {
+        reject(new Error('did not complete'))
+      }
     })
   }
 
@@ -120,10 +121,8 @@ export default class RequestWorker {
   }
 
   cirCompleted() {
-    console.log('cirCompleted')
     // merge contiguous blocks
     this.blockGroupsToFetch = RequestWorker.groupBlocks(this.blocksToFetch)
-    console.log('post', this.blockGroupsToFetch)
 
     if (this.blockGroupsToFetch.length === 0) {
       return []
@@ -165,7 +164,6 @@ export default class RequestWorker {
   }
 
   parseSummaryBlock(bytes, startOffset) {
-    console.log(bytes.byteLength, startOffset)
     const data = bytes.slice(startOffset)
     const p = new Parser().endianess(this.le).array('summary', {
       length: data.byteLength / 64,
@@ -180,7 +178,6 @@ export default class RequestWorker {
         .float('symSqData'),
     })
     const ret = p.parse(data).result
-    console.log(ret)
     ret.summary
       .filter(elt => elt.chromId === this.chr)
       .forEach(elt => {
@@ -344,6 +341,7 @@ export default class RequestWorker {
   //   return featureData
   // }
 
+  /* eslint no-param-reassign: ["error", { "props": false }] */
   async readFeatures() {
     const blockFetches = this.blockGroupsToFetch.map(blockGroup => {
       const data = Buffer.alloc(blockGroup.size)
