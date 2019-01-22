@@ -1,7 +1,7 @@
 const BBI = require('./bbi')
 
 export default class BigWig extends BBI {
-  getFeatures(refName, start, end, opts) {
+  getFeatures(refName, start, end, opts = {}) {
     const chrName = this.renameRefSeq(refName)
     const min = start
     const max = end

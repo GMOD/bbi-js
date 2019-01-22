@@ -58,6 +58,7 @@ class BBIFile {
   }
 
   async getHeader() {
+    if(this.header) { return this.header }
     const ret = await this.getParsers()
     const buf = Buffer.alloc(2000)
     await this.bbi.read(buf, 0, 2000, 0)
@@ -77,6 +78,7 @@ class BBIFile {
     }
     const chroms = await this.readChromTree(header)
     Object.assign(header, chroms)
+    this.header = header
     return header
   }
 
@@ -247,7 +249,8 @@ class BBIFile {
   }
 
   getView(scale) {
-    if (!this.zoomLevels || !this.zoomLevels.length) return null
+    const header = this.header
+    if (!header.zoomLevels || !header.zoomLevels.length) return null
 
     if (!this.viewCache || this.viewCache.scale !== scale) {
       this.viewCache = {
@@ -255,23 +258,25 @@ class BBIFile {
         view: this.getViewHelper(scale),
       }
     }
+    console.log(this.viewCache,'here')
     return this.viewCache.view
   }
 
   getViewHelper(scale) {
+    const header = this.header
     const basesPerPx = 1 / scale
     // console.log('getting view for '+basesPerSpan+' bases per span');
-    let maxLevel = this.zoomLevels.length
+    let maxLevel = header.zoomLevels.length
     if (!this.fileSize)
       // if we don't know the file size, we can't fetch the highest zoom level :-(
       maxLevel -= 1
     for (let i = maxLevel; i > 0; i -= 1) {
-      const zh = this.zoomLevels[i]
+      const zh = header.zoomLevels[i]
       if (zh && zh.reductionLevel <= 2 * basesPerPx) {
         const indexLength =
-          i < this.zoomLevels.length - 1
-            ? this.zoomLevels[i + 1].dataOffset - zh.indexOffset
-            : this.fileSize - 4 - zh.indexOffset
+          i < header.zoomLevels.length - 1
+            ? header.zoomLevels[i + 1].dataOffset - zh.indexOffset
+            : header.fileSize - 4 - zh.indexOffset
         // console.log( 'using zoom level '+i);
         return new Window(this, zh.indexOffset, indexLength, true)
       }
@@ -279,6 +284,18 @@ class BBIFile {
     // console.log( 'using unzoomed level');
     return this.getUnzoomedView()
   }
+	getUnzoomedView() {
+    const header = this.header
+			if (!this.unzoomedView) {
+					var cirLen = 4000;
+					var nzl = header.zoomLevels[0];
+					if (nzl) {
+							cirLen = header.zoomLevels[0].dataOffset - header.unzoomedIndexOffset;
+					}
+					this.unzoomedView = new Window( this, header.unzoomedIndexOffset, cirLen, false, this.autoSql );
+			}
+			return this.unzoomedView;
+	}
 }
 
 module.exports = BBIFile

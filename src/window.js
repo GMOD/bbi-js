@@ -43,11 +43,8 @@ export default class Window {
   readWigData(chrName, min, max, callback, errorCallback) {
     // console.log( 'reading wig data from '+chrName+':'+min+'..'+max);
     const chr = this.bwg.refsByName[chrName]
+    console.log(this.bwg)
     if (!chr) {
-      // Not an error because some .bwgs won't have data for all chromosomes.
-
-      // dlog("Couldn't find chr " + chrName);
-      // dlog('Chroms=' + miniJSONify(this.bwg.refsByName));
       callback([])
     } else {
       this.readWigDataByIdWithCache(chr.id, min, max, callback, errorCallback)
