@@ -19,15 +19,6 @@ export default class Window {
     this.cirTreeOffset = cirTreeOffset
     this.cirTreeLength = cirTreeLength
     this.isSummary = isSummary
-
-    function countFeatures(features) {
-      if (!features) return 0
-      let total = features.length
-      features.forEach(feature => {
-        total += countFeatures(feature.children())
-      })
-      return total
-    }
     this.featureCache = new LRU({
       maxSize: 500000, // cache up to 50000 features and subfeatures
     })
@@ -67,7 +58,6 @@ export default class Window {
           delete this.cirHeaderLoading
         })
       }
-      return
     }
 
     // dlog('_readWigDataById', chr, min, max, callback);

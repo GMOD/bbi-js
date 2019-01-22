@@ -55,15 +55,17 @@ export default class RequestWorker {
     // dlog('fetching ' + fr.min() + '-' + fr.max() + ' (' + Util.humanReadableNumber(length) + ')');
     const resultBuffer = Buffer.alloc(length)
     await this.window.bwg.bbi.read(resultBuffer, 0, length, fr.min())
-    for (let i = 0; i < offset.length; i += 1) {
-      if (fr.contains(offset[i])) {
-        this.cirFobRecur2(resultBuffer, offset[i] - fr.min(), level)
-        this.outstanding -= 1
-        if (this.outstanding === 0) {
-          return this.cirCompleted()
+    return new Promise((resolve, reject) => {
+      for (let i = 0; i < offset.length; i += 1) {
+        if (fr.contains(offset[i])) {
+          this.cirFobRecur2(resultBuffer, offset[i] - fr.min(), level)
+          this.outstanding -= 1
+          if (this.outstanding === 0) {
+            resolve(this.cirCompleted())
+          }
         }
       }
-    }
+    })
   }
 
   cirFobRecur2(cirBlockData, offset, level) {
@@ -112,7 +114,6 @@ export default class RequestWorker {
       this.blocksToFetch = p.blocksToFetch
         .filter(m)
         .map(l => ({ offset: l.blockOffset, size: l.blockSize }))
-      console.log(this.blocksToFetch, this.chr, this.min, this.max)
     }
     if (p.recurOffsets) {
       const recurOffsets = p.recurOffsets.filter(m).map(l => l.blockOffset)
@@ -120,6 +121,7 @@ export default class RequestWorker {
         return this.cirFobRecur(recurOffsets, level + 1)
       }
     }
+    return null
   }
 
   cirCompleted() {
@@ -345,13 +347,18 @@ export default class RequestWorker {
   // }
 
   async readFeatures() {
-    console.log('readFeatures')
     const blockFetches = this.blockGroupsToFetch.map(blockGroup => {
-      const data = Buffer.unsafeAlloc(blockGroup.size)
-      return this.window.bwg.read(data, 0, blockGroup.size, blockGroup.offset)
+      const data = Buffer.alloc(blockGroup.size)
+      return this.window.bwg.bbi.read(
+        data,
+        0,
+        blockGroup.size,
+        blockGroup.offset,
+      )
     })
 
     const blockGroups = await Promise.all(blockFetches)
+    console.log(blockGroups)
     blockGroups.forEach(blockGroup => {
       blockGroup.blocks.forEach(block => {
         let data

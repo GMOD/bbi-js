@@ -37,25 +37,23 @@ class BBIFile {
   }
 
   // mutates obj for keys ending with '64' to longs, and removes the '64' suffix
-  // eslint no-param-reassign: ["error", { "props": false }]
+  /* eslint no-param-reassign: ["error", { "props": false }] */
   convert64Bits(obj) {
-    const tmp = obj // avoid no-param-reassign
-    const keys = Object.keys(tmp)
+    const keys = Object.keys(obj)
     for (let i = 0; i < keys.length; i += 1) {
       const key = keys[i]
-      const val = tmp[key]
+      const val = obj[key]
       if (key.endsWith('64')) {
-        tmp[key.slice(0, -2)] = Long.fromBytes(
+        obj[key.slice(0, -2)] = Long.fromBytes(
           val,
           false,
           !this.isBigEndian,
         ).toNumber()
-        delete tmp[key]
-      } else if (typeof tmp[key] === 'object' && val !== null) {
+        delete obj[key]
+      } else if (typeof obj[key] === 'object' && val !== null) {
         this.convert64Bits(val)
       }
     }
-    return obj
   }
 
   async getHeader() {
