@@ -128,7 +128,7 @@ class BBIFile {
       .buffer('totalSummaryOffset64', {
         length: 8,
       })
-      .uint32('uncompressBufSize64')
+      .uint32('uncompressBufSize')
       .skip(8) // reserved
       .array('zoomLevels', {
         length: 'numZoomLevels',
@@ -296,6 +296,7 @@ class BBIFile {
       if (nzl) {
         cirLen = nzl.dataOffset - header.unzoomedIndexOffset
       }
+      console.log('unzoomed',cirLen)
       this.unzoomedView = new Window(
         this,
         header.unzoomedIndexOffset,

@@ -4,7 +4,10 @@ import Range from './range'
 
 const { Parser } = require('@gmod/binary-parser')
 
-const unzip = require('./unzip')
+const { promisify } = require('es6-promisify')
+const zlib = require('zlib')
+
+const gunzip = promisify(zlib.gunzip)
 // const BED = require('@gmod/bed')
 
 export default class RequestWorker {
@@ -126,7 +129,6 @@ export default class RequestWorker {
     if (this.blockGroupsToFetch.length === 0) {
       return []
     }
-    this.features = []
     return this.readFeatures()
   }
 
@@ -157,23 +159,6 @@ export default class RequestWorker {
     return blockGroups
   }
 
-  createFeature(fmin, fmax, opts) {
-    // dlog('createFeature(' + fmin +', ' + fmax + ', '+opts.score+')');
-
-    const data = Object.assign(
-      {
-        start: fmin,
-        end: fmax,
-      },
-      opts,
-    )
-
-    // const id = data.id
-    delete data.id
-
-    const f = data
-    this.features.push(f)
-  }
 
   maybeCreateFeature(fmin, fmax, opts) {
     if (fmin <= this.max && fmax >= this.min) {
@@ -270,45 +255,7 @@ export default class RequestWorker {
           }),
         },
       })
-    parser.parse(data)
-    console.log(data)
-
-    //     const itemSpan = data.getUint32(16)
-    //     const blockType = data.getUint8(20)
-    //     const itemCount = data.getUint16(22)
-
-    //     // dlog('processing bigwig block, type=' + blockType + '; count=' + itemCount);
-
-    //     if (blockType === BIG_WIG_TYPE_FSTEP) {
-    //       const blockStart = data.getInt32(4)
-    //       const itemStep = data.getUint32(12)
-    //       for (let i = 0; i < itemCount; i += 1) {
-    //         const score = data.getFloat32(4 * i + 24)
-    //         this.maybeCreateFeature(
-    //           blockStart + i * itemStep,
-    //           blockStart + i * itemStep + itemSpan,
-    //           { score },
-    //         )
-    //       }
-    //     } else if (blockType === BIG_WIG_TYPE_VSTEP) {
-    //       for (let i = 0; i < itemCount; i += 1) {
-    //         const start = data.getInt32(8 * i + 24)
-    //         const score = data.getFloat32()
-    //         this.maybeCreateFeature(start, start + itemSpan, { score })
-    //       }
-    //     } else if (blockType === BIG_WIG_TYPE_GRAPH) {
-    //       for (let i = 0; i < itemCount; i += 1) {
-    //         let start = data.getInt32(12 * i + 24)
-    //         const end = data.getInt32()
-    //         const score = data.getFloat32()
-    //         if (start > end) {
-    //           start = end
-    //         }
-    //         this.maybeCreateFeature(start, end, { score })
-    //       }
-    //     } else {
-    //       console.warn(`Currently not handling bwgType=${blockType}`)
-    //     }
+    return parser.parse(data).result.items
   }
 
   // parseBigBedBlock(bytes, startOffset) {
@@ -411,16 +358,13 @@ export default class RequestWorker {
     })
 
     const blockGroups = await Promise.all(blockFetches)
-    blockGroups.forEach(blockGroup => {
-      blockGroup.blocks.forEach(block => {
+    let ret = blockGroups.map(blockGroup => {
+      return blockGroup.blocks.map(block => {
         let data
-
-        console.log('blockoffsets', block.offset, blockGroup.offset)
         let offset = block.offset - blockGroup.offset
 
         if (this.window.bwg.header.uncompressBufSize > 0) {
-          console.log('fdsafsadfdasfsad')
-          data = unzip(blockGroup.data.slice(offset + 2, block.size - 2))
+          data = zlib.inflateRawSync(blockGroup.data.slice(offset + 2, block.size - 2))
           offset = 0
         } else {
           // eslint-disable-next-line
@@ -428,19 +372,20 @@ export default class RequestWorker {
         }
 
         if (this.window.isSummary) {
-          console.log(data.byteLength, offset)
-          this.parseSummaryBlock(data, offset)
+          return this.parseSummaryBlock(data, offset)
         } else if (this.window.bwg.type === 'bigwig') {
-          this.parseBigWigBlock(data, offset)
+          return this.parseBigWigBlock(data, offset)
         } else if (this.window.bwg.type === 'bigbed') {
-          // this.parseBigBedBlock(data, offset)
+          return this.parseBigBedBlock(data, offset)
         } else {
-          console.log(this.window.bwg.header)
           console.warn(`Don't know what to do with ${this.window.bwg.type}`)
+          return undefined
         }
       })
     })
-
-    return this.features
+    const flatten = list => list.reduce(
+        (a, b) => a.concat(Array.isArray(b) ? flatten(b) : b), []
+    );
+    return flatten(ret)
   }
 }
