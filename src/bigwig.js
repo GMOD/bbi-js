@@ -3,8 +3,6 @@ const BBI = require('./bbi')
 export default class BigWig extends BBI {
   getFeatures(refName, start, end, opts = {}) {
     const chrName = this.renameRefSeq(refName)
-    const min = start
-    const max = end
     let view
 
     if (opts.basesPerSpan) {
@@ -19,6 +17,6 @@ export default class BigWig extends BBI {
       return null
     }
 
-    return view.readWigData(chrName, min, max)
+    return view.readWigData(chrName, start, end)
   }
 }

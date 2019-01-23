@@ -99,7 +99,6 @@ export default class RequestWorker {
       })
     const p = parser.parse(data).result
     this.window.bwg.convert64Bits(p)
-    console.log(this.max, this.min, this.chr)
 
     // prettier-ignore
     const m = block =>
@@ -186,33 +185,10 @@ export default class RequestWorker {
           maxScore: elt.maxVal,
           minScore: elt.minVal,
         }
-        this.maybeCreateFeature(elt.start, elt.end, summaryOpts)
+        return {
+          start:elt.start, end:elt.end, summaryOpts
+        }
       })
-
-    //     const itemCount = bytes.byteLength / 32
-    //     for (let i = 0; i < itemCount; i += 1) {
-    //       const chromId = data.getInt32()
-    //       const start = data.getInt32()
-    //       const end = data.getInt32()
-    //       const validCnt = data.getInt32() || 1
-    //       const minVal = data.getFloat32()
-    //       const maxVal = data.getFloat32()
-    //       const sumData = data.getFloat32()
-    //       const sumSqData = data.getFloat32()
-
-    //       if (chromId === this.chr) {
-    //         const summaryOpts = {
-    //           score: sumData / validCnt,
-    //           sumSqData,
-    //           maxScore: maxVal,
-    //           minScore: minVal,
-    //         }
-    //         if (this.window.bwg.header.type === 'bigbed') {
-    //           summaryOpts.type = 'density'
-    //         }
-    //         this.maybeCreateFeature(start, end, summaryOpts)
-    //       }
-    //     }
   }
 
   parseBigWigBlock(bytes, startOffset) {
@@ -250,98 +226,8 @@ export default class RequestWorker {
           }),
         },
       })
-    const ret = parser.parse(data).result
-    console.log(ret)
-    return ret.items
+    return parser.parse(data).result.items.filter(f => f.start <= this.max && f.end >= this.min)
   }
-
-  // parseBigBedBlock(bytes, startOffset) {
-  //   const data = this.window.bwg.newDataView(bytes, startOffset)
-
-  //   let offset = 0
-  //   while (offset < bytes.byteLength) {
-  //     const chromId = data.getUint32(offset)
-  //     const start = data.getInt32(offset + 4)
-  //     const end = data.getInt32(offset + 8)
-  //     offset += 12
-  //     if (chromId !== this.chr) {
-  //       console.warn('BigBed block is out of current range')
-  //       return
-  //     }
-
-  //     let rest = ''
-  //     while (offset < bytes.byteLength) {
-  //       const ch = data.getUint8(offset)
-  //       offset += 1
-  //       if (ch !== 0) {
-  //         rest += String.fromCharCode(ch)
-  //       } else {
-  //         break
-  //       }
-  //     }
-
-  //     const featureData = this.parseBedText(start, end, rest)
-  //     featureData.id = `bb-${startOffset + offset}`
-  //     this.maybeCreateFeature(start, end, featureData)
-  //   }
-  // }
-
-  /**
-   * parse the `rest` field of a binary bed data section, using
-   * the autosql schema defined for this file
-   *
-   * @returns {Object} feature data with native BED field names
-   */
-  // parseBedText(start, end, rest) {
-  //   // include ucsc-style names as well as jbrowse-style names
-  //   const featureData = {
-  //     start,
-  //     end,
-  //   }
-
-  //   const bedColumns = rest.split('\t')
-  //   const asql = this.window.autoSql
-  //   const numericTypes = ['uint', 'int', 'float', 'long']
-  //   // first three columns (chrom,start,end) are not included in bigBed
-  //   for (let i = 3; i < asql.fields.length; i++) {
-  //     if (bedColumns[i - 3] !== '.' && bedColumns[i - 3] !== '') {
-  //       const autoField = asql.fields[i]
-  //       let columnVal = bedColumns[i - 3]
-
-  //       // for speed, cache some of the tests we need inside the autofield definition
-  //       if (!autoField._requestWorkerCache) {
-  //         const match = /^(\w+)\[/.exec(autoField.type)
-  //         autoField._requestWorkerCache = {
-  //           isNumeric: numericTypes.includes(autoField.type),
-  //           isArray: !!match,
-  //           arrayIsNumeric: match && numericTypes.includes(match[1]),
-  //         }
-  //       }
-
-  //       if (autoField._requestWorkerCache.isNumeric) {
-  //         const num = Number(columnVal)
-  //         // if the number parse results in NaN, somebody probably
-  //         // listed the type erroneously as numeric, so don't use
-  //         // the parsed number
-  //         columnVal = Number.isNaN(num) ? columnVal : num
-  //       } else if (autoField._requestWorkerCache.isArray) {
-  //         // parse array values
-  //         columnVal = columnVal.split(',')
-  //         if (columnVal[columnVal.length - 1] === '') columnVal.pop()
-  //         if (autoField._requestWorkerCache.arrayIsNumeric)
-  //           columnVal = columnVal.map(str => Number(str))
-  //       }
-
-  //       featureData[snakeCase(autoField.name)] = columnVal
-  //     }
-  //   }
-
-  //   if (featureData.strand) {
-  //     featureData.strand = { '-': -1, '+': 1 }[featureData.strand]
-  //   }
-
-  //   return featureData
-  // }
 
   /* eslint no-param-reassign: ["error", { "props": false }] */
   async readFeatures() {
