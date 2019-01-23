@@ -61,8 +61,6 @@ export default class Window {
       }
     }
 
-    // dlog('_readWigDataById', chr, min, max, callback);
-
     const worker = new RequestWorker(this, chr, min, max)
 
     return Promise.all(worker.cirFobRecur([this.cirTreeOffset + 48], 1)).then(

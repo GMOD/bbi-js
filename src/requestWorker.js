@@ -49,7 +49,7 @@ export default class RequestWorker {
     // dlog('fetching ' + fr.min() + '-' + fr.max() + ' (' + Util.humanReadableNumber(length) + ')');
     const resultBuffer = Buffer.alloc(length)
     await this.window.bwg.bbi.read(resultBuffer, 0, length, fr.min())
-    return new Promise(async (resolve, reject) => {
+    return new Promise((resolve, reject) => {
       for (let i = 0; i < offset.length; i += 1) {
         if (fr.contains(offset[i])) {
           this.cirFobRecur2(resultBuffer, offset[i] - fr.min(), level)
@@ -156,11 +156,6 @@ export default class RequestWorker {
     return blockGroups
   }
 
-  maybeCreateFeature(fmin, fmax, opts) {
-    if (fmin <= this.max && fmax >= this.min) {
-      this.createFeature(fmin, fmax, opts)
-    }
-  }
 
   parseSummaryBlock(bytes, startOffset) {
     const data = bytes.slice(startOffset)
@@ -170,23 +165,22 @@ export default class RequestWorker {
         .int32('chromId')
         .int32('start')
         .int32('end')
-        .int32('validCnt') // default to 1?
+        .int32('validCnt')
         .float('minVal')
         .float('maxVal')
         .float('sumData')
-        .float('symSqData'),
+        .float('sumSqData'),
     })
-    const ret = p.parse(data).result
-    ret.summary
+    return p.parse(data).result.summary
       .filter(elt => elt.chromId === this.chr)
-      .forEach(elt => {
-        const summaryOpts = {
+      .map(elt => {
+        return {
+          start: elt.start,
+          end:elt.end,
           score: elt.sumData / elt.validCnt || 1,
           maxScore: elt.maxVal,
           minScore: elt.minVal,
-        }
-        return {
-          start:elt.start, end:elt.end, summaryOpts
+          summary: true
         }
       })
   }
