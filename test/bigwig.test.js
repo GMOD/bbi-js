@@ -15,5 +15,4 @@ describe('bigwig formats', () => {
     expect(feats2).toMatchSnapshot()
     expect(feats3).toMatchSnapshot()
   })
-
 })

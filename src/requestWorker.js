@@ -156,7 +156,6 @@ export default class RequestWorker {
     return blockGroups
   }
 
-
   parseSummaryBlock(bytes, startOffset) {
     const data = bytes.slice(startOffset)
     const p = new Parser().endianess(this.le).array('summary', {
@@ -171,18 +170,34 @@ export default class RequestWorker {
         .float('sumData')
         .float('sumSqData'),
     })
-    return p.parse(data).result.summary
-      .filter(elt => elt.chromId === this.chr)
-      .map(elt => {
-        return {
-          start: elt.start,
-          end:elt.end,
-          score: elt.sumData / elt.validCnt || 1,
-          maxScore: elt.maxVal,
-          minScore: elt.minVal,
-          summary: true
-        }
-      })
+    return p
+      .parse(data)
+      .result.summary.filter(elt => elt.chromId === this.chr)
+      .map(elt => ({
+        start: elt.start,
+        end: elt.end,
+        score: elt.sumData / elt.validCnt || 1,
+        maxScore: elt.maxVal,
+        minScore: elt.minVal,
+        summary: true,
+      }))
+  }
+
+  parseBigBedBlock(bytes, startOffset) {
+    const data = bytes.slice(startOffset)
+    const p = new Parser().endianess(this.le).array('items', {
+      type: new Parser()
+        .uint32('chromId')
+        .int32('start')
+        .int32('end')
+        .string('rest', {
+          zeroTerminated: true,
+        }),
+      readUntil: 'eof',
+    })
+    return p
+      .parse(data)
+      .result.items.filter(f => f.start <= this.max && f.end >= this.min)
   }
 
   parseBigWigBlock(bytes, startOffset) {
@@ -220,7 +235,9 @@ export default class RequestWorker {
           }),
         },
       })
-    return parser.parse(data).result.items.filter(f => f.start <= this.max && f.end >= this.min)
+    return parser
+      .parse(data)
+      .result.items.filter(f => f.start <= this.max && f.end >= this.min)
   }
 
   /* eslint no-param-reassign: ["error", { "props": false }] */

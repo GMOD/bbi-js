@@ -1,0 +1,42 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`bigbed formats loads small bigwig file 1`] = `
+Array [
+  Object {
+    "chromId": 0,
+    "end": 73584,
+    "rest": "uc003sii.2	0	-	54028	54028	255,0,0	.	AL137655",
+    "start": 54028,
+  },
+  Object {
+    "chromId": 0,
+    "end": 61569,
+    "rest": "uc010krx.1	0	-	60328	60328	255,0,0	.	PDGFA",
+    "start": 60328,
+  },
+  Object {
+    "chromId": 0,
+    "end": 63529,
+    "rest": "uc003sij.2	0	-	62967	63366	255,0,0	.	DQ576410",
+    "start": 62967,
+  },
+  Object {
+    "chromId": 0,
+    "end": 64107,
+    "rest": "uc003sil.1	0	-	64068	64068	255,0,0	.	DQ584609",
+    "start": 64068,
+  },
+  Object {
+    "chromId": 0,
+    "end": 65220,
+    "rest": "uc003sim.1	0	-	65159	65159	255,0,0	.	DQ600587",
+    "start": 65159,
+  },
+  Object {
+    "chromId": 0,
+    "end": 116489,
+    "rest": "uc003sin.1	0	-	75460	75460	255,0,0	.	AL137655",
+    "start": 75460,
+  },
+]
+`;
