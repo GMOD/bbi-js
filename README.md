@@ -8,7 +8,13 @@ A parser for bigwig and bigbed file formats
 
 ## Usage
 
-To do
+
+    const ti = new BigWig({
+      path: 'volvox.bw'
+    })
+    await ti.getHeader()
+    const feats = await ti.getFeatures('chr1', 0, 100, { scale: 1 })
+
 
 ## Academic Use
 
