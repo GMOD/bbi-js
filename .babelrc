@@ -1,3 +1,23 @@
 {
-  "presets": ["env"]
+  "presets": [
+    ["env", {
+      "targets": {
+        "node": 6,
+        "browsers": [
+          "> 0.5%",
+          "last 2 versions"
+        ]
+      }
+    }],
+    "stage-2"
+  ],
+	"sourceMaps": true,
+	"plugins": [
+		["transform-runtime", {
+			"helpers": true,
+			"polyfill": true,
+			"regenerator": true,
+			"moduleName": "babel-runtime"
+		}]
+	]
 }
