@@ -34,6 +34,7 @@ class BBIFile {
 
     this.fetchSizeLimit = fetchSizeLimit || 50000000
     this.chunkSizeLimit = chunkSizeLimit || 10000000
+    this.gotHeader = this.getHeader()
   }
 
   // mutates obj for keys ending with '64' to longs, and removes the '64' suffix

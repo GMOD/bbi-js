@@ -1,7 +1,8 @@
 const BBI = require('./bbi')
 
 export default class BigBed extends BBI {
-  getFeatures(refName, start, end) {
+  async getFeatures(refName, start, end) {
+    await this.gotHeader
     const chrName = this.renameRefSeq(refName)
 
     const view = this.getView(1)
