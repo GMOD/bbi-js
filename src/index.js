@@ -1,3 +1,5 @@
 import BBI from './bbi'
+import BigWig from './bigwig'
+import BigBed from './bigbed'
 
-export default BBI
+export { BBI, BigWig, BigBed }
