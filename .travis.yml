@@ -1,9 +1,13 @@
 language: node_js
 node_js:
   - v8
+before_install:
+  - npm install -g http-server
+services:
+  - http-server &
 script:
-  - npm run lint
-  - npm test -- --coverage
+  - yarn lint
+  - REMOTE=1 yarn test --coverage
 cache:
   - yarn
 after_success:
