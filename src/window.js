@@ -45,9 +45,11 @@ export default class Window {
   async readWigDataById(chr, min, max) {
     if (!this.cirHeaderLoading) {
       const buffer = Buffer.alloc(48)
-      this.cirHeaderLoading = this.bwg.bbi.read(buffer, 0, 48, this.cirTreeOffset).then(() => {
-        this.cirBlockSize = buffer.readUInt32LE(4) // TODO little endian?
-      })
+      this.cirHeaderLoading = this.bwg.bbi
+        .read(buffer, 0, 48, this.cirTreeOffset)
+        .then(() => {
+          this.cirBlockSize = buffer.readUInt32LE(4) // TODO little endian?
+        })
     }
 
     await this.cirHeaderLoading

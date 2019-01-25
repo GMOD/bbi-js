@@ -6,11 +6,11 @@ class RemoteFile {
     this.position = 0
     this.url = source
     this.cache = new BufferCache({
-      fetch: (start, length) => this._fetch(start, length),
+      fetch: (start, length) => this.fetch(start, length),
     })
   }
 
-  async _fetch(position, length) {
+  async fetch(position, length) {
     const headers = {}
     if (length < Infinity) {
       headers.range = `bytes=${position}-${position + length}`
@@ -31,7 +31,7 @@ class RemoteFile {
 
       // try to parse out the size of the remote file
       const sizeMatch = /\/(\d+)$/.exec(response.headers.get('content-range'))
-      if (sizeMatch[1]) this._stat = { size: parseInt(sizeMatch[1], 10) }
+      if (sizeMatch[1]) this.savedStat = { size: parseInt(sizeMatch[1], 10) }
 
       return nodeBuffer
     }
@@ -57,13 +57,13 @@ class RemoteFile {
   }
 
   async stat() {
-    if (!this._stat) {
+    if (!this.savedStat) {
       const buf = Buffer.allocUnsafe(10)
       await this.read(buf, 0, 10, 0)
-      if (!this._stat)
+      if (!this.savedStat)
         throw new Error(`unable to determine size of file at ${this.url}`)
     }
-    return this._stat
+    return this.savedStat
   }
 }
 

@@ -19,7 +19,7 @@ class BufferCache {
     // fetch them all as necessary
     const fetches = new Array(lastChunk - firstChunk + 1)
     for (let chunk = firstChunk; chunk <= lastChunk; chunk += 1) {
-      fetches[chunk - firstChunk] = this._getChunk(chunk).then(data => ({
+      fetches[chunk - firstChunk] = this.getChunk(chunk).then(data => ({
         data,
         chunkNumber: chunk,
       }))
@@ -47,7 +47,7 @@ class BufferCache {
     })
   }
 
-  _getChunk(chunkNumber) {
+  getChunk(chunkNumber) {
     const cachedPromise = this.lruCache.get(chunkNumber)
     if (cachedPromise) return cachedPromise
 
