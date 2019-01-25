@@ -44,6 +44,7 @@
     "buffer-crc32": "^0.2.13",
     "es6-promisify": "^6.0.1",
     "long": "^4.0.0",
+    "cross-fetch": "^3.0.0",
     "quick-lru": "^2.0.0"
   },
   "devDependencies": {
@@ -54,7 +55,6 @@
     "babel-plugin-transform-runtime": "^6.23.0",
     "babel-preset-env": "^1.6.1",
     "babel-preset-stage-2": "^6.24.1",
-    "cross-fetch": "^3.0.0",
     "documentation": "^9.1.1",
     "eslint": "^5.12.0",
     "eslint-config-airbnb-base": "^13.1.0",
