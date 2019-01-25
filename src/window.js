@@ -43,23 +43,14 @@ export default class Window {
   }
 
   async readWigDataById(chr, min, max) {
-    if (!this.cirHeader) {
-      const readCallback = async () => this.readWigDataById(chr, min, max)
-      if (this.cirHeaderLoading) {
-        this.cirHeaderLoading.push(readCallback)
-      } else {
-        this.cirHeaderLoading = [readCallback]
-        // dlog('No CIR yet, fetching');
-        const buffer = Buffer.alloc(48)
-        await this.bwg.bbi.read(buffer, 0, 48, this.cirTreeOffset)
-        this.cirHeader = buffer
+    if (!this.cirHeaderLoading) {
+      const buffer = Buffer.alloc(48)
+      this.cirHeaderLoading = this.bwg.bbi.read(buffer, 0, 48, this.cirTreeOffset).then(() => {
         this.cirBlockSize = buffer.readUInt32LE(4) // TODO little endian?
-        return Promise.all(this.cirHeaderLoading.map(c => c())).then(res => {
-          delete this.cirHeaderLoading
-          return res.reduce((acc, val) => acc.concat(val), [])
-        })
-      }
+      })
     }
+
+    await this.cirHeaderLoading
 
     const worker = new RequestWorker(this, chr, min, max)
 
