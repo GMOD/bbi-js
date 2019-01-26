@@ -45,6 +45,7 @@ export default class RequestWorker {
   }
 
   async cirFobStartFetch(offset, fr, level) {
+    console.log(offset,fr,level)
     const length = fr.max() - fr.min()
     // dlog('fetching ' + fr.min() + '-' + fr.max() + ' (' + Util.humanReadableNumber(length) + ')');
     const resultBuffer = Buffer.alloc(length)

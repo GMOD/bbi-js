@@ -1,13 +1,10 @@
 language: node_js
 node_js:
   - v8
-before_install:
-  - npm install -g http-server
-  - http-server &
-  - sleep 3
 script:
   - yarn lint
-  - REMOTE=1 yarn test --coverage
+  - yarn test --coverage
+  - npx karma start --single-run
 cache:
   - yarn
 after_success:
