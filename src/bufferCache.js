@@ -1,6 +1,6 @@
 const LRU = require('quick-lru')
 
-class BufferCache {
+export default class BufferCache {
   constructor({ fetch, size = 10000000, chunkSize = 32768 }) {
     if (!fetch) throw new Error('fetch function required')
     this.fetch = fetch
@@ -59,4 +59,3 @@ class BufferCache {
     return freshPromise
   }
 }
-module.exports = BufferCache

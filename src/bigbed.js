@@ -1,4 +1,4 @@
-const BBI = require('./bbi')
+import BBI from './bbi'
 
 export default class BigBed extends BBI {
   async getFeatures(refName, start, end) {

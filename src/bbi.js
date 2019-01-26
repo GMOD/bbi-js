@@ -8,7 +8,7 @@ const LocalFile = require('./localFile')
 const BIG_WIG_MAGIC = -2003829722
 const BIG_BED_MAGIC = -2021002517
 
-class BBIFile {
+export default class BBIFile {
   constructor({
     filehandle,
     path,
@@ -310,4 +310,3 @@ class BBIFile {
   }
 }
 
-module.exports = BBIFile
