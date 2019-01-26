@@ -1,5 +1,7 @@
-const BBI = require('../src/bbi')
-const LocalFile = require('../src/localFile')
+import "regenerator-runtime/runtime"
+
+import BBI from '../src/bbi'
+import LocalFile from '../src/localFile'
 
 describe('index formats', () => {
   it('loads small bigwig header', async () => {

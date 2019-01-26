@@ -1,6 +1,7 @@
-import BigBed from '../src/bigbed'
+import "regenerator-runtime/runtime"
 
-const LocalFile = require('../src/localFile')
+import BigBed from '../src/bigbed'
+import LocalFile from '../src/localFile'
 
 describe('bigbed formats', () => {
   it('loads small bigwig file', async () => {
