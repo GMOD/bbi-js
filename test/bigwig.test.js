@@ -24,6 +24,14 @@ describe('bigwig formats', () => {
     expect(feats5).toMatchSnapshot()
   })
 
+  it('missing data', async () => {
+    const ti = new BigWig({
+      filehandle: new LocalFile(require.resolve('./data/volvox.bw')),
+    })
+    const feats5 = await ti.getFeatures('ctgA', 4200, 5600)
+    expect(feats5).toMatchSnapshot()
+  })
+
   it('loads a larger bigwig file', async () => {
     const ti = new BigWig({
       filehandle: new LocalFile(require.resolve('./data/cow.bw')),

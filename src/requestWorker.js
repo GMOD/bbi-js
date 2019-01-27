@@ -46,7 +46,6 @@ export default class RequestWorker {
 
   async cirFobStartFetch(offset, fr, level) {
     const length = fr.max() - fr.min()
-    // dlog('fetching ' + fr.min() + '-' + fr.max() + ' (' + Util.humanReadableNumber(length) + ')');
     const resultBuffer = Buffer.alloc(length)
     await this.window.bwg.bbi.read(resultBuffer, 0, length, fr.min())
     return new Promise((resolve, reject) => {
@@ -253,13 +252,13 @@ export default class RequestWorker {
     })
 
     const blockGroups = await Promise.all(blockFetches)
-    const ret = blockGroups.map(blockGroup =>
-      blockGroup.blocks.map(block => {
+    const ret = blockGroups.map(blockGroup => {
+      return blockGroup.blocks.map(block => {
         let data
         let offset = block.offset - blockGroup.offset
 
         if (this.window.bwg.header.uncompressBufSize > 0) {
-          data = zlib.inflateSync(blockGroup.data)
+          data = zlib.inflateSync(blockGroup.data.slice(offset))
           offset = 0
         } else {
           // eslint-disable-next-line
@@ -277,8 +276,8 @@ export default class RequestWorker {
         }
         console.warn(`Don't know what to do with ${this.window.bwg.type}`)
         return undefined
-      }),
-    )
+      })
+    })
     const flatten = list =>
       list.reduce((a, b) => a.concat(Array.isArray(b) ? flatten(b) : b), [])
     return flatten(ret)
