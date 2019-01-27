@@ -18,6 +18,7 @@
   ],
   "scripts": {
     "test": "jest",
+    "test-browser": "karma start --single-run --browsers PhantomJS",
     "coverage": "npm test -- --coverage",
     "lint": "eslint src test",
     "clean": "rimraf dist",
