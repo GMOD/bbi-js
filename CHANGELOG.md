@@ -1,3 +1,5 @@
+- Fix issue with properly inflating chunks (issue #1)
+
 ## [1.0.2](https://github.com/GMOD/bbi-js/compare/v1.0.1...v1.0.2) (2019-01-24)
 
 

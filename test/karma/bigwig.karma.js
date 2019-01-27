@@ -16,9 +16,6 @@ describe('test a bigwig file', () => {
       filehandle: new RemoteFile('base/test/data/volvox.bw'),
     })
     const feats1 = await bbi.getFeatures('ctgA', 20001, 21000)
-    const feats2 = await bbi.getFeatures('ctgA', 21001, 22000)
-    const feats3 = await bbi.getFeatures('ctgA', 22001, 23000)
-    const feats4 = await bbi.getFeatures('ctgA', 23001, 24000)
     expect(feats1[0].score).toEqual(19)
   })
 })
