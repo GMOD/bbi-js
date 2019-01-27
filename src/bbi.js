@@ -106,29 +106,18 @@ export default class BBIFile {
     await this.detectEndianness()
 
     const le = this.isBigEndian ? 'big' : 'little'
-    // const lebe = this.isBigEndian ? 'be' : 'le'
     const headerParser = new Parser()
       .endianess(le)
       .int32('magic')
       .uint16('version')
       .uint16('numZoomLevels')
-      .buffer('chromTreeOffset64', {
-        length: 8,
-      })
-      .buffer('unzoomedDataOffset64', {
-        length: 8,
-      })
-      .buffer('unzoomedIndexOffset64', {
-        length: 8,
-      })
+      .buffer('chromTreeOffset64', { length: 8 })
+      .buffer('unzoomedDataOffset64', { length: 8 })
+      .buffer('unzoomedIndexOffset64', { length: 8 })
       .uint16('fieldCount')
       .uint16('definedFieldCount')
-      .buffer('asOffset64', {
-        length: 8,
-      })
-      .buffer('totalSummaryOffset64', {
-        length: 8,
-      })
+      .buffer('asOffset64', { length: 8 })
+      .buffer('totalSummaryOffset64', { length: 8 })
       .uint32('uncompressBufSize')
       .skip(8) // reserved
       .array('zoomLevels', {
@@ -136,19 +125,13 @@ export default class BBIFile {
         type: new Parser()
           .uint32('reductionLevel')
           .uint32('reserved')
-          .buffer('dataOffset64', {
-            length: 8,
-          })
-          .buffer('indexOffset64', {
-            length: 8,
-          }),
+          .buffer('dataOffset64', { length: 8 })
+          .buffer('indexOffset64', { length: 8 }),
       })
 
     const totalSummaryParser = new Parser()
       .endianess(le)
-      .buffer('basesCovered64', {
-        length: 8,
-      })
+      .buffer('basesCovered64', { length: 8 })
       .double('scoreMin')
       .double('scoreMax')
       .double('scoreSum')
@@ -162,24 +145,6 @@ export default class BBIFile {
       .uint32('keySize')
       .uint32('valSize')
       .buffer('itemCount64', { length: 8 })
-
-    //       .uint8('isLeafNode')
-    //       .uint16('count')
-    //     .choice('result', {
-    //       tag: 'isLeafNode',
-    //       choices: {
-    //         1: new Parser().
-    //       .array('refSeqs', {
-    //         length: 'count',
-    //         type: new Parser()
-    //           .string('name', {
-    //             zeroTerminated: true,
-    //             length: 'keySize'
-    //           })
-    //           .uint32('refId')
-    //           .uint32('refSize')
-    //           .skip(8),
-    //       })
 
     return {
       chromTreeParser,
