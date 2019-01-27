@@ -45,7 +45,6 @@ export default class RequestWorker {
   }
 
   async cirFobStartFetch(offset, fr, level) {
-    console.log(offset,fr,level)
     const length = fr.max() - fr.min()
     // dlog('fetching ' + fr.min() + '-' + fr.max() + ' (' + Util.humanReadableNumber(length) + ')');
     const resultBuffer = Buffer.alloc(length)
@@ -260,9 +259,7 @@ export default class RequestWorker {
         let offset = block.offset - blockGroup.offset
 
         if (this.window.bwg.header.uncompressBufSize > 0) {
-          data = zlib.inflateRawSync(
-            blockGroup.data.slice(offset + 2, block.size - 2),
-          )
+          data = zlib.inflateSync(blockGroup.data)
           offset = 0
         } else {
           // eslint-disable-next-line

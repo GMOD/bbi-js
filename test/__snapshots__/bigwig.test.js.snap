@@ -1,5 +1,4840 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`bigwig formats inside file deeply 1`] = `
+Array [
+  Object {
+    "end": 20000,
+    "score": 19,
+    "start": 19999,
+  },
+  Object {
+    "end": 20001,
+    "score": 19,
+    "start": 20000,
+  },
+  Object {
+    "end": 20002,
+    "score": 19,
+    "start": 20001,
+  },
+  Object {
+    "end": 20003,
+    "score": 18,
+    "start": 20002,
+  },
+  Object {
+    "end": 20004,
+    "score": 18,
+    "start": 20003,
+  },
+  Object {
+    "end": 20005,
+    "score": 18,
+    "start": 20004,
+  },
+  Object {
+    "end": 20006,
+    "score": 18,
+    "start": 20005,
+  },
+  Object {
+    "end": 20007,
+    "score": 18,
+    "start": 20006,
+  },
+  Object {
+    "end": 20008,
+    "score": 18,
+    "start": 20007,
+  },
+  Object {
+    "end": 20009,
+    "score": 18,
+    "start": 20008,
+  },
+  Object {
+    "end": 20010,
+    "score": 18,
+    "start": 20009,
+  },
+  Object {
+    "end": 20011,
+    "score": 19,
+    "start": 20010,
+  },
+  Object {
+    "end": 20012,
+    "score": 18,
+    "start": 20011,
+  },
+  Object {
+    "end": 20013,
+    "score": 17,
+    "start": 20012,
+  },
+  Object {
+    "end": 20014,
+    "score": 17,
+    "start": 20013,
+  },
+  Object {
+    "end": 20015,
+    "score": 16,
+    "start": 20014,
+  },
+  Object {
+    "end": 20016,
+    "score": 16,
+    "start": 20015,
+  },
+  Object {
+    "end": 20017,
+    "score": 18,
+    "start": 20016,
+  },
+  Object {
+    "end": 20018,
+    "score": 17,
+    "start": 20017,
+  },
+  Object {
+    "end": 20019,
+    "score": 17,
+    "start": 20018,
+  },
+  Object {
+    "end": 20020,
+    "score": 17,
+    "start": 20019,
+  },
+  Object {
+    "end": 20021,
+    "score": 17,
+    "start": 20020,
+  },
+  Object {
+    "end": 20022,
+    "score": 17,
+    "start": 20021,
+  },
+  Object {
+    "end": 20023,
+    "score": 18,
+    "start": 20022,
+  },
+  Object {
+    "end": 20024,
+    "score": 18,
+    "start": 20023,
+  },
+  Object {
+    "end": 20025,
+    "score": 18,
+    "start": 20024,
+  },
+  Object {
+    "end": 20026,
+    "score": 18,
+    "start": 20025,
+  },
+  Object {
+    "end": 20027,
+    "score": 18,
+    "start": 20026,
+  },
+  Object {
+    "end": 20028,
+    "score": 18,
+    "start": 20027,
+  },
+  Object {
+    "end": 20029,
+    "score": 17,
+    "start": 20028,
+  },
+  Object {
+    "end": 20030,
+    "score": 16,
+    "start": 20029,
+  },
+  Object {
+    "end": 20031,
+    "score": 16,
+    "start": 20030,
+  },
+  Object {
+    "end": 20032,
+    "score": 16,
+    "start": 20031,
+  },
+  Object {
+    "end": 20033,
+    "score": 17,
+    "start": 20032,
+  },
+  Object {
+    "end": 20034,
+    "score": 17,
+    "start": 20033,
+  },
+  Object {
+    "end": 20035,
+    "score": 17,
+    "start": 20034,
+  },
+  Object {
+    "end": 20036,
+    "score": 18,
+    "start": 20035,
+  },
+  Object {
+    "end": 20037,
+    "score": 17,
+    "start": 20036,
+  },
+  Object {
+    "end": 20038,
+    "score": 17,
+    "start": 20037,
+  },
+  Object {
+    "end": 20039,
+    "score": 17,
+    "start": 20038,
+  },
+  Object {
+    "end": 20040,
+    "score": 17,
+    "start": 20039,
+  },
+  Object {
+    "end": 20041,
+    "score": 16,
+    "start": 20040,
+  },
+  Object {
+    "end": 20042,
+    "score": 16,
+    "start": 20041,
+  },
+  Object {
+    "end": 20043,
+    "score": 16,
+    "start": 20042,
+  },
+  Object {
+    "end": 20044,
+    "score": 16,
+    "start": 20043,
+  },
+  Object {
+    "end": 20045,
+    "score": 17,
+    "start": 20044,
+  },
+  Object {
+    "end": 20046,
+    "score": 17,
+    "start": 20045,
+  },
+  Object {
+    "end": 20047,
+    "score": 17,
+    "start": 20046,
+  },
+  Object {
+    "end": 20048,
+    "score": 15,
+    "start": 20047,
+  },
+  Object {
+    "end": 20049,
+    "score": 14,
+    "start": 20048,
+  },
+  Object {
+    "end": 20050,
+    "score": 14,
+    "start": 20049,
+  },
+  Object {
+    "end": 20051,
+    "score": 14,
+    "start": 20050,
+  },
+  Object {
+    "end": 20052,
+    "score": 15,
+    "start": 20051,
+  },
+  Object {
+    "end": 20053,
+    "score": 15,
+    "start": 20052,
+  },
+  Object {
+    "end": 20054,
+    "score": 15,
+    "start": 20053,
+  },
+  Object {
+    "end": 20055,
+    "score": 14,
+    "start": 20054,
+  },
+  Object {
+    "end": 20056,
+    "score": 14,
+    "start": 20055,
+  },
+  Object {
+    "end": 20057,
+    "score": 15,
+    "start": 20056,
+  },
+  Object {
+    "end": 20058,
+    "score": 16,
+    "start": 20057,
+  },
+  Object {
+    "end": 20059,
+    "score": 17,
+    "start": 20058,
+  },
+  Object {
+    "end": 20060,
+    "score": 18,
+    "start": 20059,
+  },
+  Object {
+    "end": 20061,
+    "score": 17,
+    "start": 20060,
+  },
+  Object {
+    "end": 20062,
+    "score": 17,
+    "start": 20061,
+  },
+  Object {
+    "end": 20063,
+    "score": 16,
+    "start": 20062,
+  },
+  Object {
+    "end": 20064,
+    "score": 16,
+    "start": 20063,
+  },
+  Object {
+    "end": 20065,
+    "score": 16,
+    "start": 20064,
+  },
+  Object {
+    "end": 20066,
+    "score": 16,
+    "start": 20065,
+  },
+  Object {
+    "end": 20067,
+    "score": 17,
+    "start": 20066,
+  },
+  Object {
+    "end": 20068,
+    "score": 17,
+    "start": 20067,
+  },
+  Object {
+    "end": 20069,
+    "score": 17,
+    "start": 20068,
+  },
+  Object {
+    "end": 20070,
+    "score": 17,
+    "start": 20069,
+  },
+  Object {
+    "end": 20071,
+    "score": 17,
+    "start": 20070,
+  },
+  Object {
+    "end": 20072,
+    "score": 17,
+    "start": 20071,
+  },
+  Object {
+    "end": 20073,
+    "score": 17,
+    "start": 20072,
+  },
+  Object {
+    "end": 20074,
+    "score": 17,
+    "start": 20073,
+  },
+  Object {
+    "end": 20075,
+    "score": 19,
+    "start": 20074,
+  },
+  Object {
+    "end": 20076,
+    "score": 18,
+    "start": 20075,
+  },
+  Object {
+    "end": 20077,
+    "score": 18,
+    "start": 20076,
+  },
+  Object {
+    "end": 20078,
+    "score": 18,
+    "start": 20077,
+  },
+  Object {
+    "end": 20079,
+    "score": 18,
+    "start": 20078,
+  },
+  Object {
+    "end": 20080,
+    "score": 18,
+    "start": 20079,
+  },
+  Object {
+    "end": 20081,
+    "score": 18,
+    "start": 20080,
+  },
+  Object {
+    "end": 20082,
+    "score": 18,
+    "start": 20081,
+  },
+  Object {
+    "end": 20083,
+    "score": 18,
+    "start": 20082,
+  },
+  Object {
+    "end": 20084,
+    "score": 18,
+    "start": 20083,
+  },
+  Object {
+    "end": 20085,
+    "score": 18,
+    "start": 20084,
+  },
+  Object {
+    "end": 20086,
+    "score": 18,
+    "start": 20085,
+  },
+  Object {
+    "end": 20087,
+    "score": 17,
+    "start": 20086,
+  },
+  Object {
+    "end": 20088,
+    "score": 17,
+    "start": 20087,
+  },
+  Object {
+    "end": 20089,
+    "score": 17,
+    "start": 20088,
+  },
+  Object {
+    "end": 20090,
+    "score": 17,
+    "start": 20089,
+  },
+  Object {
+    "end": 20091,
+    "score": 17,
+    "start": 20090,
+  },
+  Object {
+    "end": 20092,
+    "score": 17,
+    "start": 20091,
+  },
+  Object {
+    "end": 20093,
+    "score": 17,
+    "start": 20092,
+  },
+  Object {
+    "end": 20094,
+    "score": 17,
+    "start": 20093,
+  },
+  Object {
+    "end": 20095,
+    "score": 17,
+    "start": 20094,
+  },
+  Object {
+    "end": 20096,
+    "score": 17,
+    "start": 20095,
+  },
+  Object {
+    "end": 20097,
+    "score": 17,
+    "start": 20096,
+  },
+  Object {
+    "end": 20098,
+    "score": 17,
+    "start": 20097,
+  },
+  Object {
+    "end": 20099,
+    "score": 17,
+    "start": 20098,
+  },
+  Object {
+    "end": 20100,
+    "score": 16,
+    "start": 20099,
+  },
+  Object {
+    "end": 20101,
+    "score": 16,
+    "start": 20100,
+  },
+  Object {
+    "end": 20102,
+    "score": 16,
+    "start": 20101,
+  },
+  Object {
+    "end": 20103,
+    "score": 16,
+    "start": 20102,
+  },
+  Object {
+    "end": 20104,
+    "score": 17,
+    "start": 20103,
+  },
+  Object {
+    "end": 20105,
+    "score": 17,
+    "start": 20104,
+  },
+  Object {
+    "end": 20106,
+    "score": 17,
+    "start": 20105,
+  },
+  Object {
+    "end": 20107,
+    "score": 18,
+    "start": 20106,
+  },
+  Object {
+    "end": 20108,
+    "score": 18,
+    "start": 20107,
+  },
+  Object {
+    "end": 20109,
+    "score": 18,
+    "start": 20108,
+  },
+  Object {
+    "end": 20110,
+    "score": 19,
+    "start": 20109,
+  },
+  Object {
+    "end": 20111,
+    "score": 18,
+    "start": 20110,
+  },
+  Object {
+    "end": 20112,
+    "score": 18,
+    "start": 20111,
+  },
+  Object {
+    "end": 20113,
+    "score": 18,
+    "start": 20112,
+  },
+  Object {
+    "end": 20114,
+    "score": 18,
+    "start": 20113,
+  },
+  Object {
+    "end": 20115,
+    "score": 18,
+    "start": 20114,
+  },
+  Object {
+    "end": 20116,
+    "score": 18,
+    "start": 20115,
+  },
+  Object {
+    "end": 20117,
+    "score": 16,
+    "start": 20116,
+  },
+  Object {
+    "end": 20118,
+    "score": 17,
+    "start": 20117,
+  },
+  Object {
+    "end": 20119,
+    "score": 17,
+    "start": 20118,
+  },
+  Object {
+    "end": 20120,
+    "score": 18,
+    "start": 20119,
+  },
+  Object {
+    "end": 20121,
+    "score": 20,
+    "start": 20120,
+  },
+  Object {
+    "end": 20122,
+    "score": 20,
+    "start": 20121,
+  },
+  Object {
+    "end": 20123,
+    "score": 19,
+    "start": 20122,
+  },
+  Object {
+    "end": 20124,
+    "score": 19,
+    "start": 20123,
+  },
+  Object {
+    "end": 20125,
+    "score": 19,
+    "start": 20124,
+  },
+  Object {
+    "end": 20126,
+    "score": 19,
+    "start": 20125,
+  },
+  Object {
+    "end": 20127,
+    "score": 19,
+    "start": 20126,
+  },
+  Object {
+    "end": 20128,
+    "score": 20,
+    "start": 20127,
+  },
+  Object {
+    "end": 20129,
+    "score": 20,
+    "start": 20128,
+  },
+  Object {
+    "end": 20130,
+    "score": 20,
+    "start": 20129,
+  },
+  Object {
+    "end": 20131,
+    "score": 20,
+    "start": 20130,
+  },
+  Object {
+    "end": 20132,
+    "score": 20,
+    "start": 20131,
+  },
+  Object {
+    "end": 20133,
+    "score": 19,
+    "start": 20132,
+  },
+  Object {
+    "end": 20134,
+    "score": 19,
+    "start": 20133,
+  },
+  Object {
+    "end": 20135,
+    "score": 19,
+    "start": 20134,
+  },
+  Object {
+    "end": 20136,
+    "score": 18,
+    "start": 20135,
+  },
+  Object {
+    "end": 20137,
+    "score": 19,
+    "start": 20136,
+  },
+  Object {
+    "end": 20138,
+    "score": 19,
+    "start": 20137,
+  },
+  Object {
+    "end": 20139,
+    "score": 22,
+    "start": 20138,
+  },
+  Object {
+    "end": 20140,
+    "score": 22,
+    "start": 20139,
+  },
+  Object {
+    "end": 20141,
+    "score": 23,
+    "start": 20140,
+  },
+  Object {
+    "end": 20142,
+    "score": 24,
+    "start": 20141,
+  },
+  Object {
+    "end": 20143,
+    "score": 24,
+    "start": 20142,
+  },
+  Object {
+    "end": 20144,
+    "score": 24,
+    "start": 20143,
+  },
+  Object {
+    "end": 20145,
+    "score": 24,
+    "start": 20144,
+  },
+  Object {
+    "end": 20146,
+    "score": 25,
+    "start": 20145,
+  },
+  Object {
+    "end": 20147,
+    "score": 25,
+    "start": 20146,
+  },
+  Object {
+    "end": 20148,
+    "score": 25,
+    "start": 20147,
+  },
+  Object {
+    "end": 20149,
+    "score": 25,
+    "start": 20148,
+  },
+  Object {
+    "end": 20150,
+    "score": 25,
+    "start": 20149,
+  },
+  Object {
+    "end": 20151,
+    "score": 25,
+    "start": 20150,
+  },
+  Object {
+    "end": 20152,
+    "score": 24,
+    "start": 20151,
+  },
+  Object {
+    "end": 20153,
+    "score": 24,
+    "start": 20152,
+  },
+  Object {
+    "end": 20154,
+    "score": 24,
+    "start": 20153,
+  },
+  Object {
+    "end": 20155,
+    "score": 24,
+    "start": 20154,
+  },
+  Object {
+    "end": 20156,
+    "score": 24,
+    "start": 20155,
+  },
+  Object {
+    "end": 20157,
+    "score": 23,
+    "start": 20156,
+  },
+  Object {
+    "end": 20158,
+    "score": 21,
+    "start": 20157,
+  },
+  Object {
+    "end": 20159,
+    "score": 21,
+    "start": 20158,
+  },
+  Object {
+    "end": 20160,
+    "score": 20,
+    "start": 20159,
+  },
+  Object {
+    "end": 20161,
+    "score": 20,
+    "start": 20160,
+  },
+  Object {
+    "end": 20162,
+    "score": 20,
+    "start": 20161,
+  },
+  Object {
+    "end": 20163,
+    "score": 20,
+    "start": 20162,
+  },
+  Object {
+    "end": 20164,
+    "score": 20,
+    "start": 20163,
+  },
+  Object {
+    "end": 20165,
+    "score": 20,
+    "start": 20164,
+  },
+  Object {
+    "end": 20166,
+    "score": 20,
+    "start": 20165,
+  },
+  Object {
+    "end": 20167,
+    "score": 19,
+    "start": 20166,
+  },
+  Object {
+    "end": 20168,
+    "score": 20,
+    "start": 20167,
+  },
+  Object {
+    "end": 20169,
+    "score": 20,
+    "start": 20168,
+  },
+  Object {
+    "end": 20170,
+    "score": 20,
+    "start": 20169,
+  },
+  Object {
+    "end": 20171,
+    "score": 20,
+    "start": 20170,
+  },
+  Object {
+    "end": 20172,
+    "score": 21,
+    "start": 20171,
+  },
+  Object {
+    "end": 20173,
+    "score": 21,
+    "start": 20172,
+  },
+  Object {
+    "end": 20174,
+    "score": 21,
+    "start": 20173,
+  },
+  Object {
+    "end": 20175,
+    "score": 19,
+    "start": 20174,
+  },
+  Object {
+    "end": 20176,
+    "score": 20,
+    "start": 20175,
+  },
+  Object {
+    "end": 20177,
+    "score": 20,
+    "start": 20176,
+  },
+  Object {
+    "end": 20178,
+    "score": 20,
+    "start": 20177,
+  },
+  Object {
+    "end": 20179,
+    "score": 20,
+    "start": 20178,
+  },
+  Object {
+    "end": 20180,
+    "score": 20,
+    "start": 20179,
+  },
+  Object {
+    "end": 20181,
+    "score": 21,
+    "start": 20180,
+  },
+  Object {
+    "end": 20182,
+    "score": 21,
+    "start": 20181,
+  },
+  Object {
+    "end": 20183,
+    "score": 21,
+    "start": 20182,
+  },
+  Object {
+    "end": 20184,
+    "score": 21,
+    "start": 20183,
+  },
+  Object {
+    "end": 20185,
+    "score": 21,
+    "start": 20184,
+  },
+  Object {
+    "end": 20186,
+    "score": 21,
+    "start": 20185,
+  },
+  Object {
+    "end": 20187,
+    "score": 21,
+    "start": 20186,
+  },
+  Object {
+    "end": 20188,
+    "score": 21,
+    "start": 20187,
+  },
+  Object {
+    "end": 20189,
+    "score": 22,
+    "start": 20188,
+  },
+  Object {
+    "end": 20190,
+    "score": 22,
+    "start": 20189,
+  },
+  Object {
+    "end": 20191,
+    "score": 22,
+    "start": 20190,
+  },
+  Object {
+    "end": 20192,
+    "score": 22,
+    "start": 20191,
+  },
+  Object {
+    "end": 20193,
+    "score": 22,
+    "start": 20192,
+  },
+  Object {
+    "end": 20194,
+    "score": 22,
+    "start": 20193,
+  },
+  Object {
+    "end": 20195,
+    "score": 22,
+    "start": 20194,
+  },
+  Object {
+    "end": 20196,
+    "score": 23,
+    "start": 20195,
+  },
+  Object {
+    "end": 20197,
+    "score": 24,
+    "start": 20196,
+  },
+  Object {
+    "end": 20198,
+    "score": 24,
+    "start": 20197,
+  },
+  Object {
+    "end": 20199,
+    "score": 24,
+    "start": 20198,
+  },
+  Object {
+    "end": 20200,
+    "score": 24,
+    "start": 20199,
+  },
+  Object {
+    "end": 20201,
+    "score": 24,
+    "start": 20200,
+  },
+  Object {
+    "end": 20202,
+    "score": 24,
+    "start": 20201,
+  },
+  Object {
+    "end": 20203,
+    "score": 24,
+    "start": 20202,
+  },
+  Object {
+    "end": 20204,
+    "score": 23,
+    "start": 20203,
+  },
+  Object {
+    "end": 20205,
+    "score": 23,
+    "start": 20204,
+  },
+  Object {
+    "end": 20206,
+    "score": 23,
+    "start": 20205,
+  },
+  Object {
+    "end": 20207,
+    "score": 22,
+    "start": 20206,
+  },
+  Object {
+    "end": 20208,
+    "score": 23,
+    "start": 20207,
+  },
+  Object {
+    "end": 20209,
+    "score": 23,
+    "start": 20208,
+  },
+  Object {
+    "end": 20210,
+    "score": 22,
+    "start": 20209,
+  },
+  Object {
+    "end": 20211,
+    "score": 22,
+    "start": 20210,
+  },
+  Object {
+    "end": 20212,
+    "score": 22,
+    "start": 20211,
+  },
+  Object {
+    "end": 20213,
+    "score": 22,
+    "start": 20212,
+  },
+  Object {
+    "end": 20214,
+    "score": 23,
+    "start": 20213,
+  },
+  Object {
+    "end": 20215,
+    "score": 23,
+    "start": 20214,
+  },
+  Object {
+    "end": 20216,
+    "score": 23,
+    "start": 20215,
+  },
+  Object {
+    "end": 20217,
+    "score": 24,
+    "start": 20216,
+  },
+  Object {
+    "end": 20218,
+    "score": 23,
+    "start": 20217,
+  },
+  Object {
+    "end": 20219,
+    "score": 23,
+    "start": 20218,
+  },
+  Object {
+    "end": 20220,
+    "score": 23,
+    "start": 20219,
+  },
+  Object {
+    "end": 20221,
+    "score": 21,
+    "start": 20220,
+  },
+  Object {
+    "end": 20222,
+    "score": 21,
+    "start": 20221,
+  },
+  Object {
+    "end": 20223,
+    "score": 21,
+    "start": 20222,
+  },
+  Object {
+    "end": 20224,
+    "score": 21,
+    "start": 20223,
+  },
+  Object {
+    "end": 20225,
+    "score": 21,
+    "start": 20224,
+  },
+  Object {
+    "end": 20226,
+    "score": 21,
+    "start": 20225,
+  },
+  Object {
+    "end": 20227,
+    "score": 21,
+    "start": 20226,
+  },
+  Object {
+    "end": 20228,
+    "score": 20,
+    "start": 20227,
+  },
+  Object {
+    "end": 20229,
+    "score": 20,
+    "start": 20228,
+  },
+  Object {
+    "end": 20230,
+    "score": 20,
+    "start": 20229,
+  },
+  Object {
+    "end": 20231,
+    "score": 20,
+    "start": 20230,
+  },
+  Object {
+    "end": 20232,
+    "score": 21,
+    "start": 20231,
+  },
+  Object {
+    "end": 20233,
+    "score": 21,
+    "start": 20232,
+  },
+  Object {
+    "end": 20234,
+    "score": 21,
+    "start": 20233,
+  },
+  Object {
+    "end": 20235,
+    "score": 21,
+    "start": 20234,
+  },
+  Object {
+    "end": 20236,
+    "score": 21,
+    "start": 20235,
+  },
+  Object {
+    "end": 20237,
+    "score": 21,
+    "start": 20236,
+  },
+  Object {
+    "end": 20238,
+    "score": 21,
+    "start": 20237,
+  },
+  Object {
+    "end": 20239,
+    "score": 19,
+    "start": 20238,
+  },
+  Object {
+    "end": 20240,
+    "score": 19,
+    "start": 20239,
+  },
+  Object {
+    "end": 20241,
+    "score": 19,
+    "start": 20240,
+  },
+  Object {
+    "end": 20242,
+    "score": 18,
+    "start": 20241,
+  },
+  Object {
+    "end": 20243,
+    "score": 18,
+    "start": 20242,
+  },
+  Object {
+    "end": 20244,
+    "score": 18,
+    "start": 20243,
+  },
+  Object {
+    "end": 20245,
+    "score": 17,
+    "start": 20244,
+  },
+  Object {
+    "end": 20246,
+    "score": 16,
+    "start": 20245,
+  },
+  Object {
+    "end": 20247,
+    "score": 17,
+    "start": 20246,
+  },
+  Object {
+    "end": 20248,
+    "score": 17,
+    "start": 20247,
+  },
+  Object {
+    "end": 20249,
+    "score": 17,
+    "start": 20248,
+  },
+  Object {
+    "end": 20250,
+    "score": 17,
+    "start": 20249,
+  },
+  Object {
+    "end": 20251,
+    "score": 17,
+    "start": 20250,
+  },
+  Object {
+    "end": 20252,
+    "score": 17,
+    "start": 20251,
+  },
+  Object {
+    "end": 20253,
+    "score": 19,
+    "start": 20252,
+  },
+  Object {
+    "end": 20254,
+    "score": 19,
+    "start": 20253,
+  },
+  Object {
+    "end": 20255,
+    "score": 19,
+    "start": 20254,
+  },
+  Object {
+    "end": 20256,
+    "score": 19,
+    "start": 20255,
+  },
+  Object {
+    "end": 20257,
+    "score": 20,
+    "start": 20256,
+  },
+  Object {
+    "end": 20258,
+    "score": 20,
+    "start": 20257,
+  },
+  Object {
+    "end": 20259,
+    "score": 21,
+    "start": 20258,
+  },
+  Object {
+    "end": 20260,
+    "score": 21,
+    "start": 20259,
+  },
+  Object {
+    "end": 20261,
+    "score": 21,
+    "start": 20260,
+  },
+  Object {
+    "end": 20262,
+    "score": 21,
+    "start": 20261,
+  },
+  Object {
+    "end": 20263,
+    "score": 22,
+    "start": 20262,
+  },
+  Object {
+    "end": 20264,
+    "score": 22,
+    "start": 20263,
+  },
+  Object {
+    "end": 20265,
+    "score": 22,
+    "start": 20264,
+  },
+  Object {
+    "end": 20266,
+    "score": 23,
+    "start": 20265,
+  },
+  Object {
+    "end": 20267,
+    "score": 24,
+    "start": 20266,
+  },
+  Object {
+    "end": 20268,
+    "score": 23,
+    "start": 20267,
+  },
+  Object {
+    "end": 20269,
+    "score": 23,
+    "start": 20268,
+  },
+  Object {
+    "end": 20270,
+    "score": 23,
+    "start": 20269,
+  },
+  Object {
+    "end": 20271,
+    "score": 24,
+    "start": 20270,
+  },
+  Object {
+    "end": 20272,
+    "score": 23,
+    "start": 20271,
+  },
+  Object {
+    "end": 20273,
+    "score": 23,
+    "start": 20272,
+  },
+  Object {
+    "end": 20274,
+    "score": 24,
+    "start": 20273,
+  },
+  Object {
+    "end": 20275,
+    "score": 27,
+    "start": 20274,
+  },
+  Object {
+    "end": 20276,
+    "score": 26,
+    "start": 20275,
+  },
+  Object {
+    "end": 20277,
+    "score": 26,
+    "start": 20276,
+  },
+  Object {
+    "end": 20278,
+    "score": 26,
+    "start": 20277,
+  },
+  Object {
+    "end": 20279,
+    "score": 26,
+    "start": 20278,
+  },
+  Object {
+    "end": 20280,
+    "score": 27,
+    "start": 20279,
+  },
+  Object {
+    "end": 20281,
+    "score": 26,
+    "start": 20280,
+  },
+  Object {
+    "end": 20282,
+    "score": 26,
+    "start": 20281,
+  },
+  Object {
+    "end": 20283,
+    "score": 26,
+    "start": 20282,
+  },
+  Object {
+    "end": 20284,
+    "score": 26,
+    "start": 20283,
+  },
+  Object {
+    "end": 20285,
+    "score": 26,
+    "start": 20284,
+  },
+  Object {
+    "end": 20286,
+    "score": 26,
+    "start": 20285,
+  },
+  Object {
+    "end": 20287,
+    "score": 26,
+    "start": 20286,
+  },
+  Object {
+    "end": 20288,
+    "score": 26,
+    "start": 20287,
+  },
+  Object {
+    "end": 20289,
+    "score": 25,
+    "start": 20288,
+  },
+  Object {
+    "end": 20290,
+    "score": 25,
+    "start": 20289,
+  },
+  Object {
+    "end": 20291,
+    "score": 25,
+    "start": 20290,
+  },
+  Object {
+    "end": 20292,
+    "score": 25,
+    "start": 20291,
+  },
+  Object {
+    "end": 20293,
+    "score": 25,
+    "start": 20292,
+  },
+  Object {
+    "end": 20294,
+    "score": 25,
+    "start": 20293,
+  },
+  Object {
+    "end": 20295,
+    "score": 25,
+    "start": 20294,
+  },
+  Object {
+    "end": 20296,
+    "score": 24,
+    "start": 20295,
+  },
+  Object {
+    "end": 20297,
+    "score": 23,
+    "start": 20296,
+  },
+  Object {
+    "end": 20298,
+    "score": 25,
+    "start": 20297,
+  },
+  Object {
+    "end": 20299,
+    "score": 25,
+    "start": 20298,
+  },
+  Object {
+    "end": 20300,
+    "score": 25,
+    "start": 20299,
+  },
+  Object {
+    "end": 20301,
+    "score": 25,
+    "start": 20300,
+  },
+  Object {
+    "end": 20302,
+    "score": 26,
+    "start": 20301,
+  },
+  Object {
+    "end": 20303,
+    "score": 26,
+    "start": 20302,
+  },
+  Object {
+    "end": 20304,
+    "score": 26,
+    "start": 20303,
+  },
+  Object {
+    "end": 20305,
+    "score": 26,
+    "start": 20304,
+  },
+  Object {
+    "end": 20306,
+    "score": 26,
+    "start": 20305,
+  },
+  Object {
+    "end": 20307,
+    "score": 26,
+    "start": 20306,
+  },
+  Object {
+    "end": 20308,
+    "score": 25,
+    "start": 20307,
+  },
+  Object {
+    "end": 20309,
+    "score": 25,
+    "start": 20308,
+  },
+  Object {
+    "end": 20310,
+    "score": 25,
+    "start": 20309,
+  },
+  Object {
+    "end": 20311,
+    "score": 25,
+    "start": 20310,
+  },
+  Object {
+    "end": 20312,
+    "score": 25,
+    "start": 20311,
+  },
+  Object {
+    "end": 20313,
+    "score": 26,
+    "start": 20312,
+  },
+  Object {
+    "end": 20314,
+    "score": 25,
+    "start": 20313,
+  },
+  Object {
+    "end": 20315,
+    "score": 25,
+    "start": 20314,
+  },
+  Object {
+    "end": 20316,
+    "score": 25,
+    "start": 20315,
+  },
+  Object {
+    "end": 20317,
+    "score": 24,
+    "start": 20316,
+  },
+  Object {
+    "end": 20318,
+    "score": 24,
+    "start": 20317,
+  },
+  Object {
+    "end": 20319,
+    "score": 25,
+    "start": 20318,
+  },
+  Object {
+    "end": 20320,
+    "score": 24,
+    "start": 20319,
+  },
+  Object {
+    "end": 20321,
+    "score": 24,
+    "start": 20320,
+  },
+  Object {
+    "end": 20322,
+    "score": 24,
+    "start": 20321,
+  },
+  Object {
+    "end": 20323,
+    "score": 24,
+    "start": 20322,
+  },
+  Object {
+    "end": 20324,
+    "score": 24,
+    "start": 20323,
+  },
+  Object {
+    "end": 20325,
+    "score": 24,
+    "start": 20324,
+  },
+  Object {
+    "end": 20326,
+    "score": 24,
+    "start": 20325,
+  },
+  Object {
+    "end": 20327,
+    "score": 24,
+    "start": 20326,
+  },
+  Object {
+    "end": 20328,
+    "score": 24,
+    "start": 20327,
+  },
+  Object {
+    "end": 20329,
+    "score": 24,
+    "start": 20328,
+  },
+  Object {
+    "end": 20330,
+    "score": 24,
+    "start": 20329,
+  },
+  Object {
+    "end": 20331,
+    "score": 24,
+    "start": 20330,
+  },
+  Object {
+    "end": 20332,
+    "score": 23,
+    "start": 20331,
+  },
+  Object {
+    "end": 20333,
+    "score": 23,
+    "start": 20332,
+  },
+  Object {
+    "end": 20334,
+    "score": 23,
+    "start": 20333,
+  },
+  Object {
+    "end": 20335,
+    "score": 23,
+    "start": 20334,
+  },
+  Object {
+    "end": 20336,
+    "score": 24,
+    "start": 20335,
+  },
+  Object {
+    "end": 20337,
+    "score": 24,
+    "start": 20336,
+  },
+  Object {
+    "end": 20338,
+    "score": 24,
+    "start": 20337,
+  },
+  Object {
+    "end": 20339,
+    "score": 23,
+    "start": 20338,
+  },
+  Object {
+    "end": 20340,
+    "score": 23,
+    "start": 20339,
+  },
+  Object {
+    "end": 20341,
+    "score": 22,
+    "start": 20340,
+  },
+  Object {
+    "end": 20342,
+    "score": 23,
+    "start": 20341,
+  },
+  Object {
+    "end": 20343,
+    "score": 24,
+    "start": 20342,
+  },
+  Object {
+    "end": 20344,
+    "score": 25,
+    "start": 20343,
+  },
+  Object {
+    "end": 20345,
+    "score": 25,
+    "start": 20344,
+  },
+  Object {
+    "end": 20346,
+    "score": 25,
+    "start": 20345,
+  },
+  Object {
+    "end": 20347,
+    "score": 24,
+    "start": 20346,
+  },
+  Object {
+    "end": 20348,
+    "score": 24,
+    "start": 20347,
+  },
+  Object {
+    "end": 20349,
+    "score": 24,
+    "start": 20348,
+  },
+  Object {
+    "end": 20350,
+    "score": 24,
+    "start": 20349,
+  },
+  Object {
+    "end": 20351,
+    "score": 24,
+    "start": 20350,
+  },
+  Object {
+    "end": 20352,
+    "score": 24,
+    "start": 20351,
+  },
+  Object {
+    "end": 20353,
+    "score": 24,
+    "start": 20352,
+  },
+  Object {
+    "end": 20354,
+    "score": 25,
+    "start": 20353,
+  },
+  Object {
+    "end": 20355,
+    "score": 25,
+    "start": 20354,
+  },
+  Object {
+    "end": 20356,
+    "score": 25,
+    "start": 20355,
+  },
+  Object {
+    "end": 20357,
+    "score": 25,
+    "start": 20356,
+  },
+  Object {
+    "end": 20358,
+    "score": 25,
+    "start": 20357,
+  },
+  Object {
+    "end": 20359,
+    "score": 24,
+    "start": 20358,
+  },
+  Object {
+    "end": 20360,
+    "score": 24,
+    "start": 20359,
+  },
+  Object {
+    "end": 20361,
+    "score": 24,
+    "start": 20360,
+  },
+  Object {
+    "end": 20362,
+    "score": 24,
+    "start": 20361,
+  },
+  Object {
+    "end": 20363,
+    "score": 23,
+    "start": 20362,
+  },
+  Object {
+    "end": 20364,
+    "score": 23,
+    "start": 20363,
+  },
+  Object {
+    "end": 20365,
+    "score": 23,
+    "start": 20364,
+  },
+  Object {
+    "end": 20366,
+    "score": 22,
+    "start": 20365,
+  },
+  Object {
+    "end": 20367,
+    "score": 21,
+    "start": 20366,
+  },
+  Object {
+    "end": 20368,
+    "score": 21,
+    "start": 20367,
+  },
+  Object {
+    "end": 20369,
+    "score": 21,
+    "start": 20368,
+  },
+  Object {
+    "end": 20370,
+    "score": 22,
+    "start": 20369,
+  },
+  Object {
+    "end": 20371,
+    "score": 21,
+    "start": 20370,
+  },
+  Object {
+    "end": 20372,
+    "score": 21,
+    "start": 20371,
+  },
+  Object {
+    "end": 20373,
+    "score": 21,
+    "start": 20372,
+  },
+  Object {
+    "end": 20374,
+    "score": 20,
+    "start": 20373,
+  },
+  Object {
+    "end": 20375,
+    "score": 17,
+    "start": 20374,
+  },
+  Object {
+    "end": 20376,
+    "score": 17,
+    "start": 20375,
+  },
+  Object {
+    "end": 20377,
+    "score": 17,
+    "start": 20376,
+  },
+  Object {
+    "end": 20378,
+    "score": 17,
+    "start": 20377,
+  },
+  Object {
+    "end": 20379,
+    "score": 18,
+    "start": 20378,
+  },
+  Object {
+    "end": 20380,
+    "score": 17,
+    "start": 20379,
+  },
+  Object {
+    "end": 20381,
+    "score": 17,
+    "start": 20380,
+  },
+  Object {
+    "end": 20382,
+    "score": 17,
+    "start": 20381,
+  },
+  Object {
+    "end": 20383,
+    "score": 17,
+    "start": 20382,
+  },
+  Object {
+    "end": 20384,
+    "score": 17,
+    "start": 20383,
+  },
+  Object {
+    "end": 20385,
+    "score": 17,
+    "start": 20384,
+  },
+  Object {
+    "end": 20386,
+    "score": 17,
+    "start": 20385,
+  },
+  Object {
+    "end": 20387,
+    "score": 17,
+    "start": 20386,
+  },
+  Object {
+    "end": 20388,
+    "score": 17,
+    "start": 20387,
+  },
+  Object {
+    "end": 20389,
+    "score": 18,
+    "start": 20388,
+  },
+  Object {
+    "end": 20390,
+    "score": 18,
+    "start": 20389,
+  },
+  Object {
+    "end": 20391,
+    "score": 18,
+    "start": 20390,
+  },
+  Object {
+    "end": 20392,
+    "score": 18,
+    "start": 20391,
+  },
+  Object {
+    "end": 20393,
+    "score": 18,
+    "start": 20392,
+  },
+  Object {
+    "end": 20394,
+    "score": 18,
+    "start": 20393,
+  },
+  Object {
+    "end": 20395,
+    "score": 18,
+    "start": 20394,
+  },
+  Object {
+    "end": 20396,
+    "score": 18,
+    "start": 20395,
+  },
+  Object {
+    "end": 20397,
+    "score": 19,
+    "start": 20396,
+  },
+  Object {
+    "end": 20398,
+    "score": 17,
+    "start": 20397,
+  },
+  Object {
+    "end": 20399,
+    "score": 17,
+    "start": 20398,
+  },
+  Object {
+    "end": 20400,
+    "score": 20,
+    "start": 20399,
+  },
+  Object {
+    "end": 20401,
+    "score": 20,
+    "start": 20400,
+  },
+  Object {
+    "end": 20402,
+    "score": 19,
+    "start": 20401,
+  },
+  Object {
+    "end": 20403,
+    "score": 19,
+    "start": 20402,
+  },
+  Object {
+    "end": 20404,
+    "score": 19,
+    "start": 20403,
+  },
+  Object {
+    "end": 20405,
+    "score": 19,
+    "start": 20404,
+  },
+  Object {
+    "end": 20406,
+    "score": 19,
+    "start": 20405,
+  },
+  Object {
+    "end": 20407,
+    "score": 19,
+    "start": 20406,
+  },
+  Object {
+    "end": 20408,
+    "score": 20,
+    "start": 20407,
+  },
+  Object {
+    "end": 20409,
+    "score": 20,
+    "start": 20408,
+  },
+  Object {
+    "end": 20410,
+    "score": 20,
+    "start": 20409,
+  },
+  Object {
+    "end": 20411,
+    "score": 20,
+    "start": 20410,
+  },
+  Object {
+    "end": 20412,
+    "score": 20,
+    "start": 20411,
+  },
+  Object {
+    "end": 20413,
+    "score": 19,
+    "start": 20412,
+  },
+  Object {
+    "end": 20414,
+    "score": 19,
+    "start": 20413,
+  },
+  Object {
+    "end": 20415,
+    "score": 19,
+    "start": 20414,
+  },
+  Object {
+    "end": 20416,
+    "score": 19,
+    "start": 20415,
+  },
+  Object {
+    "end": 20417,
+    "score": 19,
+    "start": 20416,
+  },
+  Object {
+    "end": 20418,
+    "score": 19,
+    "start": 20417,
+  },
+  Object {
+    "end": 20419,
+    "score": 18,
+    "start": 20418,
+  },
+  Object {
+    "end": 20420,
+    "score": 18,
+    "start": 20419,
+  },
+  Object {
+    "end": 20421,
+    "score": 18,
+    "start": 20420,
+  },
+  Object {
+    "end": 20422,
+    "score": 18,
+    "start": 20421,
+  },
+  Object {
+    "end": 20423,
+    "score": 18,
+    "start": 20422,
+  },
+  Object {
+    "end": 20424,
+    "score": 18,
+    "start": 20423,
+  },
+  Object {
+    "end": 20425,
+    "score": 18,
+    "start": 20424,
+  },
+  Object {
+    "end": 20426,
+    "score": 18,
+    "start": 20425,
+  },
+  Object {
+    "end": 20427,
+    "score": 18,
+    "start": 20426,
+  },
+  Object {
+    "end": 20428,
+    "score": 18,
+    "start": 20427,
+  },
+  Object {
+    "end": 20429,
+    "score": 19,
+    "start": 20428,
+  },
+  Object {
+    "end": 20430,
+    "score": 19,
+    "start": 20429,
+  },
+  Object {
+    "end": 20431,
+    "score": 19,
+    "start": 20430,
+  },
+  Object {
+    "end": 20432,
+    "score": 19,
+    "start": 20431,
+  },
+  Object {
+    "end": 20433,
+    "score": 19,
+    "start": 20432,
+  },
+  Object {
+    "end": 20434,
+    "score": 19,
+    "start": 20433,
+  },
+  Object {
+    "end": 20435,
+    "score": 19,
+    "start": 20434,
+  },
+  Object {
+    "end": 20436,
+    "score": 18,
+    "start": 20435,
+  },
+  Object {
+    "end": 20437,
+    "score": 17,
+    "start": 20436,
+  },
+  Object {
+    "end": 20438,
+    "score": 17,
+    "start": 20437,
+  },
+  Object {
+    "end": 20439,
+    "score": 17,
+    "start": 20438,
+  },
+  Object {
+    "end": 20440,
+    "score": 17,
+    "start": 20439,
+  },
+  Object {
+    "end": 20441,
+    "score": 17,
+    "start": 20440,
+  },
+  Object {
+    "end": 20442,
+    "score": 17,
+    "start": 20441,
+  },
+  Object {
+    "end": 20443,
+    "score": 16,
+    "start": 20442,
+  },
+  Object {
+    "end": 20444,
+    "score": 15,
+    "start": 20443,
+  },
+  Object {
+    "end": 20445,
+    "score": 15,
+    "start": 20444,
+  },
+  Object {
+    "end": 20446,
+    "score": 15,
+    "start": 20445,
+  },
+  Object {
+    "end": 20447,
+    "score": 15,
+    "start": 20446,
+  },
+  Object {
+    "end": 20448,
+    "score": 15,
+    "start": 20447,
+  },
+  Object {
+    "end": 20449,
+    "score": 15,
+    "start": 20448,
+  },
+  Object {
+    "end": 20450,
+    "score": 15,
+    "start": 20449,
+  },
+  Object {
+    "end": 20451,
+    "score": 15,
+    "start": 20450,
+  },
+  Object {
+    "end": 20452,
+    "score": 15,
+    "start": 20451,
+  },
+  Object {
+    "end": 20453,
+    "score": 13,
+    "start": 20452,
+  },
+  Object {
+    "end": 20454,
+    "score": 12,
+    "start": 20453,
+  },
+  Object {
+    "end": 20455,
+    "score": 12,
+    "start": 20454,
+  },
+  Object {
+    "end": 20456,
+    "score": 12,
+    "start": 20455,
+  },
+  Object {
+    "end": 20457,
+    "score": 11,
+    "start": 20456,
+  },
+  Object {
+    "end": 20458,
+    "score": 11,
+    "start": 20457,
+  },
+  Object {
+    "end": 20459,
+    "score": 10,
+    "start": 20458,
+  },
+  Object {
+    "end": 20460,
+    "score": 10,
+    "start": 20459,
+  },
+  Object {
+    "end": 20461,
+    "score": 10,
+    "start": 20460,
+  },
+  Object {
+    "end": 20462,
+    "score": 10,
+    "start": 20461,
+  },
+  Object {
+    "end": 20463,
+    "score": 10,
+    "start": 20462,
+  },
+  Object {
+    "end": 20464,
+    "score": 10,
+    "start": 20463,
+  },
+  Object {
+    "end": 20465,
+    "score": 11,
+    "start": 20464,
+  },
+  Object {
+    "end": 20466,
+    "score": 12,
+    "start": 20465,
+  },
+  Object {
+    "end": 20467,
+    "score": 12,
+    "start": 20466,
+  },
+  Object {
+    "end": 20468,
+    "score": 12,
+    "start": 20467,
+  },
+  Object {
+    "end": 20469,
+    "score": 13,
+    "start": 20468,
+  },
+  Object {
+    "end": 20470,
+    "score": 12,
+    "start": 20469,
+  },
+  Object {
+    "end": 20471,
+    "score": 13,
+    "start": 20470,
+  },
+  Object {
+    "end": 20472,
+    "score": 13,
+    "start": 20471,
+  },
+  Object {
+    "end": 20473,
+    "score": 13,
+    "start": 20472,
+  },
+  Object {
+    "end": 20474,
+    "score": 13,
+    "start": 20473,
+  },
+  Object {
+    "end": 20475,
+    "score": 13,
+    "start": 20474,
+  },
+  Object {
+    "end": 20476,
+    "score": 13,
+    "start": 20475,
+  },
+  Object {
+    "end": 20477,
+    "score": 13,
+    "start": 20476,
+  },
+  Object {
+    "end": 20478,
+    "score": 13,
+    "start": 20477,
+  },
+  Object {
+    "end": 20479,
+    "score": 13,
+    "start": 20478,
+  },
+  Object {
+    "end": 20480,
+    "score": 13,
+    "start": 20479,
+  },
+  Object {
+    "end": 20481,
+    "score": 13,
+    "start": 20480,
+  },
+  Object {
+    "end": 20482,
+    "score": 13,
+    "start": 20481,
+  },
+  Object {
+    "end": 20000,
+    "score": 19,
+    "start": 19999,
+  },
+  Object {
+    "end": 20001,
+    "score": 19,
+    "start": 20000,
+  },
+  Object {
+    "end": 20002,
+    "score": 19,
+    "start": 20001,
+  },
+  Object {
+    "end": 20003,
+    "score": 18,
+    "start": 20002,
+  },
+  Object {
+    "end": 20004,
+    "score": 18,
+    "start": 20003,
+  },
+  Object {
+    "end": 20005,
+    "score": 18,
+    "start": 20004,
+  },
+  Object {
+    "end": 20006,
+    "score": 18,
+    "start": 20005,
+  },
+  Object {
+    "end": 20007,
+    "score": 18,
+    "start": 20006,
+  },
+  Object {
+    "end": 20008,
+    "score": 18,
+    "start": 20007,
+  },
+  Object {
+    "end": 20009,
+    "score": 18,
+    "start": 20008,
+  },
+  Object {
+    "end": 20010,
+    "score": 18,
+    "start": 20009,
+  },
+  Object {
+    "end": 20011,
+    "score": 19,
+    "start": 20010,
+  },
+  Object {
+    "end": 20012,
+    "score": 18,
+    "start": 20011,
+  },
+  Object {
+    "end": 20013,
+    "score": 17,
+    "start": 20012,
+  },
+  Object {
+    "end": 20014,
+    "score": 17,
+    "start": 20013,
+  },
+  Object {
+    "end": 20015,
+    "score": 16,
+    "start": 20014,
+  },
+  Object {
+    "end": 20016,
+    "score": 16,
+    "start": 20015,
+  },
+  Object {
+    "end": 20017,
+    "score": 18,
+    "start": 20016,
+  },
+  Object {
+    "end": 20018,
+    "score": 17,
+    "start": 20017,
+  },
+  Object {
+    "end": 20019,
+    "score": 17,
+    "start": 20018,
+  },
+  Object {
+    "end": 20020,
+    "score": 17,
+    "start": 20019,
+  },
+  Object {
+    "end": 20021,
+    "score": 17,
+    "start": 20020,
+  },
+  Object {
+    "end": 20022,
+    "score": 17,
+    "start": 20021,
+  },
+  Object {
+    "end": 20023,
+    "score": 18,
+    "start": 20022,
+  },
+  Object {
+    "end": 20024,
+    "score": 18,
+    "start": 20023,
+  },
+  Object {
+    "end": 20025,
+    "score": 18,
+    "start": 20024,
+  },
+  Object {
+    "end": 20026,
+    "score": 18,
+    "start": 20025,
+  },
+  Object {
+    "end": 20027,
+    "score": 18,
+    "start": 20026,
+  },
+  Object {
+    "end": 20028,
+    "score": 18,
+    "start": 20027,
+  },
+  Object {
+    "end": 20029,
+    "score": 17,
+    "start": 20028,
+  },
+  Object {
+    "end": 20030,
+    "score": 16,
+    "start": 20029,
+  },
+  Object {
+    "end": 20031,
+    "score": 16,
+    "start": 20030,
+  },
+  Object {
+    "end": 20032,
+    "score": 16,
+    "start": 20031,
+  },
+  Object {
+    "end": 20033,
+    "score": 17,
+    "start": 20032,
+  },
+  Object {
+    "end": 20034,
+    "score": 17,
+    "start": 20033,
+  },
+  Object {
+    "end": 20035,
+    "score": 17,
+    "start": 20034,
+  },
+  Object {
+    "end": 20036,
+    "score": 18,
+    "start": 20035,
+  },
+  Object {
+    "end": 20037,
+    "score": 17,
+    "start": 20036,
+  },
+  Object {
+    "end": 20038,
+    "score": 17,
+    "start": 20037,
+  },
+  Object {
+    "end": 20039,
+    "score": 17,
+    "start": 20038,
+  },
+  Object {
+    "end": 20040,
+    "score": 17,
+    "start": 20039,
+  },
+  Object {
+    "end": 20041,
+    "score": 16,
+    "start": 20040,
+  },
+  Object {
+    "end": 20042,
+    "score": 16,
+    "start": 20041,
+  },
+  Object {
+    "end": 20043,
+    "score": 16,
+    "start": 20042,
+  },
+  Object {
+    "end": 20044,
+    "score": 16,
+    "start": 20043,
+  },
+  Object {
+    "end": 20045,
+    "score": 17,
+    "start": 20044,
+  },
+  Object {
+    "end": 20046,
+    "score": 17,
+    "start": 20045,
+  },
+  Object {
+    "end": 20047,
+    "score": 17,
+    "start": 20046,
+  },
+  Object {
+    "end": 20048,
+    "score": 15,
+    "start": 20047,
+  },
+  Object {
+    "end": 20049,
+    "score": 14,
+    "start": 20048,
+  },
+  Object {
+    "end": 20050,
+    "score": 14,
+    "start": 20049,
+  },
+  Object {
+    "end": 20051,
+    "score": 14,
+    "start": 20050,
+  },
+  Object {
+    "end": 20052,
+    "score": 15,
+    "start": 20051,
+  },
+  Object {
+    "end": 20053,
+    "score": 15,
+    "start": 20052,
+  },
+  Object {
+    "end": 20054,
+    "score": 15,
+    "start": 20053,
+  },
+  Object {
+    "end": 20055,
+    "score": 14,
+    "start": 20054,
+  },
+  Object {
+    "end": 20056,
+    "score": 14,
+    "start": 20055,
+  },
+  Object {
+    "end": 20057,
+    "score": 15,
+    "start": 20056,
+  },
+  Object {
+    "end": 20058,
+    "score": 16,
+    "start": 20057,
+  },
+  Object {
+    "end": 20059,
+    "score": 17,
+    "start": 20058,
+  },
+  Object {
+    "end": 20060,
+    "score": 18,
+    "start": 20059,
+  },
+  Object {
+    "end": 20061,
+    "score": 17,
+    "start": 20060,
+  },
+  Object {
+    "end": 20062,
+    "score": 17,
+    "start": 20061,
+  },
+  Object {
+    "end": 20063,
+    "score": 16,
+    "start": 20062,
+  },
+  Object {
+    "end": 20064,
+    "score": 16,
+    "start": 20063,
+  },
+  Object {
+    "end": 20065,
+    "score": 16,
+    "start": 20064,
+  },
+  Object {
+    "end": 20066,
+    "score": 16,
+    "start": 20065,
+  },
+  Object {
+    "end": 20067,
+    "score": 17,
+    "start": 20066,
+  },
+  Object {
+    "end": 20068,
+    "score": 17,
+    "start": 20067,
+  },
+  Object {
+    "end": 20069,
+    "score": 17,
+    "start": 20068,
+  },
+  Object {
+    "end": 20070,
+    "score": 17,
+    "start": 20069,
+  },
+  Object {
+    "end": 20071,
+    "score": 17,
+    "start": 20070,
+  },
+  Object {
+    "end": 20072,
+    "score": 17,
+    "start": 20071,
+  },
+  Object {
+    "end": 20073,
+    "score": 17,
+    "start": 20072,
+  },
+  Object {
+    "end": 20074,
+    "score": 17,
+    "start": 20073,
+  },
+  Object {
+    "end": 20075,
+    "score": 19,
+    "start": 20074,
+  },
+  Object {
+    "end": 20076,
+    "score": 18,
+    "start": 20075,
+  },
+  Object {
+    "end": 20077,
+    "score": 18,
+    "start": 20076,
+  },
+  Object {
+    "end": 20078,
+    "score": 18,
+    "start": 20077,
+  },
+  Object {
+    "end": 20079,
+    "score": 18,
+    "start": 20078,
+  },
+  Object {
+    "end": 20080,
+    "score": 18,
+    "start": 20079,
+  },
+  Object {
+    "end": 20081,
+    "score": 18,
+    "start": 20080,
+  },
+  Object {
+    "end": 20082,
+    "score": 18,
+    "start": 20081,
+  },
+  Object {
+    "end": 20083,
+    "score": 18,
+    "start": 20082,
+  },
+  Object {
+    "end": 20084,
+    "score": 18,
+    "start": 20083,
+  },
+  Object {
+    "end": 20085,
+    "score": 18,
+    "start": 20084,
+  },
+  Object {
+    "end": 20086,
+    "score": 18,
+    "start": 20085,
+  },
+  Object {
+    "end": 20087,
+    "score": 17,
+    "start": 20086,
+  },
+  Object {
+    "end": 20088,
+    "score": 17,
+    "start": 20087,
+  },
+  Object {
+    "end": 20089,
+    "score": 17,
+    "start": 20088,
+  },
+  Object {
+    "end": 20090,
+    "score": 17,
+    "start": 20089,
+  },
+  Object {
+    "end": 20091,
+    "score": 17,
+    "start": 20090,
+  },
+  Object {
+    "end": 20092,
+    "score": 17,
+    "start": 20091,
+  },
+  Object {
+    "end": 20093,
+    "score": 17,
+    "start": 20092,
+  },
+  Object {
+    "end": 20094,
+    "score": 17,
+    "start": 20093,
+  },
+  Object {
+    "end": 20095,
+    "score": 17,
+    "start": 20094,
+  },
+  Object {
+    "end": 20096,
+    "score": 17,
+    "start": 20095,
+  },
+  Object {
+    "end": 20097,
+    "score": 17,
+    "start": 20096,
+  },
+  Object {
+    "end": 20098,
+    "score": 17,
+    "start": 20097,
+  },
+  Object {
+    "end": 20099,
+    "score": 17,
+    "start": 20098,
+  },
+  Object {
+    "end": 20100,
+    "score": 16,
+    "start": 20099,
+  },
+  Object {
+    "end": 20101,
+    "score": 16,
+    "start": 20100,
+  },
+  Object {
+    "end": 20102,
+    "score": 16,
+    "start": 20101,
+  },
+  Object {
+    "end": 20103,
+    "score": 16,
+    "start": 20102,
+  },
+  Object {
+    "end": 20104,
+    "score": 17,
+    "start": 20103,
+  },
+  Object {
+    "end": 20105,
+    "score": 17,
+    "start": 20104,
+  },
+  Object {
+    "end": 20106,
+    "score": 17,
+    "start": 20105,
+  },
+  Object {
+    "end": 20107,
+    "score": 18,
+    "start": 20106,
+  },
+  Object {
+    "end": 20108,
+    "score": 18,
+    "start": 20107,
+  },
+  Object {
+    "end": 20109,
+    "score": 18,
+    "start": 20108,
+  },
+  Object {
+    "end": 20110,
+    "score": 19,
+    "start": 20109,
+  },
+  Object {
+    "end": 20111,
+    "score": 18,
+    "start": 20110,
+  },
+  Object {
+    "end": 20112,
+    "score": 18,
+    "start": 20111,
+  },
+  Object {
+    "end": 20113,
+    "score": 18,
+    "start": 20112,
+  },
+  Object {
+    "end": 20114,
+    "score": 18,
+    "start": 20113,
+  },
+  Object {
+    "end": 20115,
+    "score": 18,
+    "start": 20114,
+  },
+  Object {
+    "end": 20116,
+    "score": 18,
+    "start": 20115,
+  },
+  Object {
+    "end": 20117,
+    "score": 16,
+    "start": 20116,
+  },
+  Object {
+    "end": 20118,
+    "score": 17,
+    "start": 20117,
+  },
+  Object {
+    "end": 20119,
+    "score": 17,
+    "start": 20118,
+  },
+  Object {
+    "end": 20120,
+    "score": 18,
+    "start": 20119,
+  },
+  Object {
+    "end": 20121,
+    "score": 20,
+    "start": 20120,
+  },
+  Object {
+    "end": 20122,
+    "score": 20,
+    "start": 20121,
+  },
+  Object {
+    "end": 20123,
+    "score": 19,
+    "start": 20122,
+  },
+  Object {
+    "end": 20124,
+    "score": 19,
+    "start": 20123,
+  },
+  Object {
+    "end": 20125,
+    "score": 19,
+    "start": 20124,
+  },
+  Object {
+    "end": 20126,
+    "score": 19,
+    "start": 20125,
+  },
+  Object {
+    "end": 20127,
+    "score": 19,
+    "start": 20126,
+  },
+  Object {
+    "end": 20128,
+    "score": 20,
+    "start": 20127,
+  },
+  Object {
+    "end": 20129,
+    "score": 20,
+    "start": 20128,
+  },
+  Object {
+    "end": 20130,
+    "score": 20,
+    "start": 20129,
+  },
+  Object {
+    "end": 20131,
+    "score": 20,
+    "start": 20130,
+  },
+  Object {
+    "end": 20132,
+    "score": 20,
+    "start": 20131,
+  },
+  Object {
+    "end": 20133,
+    "score": 19,
+    "start": 20132,
+  },
+  Object {
+    "end": 20134,
+    "score": 19,
+    "start": 20133,
+  },
+  Object {
+    "end": 20135,
+    "score": 19,
+    "start": 20134,
+  },
+  Object {
+    "end": 20136,
+    "score": 18,
+    "start": 20135,
+  },
+  Object {
+    "end": 20137,
+    "score": 19,
+    "start": 20136,
+  },
+  Object {
+    "end": 20138,
+    "score": 19,
+    "start": 20137,
+  },
+  Object {
+    "end": 20139,
+    "score": 22,
+    "start": 20138,
+  },
+  Object {
+    "end": 20140,
+    "score": 22,
+    "start": 20139,
+  },
+  Object {
+    "end": 20141,
+    "score": 23,
+    "start": 20140,
+  },
+  Object {
+    "end": 20142,
+    "score": 24,
+    "start": 20141,
+  },
+  Object {
+    "end": 20143,
+    "score": 24,
+    "start": 20142,
+  },
+  Object {
+    "end": 20144,
+    "score": 24,
+    "start": 20143,
+  },
+  Object {
+    "end": 20145,
+    "score": 24,
+    "start": 20144,
+  },
+  Object {
+    "end": 20146,
+    "score": 25,
+    "start": 20145,
+  },
+  Object {
+    "end": 20147,
+    "score": 25,
+    "start": 20146,
+  },
+  Object {
+    "end": 20148,
+    "score": 25,
+    "start": 20147,
+  },
+  Object {
+    "end": 20149,
+    "score": 25,
+    "start": 20148,
+  },
+  Object {
+    "end": 20150,
+    "score": 25,
+    "start": 20149,
+  },
+  Object {
+    "end": 20151,
+    "score": 25,
+    "start": 20150,
+  },
+  Object {
+    "end": 20152,
+    "score": 24,
+    "start": 20151,
+  },
+  Object {
+    "end": 20153,
+    "score": 24,
+    "start": 20152,
+  },
+  Object {
+    "end": 20154,
+    "score": 24,
+    "start": 20153,
+  },
+  Object {
+    "end": 20155,
+    "score": 24,
+    "start": 20154,
+  },
+  Object {
+    "end": 20156,
+    "score": 24,
+    "start": 20155,
+  },
+  Object {
+    "end": 20157,
+    "score": 23,
+    "start": 20156,
+  },
+  Object {
+    "end": 20158,
+    "score": 21,
+    "start": 20157,
+  },
+  Object {
+    "end": 20159,
+    "score": 21,
+    "start": 20158,
+  },
+  Object {
+    "end": 20160,
+    "score": 20,
+    "start": 20159,
+  },
+  Object {
+    "end": 20161,
+    "score": 20,
+    "start": 20160,
+  },
+  Object {
+    "end": 20162,
+    "score": 20,
+    "start": 20161,
+  },
+  Object {
+    "end": 20163,
+    "score": 20,
+    "start": 20162,
+  },
+  Object {
+    "end": 20164,
+    "score": 20,
+    "start": 20163,
+  },
+  Object {
+    "end": 20165,
+    "score": 20,
+    "start": 20164,
+  },
+  Object {
+    "end": 20166,
+    "score": 20,
+    "start": 20165,
+  },
+  Object {
+    "end": 20167,
+    "score": 19,
+    "start": 20166,
+  },
+  Object {
+    "end": 20168,
+    "score": 20,
+    "start": 20167,
+  },
+  Object {
+    "end": 20169,
+    "score": 20,
+    "start": 20168,
+  },
+  Object {
+    "end": 20170,
+    "score": 20,
+    "start": 20169,
+  },
+  Object {
+    "end": 20171,
+    "score": 20,
+    "start": 20170,
+  },
+  Object {
+    "end": 20172,
+    "score": 21,
+    "start": 20171,
+  },
+  Object {
+    "end": 20173,
+    "score": 21,
+    "start": 20172,
+  },
+  Object {
+    "end": 20174,
+    "score": 21,
+    "start": 20173,
+  },
+  Object {
+    "end": 20175,
+    "score": 19,
+    "start": 20174,
+  },
+  Object {
+    "end": 20176,
+    "score": 20,
+    "start": 20175,
+  },
+  Object {
+    "end": 20177,
+    "score": 20,
+    "start": 20176,
+  },
+  Object {
+    "end": 20178,
+    "score": 20,
+    "start": 20177,
+  },
+  Object {
+    "end": 20179,
+    "score": 20,
+    "start": 20178,
+  },
+  Object {
+    "end": 20180,
+    "score": 20,
+    "start": 20179,
+  },
+  Object {
+    "end": 20181,
+    "score": 21,
+    "start": 20180,
+  },
+  Object {
+    "end": 20182,
+    "score": 21,
+    "start": 20181,
+  },
+  Object {
+    "end": 20183,
+    "score": 21,
+    "start": 20182,
+  },
+  Object {
+    "end": 20184,
+    "score": 21,
+    "start": 20183,
+  },
+  Object {
+    "end": 20185,
+    "score": 21,
+    "start": 20184,
+  },
+  Object {
+    "end": 20186,
+    "score": 21,
+    "start": 20185,
+  },
+  Object {
+    "end": 20187,
+    "score": 21,
+    "start": 20186,
+  },
+  Object {
+    "end": 20188,
+    "score": 21,
+    "start": 20187,
+  },
+  Object {
+    "end": 20189,
+    "score": 22,
+    "start": 20188,
+  },
+  Object {
+    "end": 20190,
+    "score": 22,
+    "start": 20189,
+  },
+  Object {
+    "end": 20191,
+    "score": 22,
+    "start": 20190,
+  },
+  Object {
+    "end": 20192,
+    "score": 22,
+    "start": 20191,
+  },
+  Object {
+    "end": 20193,
+    "score": 22,
+    "start": 20192,
+  },
+  Object {
+    "end": 20194,
+    "score": 22,
+    "start": 20193,
+  },
+  Object {
+    "end": 20195,
+    "score": 22,
+    "start": 20194,
+  },
+  Object {
+    "end": 20196,
+    "score": 23,
+    "start": 20195,
+  },
+  Object {
+    "end": 20197,
+    "score": 24,
+    "start": 20196,
+  },
+  Object {
+    "end": 20198,
+    "score": 24,
+    "start": 20197,
+  },
+  Object {
+    "end": 20199,
+    "score": 24,
+    "start": 20198,
+  },
+  Object {
+    "end": 20200,
+    "score": 24,
+    "start": 20199,
+  },
+  Object {
+    "end": 20201,
+    "score": 24,
+    "start": 20200,
+  },
+  Object {
+    "end": 20202,
+    "score": 24,
+    "start": 20201,
+  },
+  Object {
+    "end": 20203,
+    "score": 24,
+    "start": 20202,
+  },
+  Object {
+    "end": 20204,
+    "score": 23,
+    "start": 20203,
+  },
+  Object {
+    "end": 20205,
+    "score": 23,
+    "start": 20204,
+  },
+  Object {
+    "end": 20206,
+    "score": 23,
+    "start": 20205,
+  },
+  Object {
+    "end": 20207,
+    "score": 22,
+    "start": 20206,
+  },
+  Object {
+    "end": 20208,
+    "score": 23,
+    "start": 20207,
+  },
+  Object {
+    "end": 20209,
+    "score": 23,
+    "start": 20208,
+  },
+  Object {
+    "end": 20210,
+    "score": 22,
+    "start": 20209,
+  },
+  Object {
+    "end": 20211,
+    "score": 22,
+    "start": 20210,
+  },
+  Object {
+    "end": 20212,
+    "score": 22,
+    "start": 20211,
+  },
+  Object {
+    "end": 20213,
+    "score": 22,
+    "start": 20212,
+  },
+  Object {
+    "end": 20214,
+    "score": 23,
+    "start": 20213,
+  },
+  Object {
+    "end": 20215,
+    "score": 23,
+    "start": 20214,
+  },
+  Object {
+    "end": 20216,
+    "score": 23,
+    "start": 20215,
+  },
+  Object {
+    "end": 20217,
+    "score": 24,
+    "start": 20216,
+  },
+  Object {
+    "end": 20218,
+    "score": 23,
+    "start": 20217,
+  },
+  Object {
+    "end": 20219,
+    "score": 23,
+    "start": 20218,
+  },
+  Object {
+    "end": 20220,
+    "score": 23,
+    "start": 20219,
+  },
+  Object {
+    "end": 20221,
+    "score": 21,
+    "start": 20220,
+  },
+  Object {
+    "end": 20222,
+    "score": 21,
+    "start": 20221,
+  },
+  Object {
+    "end": 20223,
+    "score": 21,
+    "start": 20222,
+  },
+  Object {
+    "end": 20224,
+    "score": 21,
+    "start": 20223,
+  },
+  Object {
+    "end": 20225,
+    "score": 21,
+    "start": 20224,
+  },
+  Object {
+    "end": 20226,
+    "score": 21,
+    "start": 20225,
+  },
+  Object {
+    "end": 20227,
+    "score": 21,
+    "start": 20226,
+  },
+  Object {
+    "end": 20228,
+    "score": 20,
+    "start": 20227,
+  },
+  Object {
+    "end": 20229,
+    "score": 20,
+    "start": 20228,
+  },
+  Object {
+    "end": 20230,
+    "score": 20,
+    "start": 20229,
+  },
+  Object {
+    "end": 20231,
+    "score": 20,
+    "start": 20230,
+  },
+  Object {
+    "end": 20232,
+    "score": 21,
+    "start": 20231,
+  },
+  Object {
+    "end": 20233,
+    "score": 21,
+    "start": 20232,
+  },
+  Object {
+    "end": 20234,
+    "score": 21,
+    "start": 20233,
+  },
+  Object {
+    "end": 20235,
+    "score": 21,
+    "start": 20234,
+  },
+  Object {
+    "end": 20236,
+    "score": 21,
+    "start": 20235,
+  },
+  Object {
+    "end": 20237,
+    "score": 21,
+    "start": 20236,
+  },
+  Object {
+    "end": 20238,
+    "score": 21,
+    "start": 20237,
+  },
+  Object {
+    "end": 20239,
+    "score": 19,
+    "start": 20238,
+  },
+  Object {
+    "end": 20240,
+    "score": 19,
+    "start": 20239,
+  },
+  Object {
+    "end": 20241,
+    "score": 19,
+    "start": 20240,
+  },
+  Object {
+    "end": 20242,
+    "score": 18,
+    "start": 20241,
+  },
+  Object {
+    "end": 20243,
+    "score": 18,
+    "start": 20242,
+  },
+  Object {
+    "end": 20244,
+    "score": 18,
+    "start": 20243,
+  },
+  Object {
+    "end": 20245,
+    "score": 17,
+    "start": 20244,
+  },
+  Object {
+    "end": 20246,
+    "score": 16,
+    "start": 20245,
+  },
+  Object {
+    "end": 20247,
+    "score": 17,
+    "start": 20246,
+  },
+  Object {
+    "end": 20248,
+    "score": 17,
+    "start": 20247,
+  },
+  Object {
+    "end": 20249,
+    "score": 17,
+    "start": 20248,
+  },
+  Object {
+    "end": 20250,
+    "score": 17,
+    "start": 20249,
+  },
+  Object {
+    "end": 20251,
+    "score": 17,
+    "start": 20250,
+  },
+  Object {
+    "end": 20252,
+    "score": 17,
+    "start": 20251,
+  },
+  Object {
+    "end": 20253,
+    "score": 19,
+    "start": 20252,
+  },
+  Object {
+    "end": 20254,
+    "score": 19,
+    "start": 20253,
+  },
+  Object {
+    "end": 20255,
+    "score": 19,
+    "start": 20254,
+  },
+  Object {
+    "end": 20256,
+    "score": 19,
+    "start": 20255,
+  },
+  Object {
+    "end": 20257,
+    "score": 20,
+    "start": 20256,
+  },
+  Object {
+    "end": 20258,
+    "score": 20,
+    "start": 20257,
+  },
+  Object {
+    "end": 20259,
+    "score": 21,
+    "start": 20258,
+  },
+  Object {
+    "end": 20260,
+    "score": 21,
+    "start": 20259,
+  },
+  Object {
+    "end": 20261,
+    "score": 21,
+    "start": 20260,
+  },
+  Object {
+    "end": 20262,
+    "score": 21,
+    "start": 20261,
+  },
+  Object {
+    "end": 20263,
+    "score": 22,
+    "start": 20262,
+  },
+  Object {
+    "end": 20264,
+    "score": 22,
+    "start": 20263,
+  },
+  Object {
+    "end": 20265,
+    "score": 22,
+    "start": 20264,
+  },
+  Object {
+    "end": 20266,
+    "score": 23,
+    "start": 20265,
+  },
+  Object {
+    "end": 20267,
+    "score": 24,
+    "start": 20266,
+  },
+  Object {
+    "end": 20268,
+    "score": 23,
+    "start": 20267,
+  },
+  Object {
+    "end": 20269,
+    "score": 23,
+    "start": 20268,
+  },
+  Object {
+    "end": 20270,
+    "score": 23,
+    "start": 20269,
+  },
+  Object {
+    "end": 20271,
+    "score": 24,
+    "start": 20270,
+  },
+  Object {
+    "end": 20272,
+    "score": 23,
+    "start": 20271,
+  },
+  Object {
+    "end": 20273,
+    "score": 23,
+    "start": 20272,
+  },
+  Object {
+    "end": 20274,
+    "score": 24,
+    "start": 20273,
+  },
+  Object {
+    "end": 20275,
+    "score": 27,
+    "start": 20274,
+  },
+  Object {
+    "end": 20276,
+    "score": 26,
+    "start": 20275,
+  },
+  Object {
+    "end": 20277,
+    "score": 26,
+    "start": 20276,
+  },
+  Object {
+    "end": 20278,
+    "score": 26,
+    "start": 20277,
+  },
+  Object {
+    "end": 20279,
+    "score": 26,
+    "start": 20278,
+  },
+  Object {
+    "end": 20280,
+    "score": 27,
+    "start": 20279,
+  },
+  Object {
+    "end": 20281,
+    "score": 26,
+    "start": 20280,
+  },
+  Object {
+    "end": 20282,
+    "score": 26,
+    "start": 20281,
+  },
+  Object {
+    "end": 20283,
+    "score": 26,
+    "start": 20282,
+  },
+  Object {
+    "end": 20284,
+    "score": 26,
+    "start": 20283,
+  },
+  Object {
+    "end": 20285,
+    "score": 26,
+    "start": 20284,
+  },
+  Object {
+    "end": 20286,
+    "score": 26,
+    "start": 20285,
+  },
+  Object {
+    "end": 20287,
+    "score": 26,
+    "start": 20286,
+  },
+  Object {
+    "end": 20288,
+    "score": 26,
+    "start": 20287,
+  },
+  Object {
+    "end": 20289,
+    "score": 25,
+    "start": 20288,
+  },
+  Object {
+    "end": 20290,
+    "score": 25,
+    "start": 20289,
+  },
+  Object {
+    "end": 20291,
+    "score": 25,
+    "start": 20290,
+  },
+  Object {
+    "end": 20292,
+    "score": 25,
+    "start": 20291,
+  },
+  Object {
+    "end": 20293,
+    "score": 25,
+    "start": 20292,
+  },
+  Object {
+    "end": 20294,
+    "score": 25,
+    "start": 20293,
+  },
+  Object {
+    "end": 20295,
+    "score": 25,
+    "start": 20294,
+  },
+  Object {
+    "end": 20296,
+    "score": 24,
+    "start": 20295,
+  },
+  Object {
+    "end": 20297,
+    "score": 23,
+    "start": 20296,
+  },
+  Object {
+    "end": 20298,
+    "score": 25,
+    "start": 20297,
+  },
+  Object {
+    "end": 20299,
+    "score": 25,
+    "start": 20298,
+  },
+  Object {
+    "end": 20300,
+    "score": 25,
+    "start": 20299,
+  },
+  Object {
+    "end": 20301,
+    "score": 25,
+    "start": 20300,
+  },
+  Object {
+    "end": 20302,
+    "score": 26,
+    "start": 20301,
+  },
+  Object {
+    "end": 20303,
+    "score": 26,
+    "start": 20302,
+  },
+  Object {
+    "end": 20304,
+    "score": 26,
+    "start": 20303,
+  },
+  Object {
+    "end": 20305,
+    "score": 26,
+    "start": 20304,
+  },
+  Object {
+    "end": 20306,
+    "score": 26,
+    "start": 20305,
+  },
+  Object {
+    "end": 20307,
+    "score": 26,
+    "start": 20306,
+  },
+  Object {
+    "end": 20308,
+    "score": 25,
+    "start": 20307,
+  },
+  Object {
+    "end": 20309,
+    "score": 25,
+    "start": 20308,
+  },
+  Object {
+    "end": 20310,
+    "score": 25,
+    "start": 20309,
+  },
+  Object {
+    "end": 20311,
+    "score": 25,
+    "start": 20310,
+  },
+  Object {
+    "end": 20312,
+    "score": 25,
+    "start": 20311,
+  },
+  Object {
+    "end": 20313,
+    "score": 26,
+    "start": 20312,
+  },
+  Object {
+    "end": 20314,
+    "score": 25,
+    "start": 20313,
+  },
+  Object {
+    "end": 20315,
+    "score": 25,
+    "start": 20314,
+  },
+  Object {
+    "end": 20316,
+    "score": 25,
+    "start": 20315,
+  },
+  Object {
+    "end": 20317,
+    "score": 24,
+    "start": 20316,
+  },
+  Object {
+    "end": 20318,
+    "score": 24,
+    "start": 20317,
+  },
+  Object {
+    "end": 20319,
+    "score": 25,
+    "start": 20318,
+  },
+  Object {
+    "end": 20320,
+    "score": 24,
+    "start": 20319,
+  },
+  Object {
+    "end": 20321,
+    "score": 24,
+    "start": 20320,
+  },
+  Object {
+    "end": 20322,
+    "score": 24,
+    "start": 20321,
+  },
+  Object {
+    "end": 20323,
+    "score": 24,
+    "start": 20322,
+  },
+  Object {
+    "end": 20324,
+    "score": 24,
+    "start": 20323,
+  },
+  Object {
+    "end": 20325,
+    "score": 24,
+    "start": 20324,
+  },
+  Object {
+    "end": 20326,
+    "score": 24,
+    "start": 20325,
+  },
+  Object {
+    "end": 20327,
+    "score": 24,
+    "start": 20326,
+  },
+  Object {
+    "end": 20328,
+    "score": 24,
+    "start": 20327,
+  },
+  Object {
+    "end": 20329,
+    "score": 24,
+    "start": 20328,
+  },
+  Object {
+    "end": 20330,
+    "score": 24,
+    "start": 20329,
+  },
+  Object {
+    "end": 20331,
+    "score": 24,
+    "start": 20330,
+  },
+  Object {
+    "end": 20332,
+    "score": 23,
+    "start": 20331,
+  },
+  Object {
+    "end": 20333,
+    "score": 23,
+    "start": 20332,
+  },
+  Object {
+    "end": 20334,
+    "score": 23,
+    "start": 20333,
+  },
+  Object {
+    "end": 20335,
+    "score": 23,
+    "start": 20334,
+  },
+  Object {
+    "end": 20336,
+    "score": 24,
+    "start": 20335,
+  },
+  Object {
+    "end": 20337,
+    "score": 24,
+    "start": 20336,
+  },
+  Object {
+    "end": 20338,
+    "score": 24,
+    "start": 20337,
+  },
+  Object {
+    "end": 20339,
+    "score": 23,
+    "start": 20338,
+  },
+  Object {
+    "end": 20340,
+    "score": 23,
+    "start": 20339,
+  },
+  Object {
+    "end": 20341,
+    "score": 22,
+    "start": 20340,
+  },
+  Object {
+    "end": 20342,
+    "score": 23,
+    "start": 20341,
+  },
+  Object {
+    "end": 20343,
+    "score": 24,
+    "start": 20342,
+  },
+  Object {
+    "end": 20344,
+    "score": 25,
+    "start": 20343,
+  },
+  Object {
+    "end": 20345,
+    "score": 25,
+    "start": 20344,
+  },
+  Object {
+    "end": 20346,
+    "score": 25,
+    "start": 20345,
+  },
+  Object {
+    "end": 20347,
+    "score": 24,
+    "start": 20346,
+  },
+  Object {
+    "end": 20348,
+    "score": 24,
+    "start": 20347,
+  },
+  Object {
+    "end": 20349,
+    "score": 24,
+    "start": 20348,
+  },
+  Object {
+    "end": 20350,
+    "score": 24,
+    "start": 20349,
+  },
+  Object {
+    "end": 20351,
+    "score": 24,
+    "start": 20350,
+  },
+  Object {
+    "end": 20352,
+    "score": 24,
+    "start": 20351,
+  },
+  Object {
+    "end": 20353,
+    "score": 24,
+    "start": 20352,
+  },
+  Object {
+    "end": 20354,
+    "score": 25,
+    "start": 20353,
+  },
+  Object {
+    "end": 20355,
+    "score": 25,
+    "start": 20354,
+  },
+  Object {
+    "end": 20356,
+    "score": 25,
+    "start": 20355,
+  },
+  Object {
+    "end": 20357,
+    "score": 25,
+    "start": 20356,
+  },
+  Object {
+    "end": 20358,
+    "score": 25,
+    "start": 20357,
+  },
+  Object {
+    "end": 20359,
+    "score": 24,
+    "start": 20358,
+  },
+  Object {
+    "end": 20360,
+    "score": 24,
+    "start": 20359,
+  },
+  Object {
+    "end": 20361,
+    "score": 24,
+    "start": 20360,
+  },
+  Object {
+    "end": 20362,
+    "score": 24,
+    "start": 20361,
+  },
+  Object {
+    "end": 20363,
+    "score": 23,
+    "start": 20362,
+  },
+  Object {
+    "end": 20364,
+    "score": 23,
+    "start": 20363,
+  },
+  Object {
+    "end": 20365,
+    "score": 23,
+    "start": 20364,
+  },
+  Object {
+    "end": 20366,
+    "score": 22,
+    "start": 20365,
+  },
+  Object {
+    "end": 20367,
+    "score": 21,
+    "start": 20366,
+  },
+  Object {
+    "end": 20368,
+    "score": 21,
+    "start": 20367,
+  },
+  Object {
+    "end": 20369,
+    "score": 21,
+    "start": 20368,
+  },
+  Object {
+    "end": 20370,
+    "score": 22,
+    "start": 20369,
+  },
+  Object {
+    "end": 20371,
+    "score": 21,
+    "start": 20370,
+  },
+  Object {
+    "end": 20372,
+    "score": 21,
+    "start": 20371,
+  },
+  Object {
+    "end": 20373,
+    "score": 21,
+    "start": 20372,
+  },
+  Object {
+    "end": 20374,
+    "score": 20,
+    "start": 20373,
+  },
+  Object {
+    "end": 20375,
+    "score": 17,
+    "start": 20374,
+  },
+  Object {
+    "end": 20376,
+    "score": 17,
+    "start": 20375,
+  },
+  Object {
+    "end": 20377,
+    "score": 17,
+    "start": 20376,
+  },
+  Object {
+    "end": 20378,
+    "score": 17,
+    "start": 20377,
+  },
+  Object {
+    "end": 20379,
+    "score": 18,
+    "start": 20378,
+  },
+  Object {
+    "end": 20380,
+    "score": 17,
+    "start": 20379,
+  },
+  Object {
+    "end": 20381,
+    "score": 17,
+    "start": 20380,
+  },
+  Object {
+    "end": 20382,
+    "score": 17,
+    "start": 20381,
+  },
+  Object {
+    "end": 20383,
+    "score": 17,
+    "start": 20382,
+  },
+  Object {
+    "end": 20384,
+    "score": 17,
+    "start": 20383,
+  },
+  Object {
+    "end": 20385,
+    "score": 17,
+    "start": 20384,
+  },
+  Object {
+    "end": 20386,
+    "score": 17,
+    "start": 20385,
+  },
+  Object {
+    "end": 20387,
+    "score": 17,
+    "start": 20386,
+  },
+  Object {
+    "end": 20388,
+    "score": 17,
+    "start": 20387,
+  },
+  Object {
+    "end": 20389,
+    "score": 18,
+    "start": 20388,
+  },
+  Object {
+    "end": 20390,
+    "score": 18,
+    "start": 20389,
+  },
+  Object {
+    "end": 20391,
+    "score": 18,
+    "start": 20390,
+  },
+  Object {
+    "end": 20392,
+    "score": 18,
+    "start": 20391,
+  },
+  Object {
+    "end": 20393,
+    "score": 18,
+    "start": 20392,
+  },
+  Object {
+    "end": 20394,
+    "score": 18,
+    "start": 20393,
+  },
+  Object {
+    "end": 20395,
+    "score": 18,
+    "start": 20394,
+  },
+  Object {
+    "end": 20396,
+    "score": 18,
+    "start": 20395,
+  },
+  Object {
+    "end": 20397,
+    "score": 19,
+    "start": 20396,
+  },
+  Object {
+    "end": 20398,
+    "score": 17,
+    "start": 20397,
+  },
+  Object {
+    "end": 20399,
+    "score": 17,
+    "start": 20398,
+  },
+  Object {
+    "end": 20400,
+    "score": 20,
+    "start": 20399,
+  },
+  Object {
+    "end": 20401,
+    "score": 20,
+    "start": 20400,
+  },
+  Object {
+    "end": 20402,
+    "score": 19,
+    "start": 20401,
+  },
+  Object {
+    "end": 20403,
+    "score": 19,
+    "start": 20402,
+  },
+  Object {
+    "end": 20404,
+    "score": 19,
+    "start": 20403,
+  },
+  Object {
+    "end": 20405,
+    "score": 19,
+    "start": 20404,
+  },
+  Object {
+    "end": 20406,
+    "score": 19,
+    "start": 20405,
+  },
+  Object {
+    "end": 20407,
+    "score": 19,
+    "start": 20406,
+  },
+  Object {
+    "end": 20408,
+    "score": 20,
+    "start": 20407,
+  },
+  Object {
+    "end": 20409,
+    "score": 20,
+    "start": 20408,
+  },
+  Object {
+    "end": 20410,
+    "score": 20,
+    "start": 20409,
+  },
+  Object {
+    "end": 20411,
+    "score": 20,
+    "start": 20410,
+  },
+  Object {
+    "end": 20412,
+    "score": 20,
+    "start": 20411,
+  },
+  Object {
+    "end": 20413,
+    "score": 19,
+    "start": 20412,
+  },
+  Object {
+    "end": 20414,
+    "score": 19,
+    "start": 20413,
+  },
+  Object {
+    "end": 20415,
+    "score": 19,
+    "start": 20414,
+  },
+  Object {
+    "end": 20416,
+    "score": 19,
+    "start": 20415,
+  },
+  Object {
+    "end": 20417,
+    "score": 19,
+    "start": 20416,
+  },
+  Object {
+    "end": 20418,
+    "score": 19,
+    "start": 20417,
+  },
+  Object {
+    "end": 20419,
+    "score": 18,
+    "start": 20418,
+  },
+  Object {
+    "end": 20420,
+    "score": 18,
+    "start": 20419,
+  },
+  Object {
+    "end": 20421,
+    "score": 18,
+    "start": 20420,
+  },
+  Object {
+    "end": 20422,
+    "score": 18,
+    "start": 20421,
+  },
+  Object {
+    "end": 20423,
+    "score": 18,
+    "start": 20422,
+  },
+  Object {
+    "end": 20424,
+    "score": 18,
+    "start": 20423,
+  },
+  Object {
+    "end": 20425,
+    "score": 18,
+    "start": 20424,
+  },
+  Object {
+    "end": 20426,
+    "score": 18,
+    "start": 20425,
+  },
+  Object {
+    "end": 20427,
+    "score": 18,
+    "start": 20426,
+  },
+  Object {
+    "end": 20428,
+    "score": 18,
+    "start": 20427,
+  },
+  Object {
+    "end": 20429,
+    "score": 19,
+    "start": 20428,
+  },
+  Object {
+    "end": 20430,
+    "score": 19,
+    "start": 20429,
+  },
+  Object {
+    "end": 20431,
+    "score": 19,
+    "start": 20430,
+  },
+  Object {
+    "end": 20432,
+    "score": 19,
+    "start": 20431,
+  },
+  Object {
+    "end": 20433,
+    "score": 19,
+    "start": 20432,
+  },
+  Object {
+    "end": 20434,
+    "score": 19,
+    "start": 20433,
+  },
+  Object {
+    "end": 20435,
+    "score": 19,
+    "start": 20434,
+  },
+  Object {
+    "end": 20436,
+    "score": 18,
+    "start": 20435,
+  },
+  Object {
+    "end": 20437,
+    "score": 17,
+    "start": 20436,
+  },
+  Object {
+    "end": 20438,
+    "score": 17,
+    "start": 20437,
+  },
+  Object {
+    "end": 20439,
+    "score": 17,
+    "start": 20438,
+  },
+  Object {
+    "end": 20440,
+    "score": 17,
+    "start": 20439,
+  },
+  Object {
+    "end": 20441,
+    "score": 17,
+    "start": 20440,
+  },
+  Object {
+    "end": 20442,
+    "score": 17,
+    "start": 20441,
+  },
+  Object {
+    "end": 20443,
+    "score": 16,
+    "start": 20442,
+  },
+  Object {
+    "end": 20444,
+    "score": 15,
+    "start": 20443,
+  },
+  Object {
+    "end": 20445,
+    "score": 15,
+    "start": 20444,
+  },
+  Object {
+    "end": 20446,
+    "score": 15,
+    "start": 20445,
+  },
+  Object {
+    "end": 20447,
+    "score": 15,
+    "start": 20446,
+  },
+  Object {
+    "end": 20448,
+    "score": 15,
+    "start": 20447,
+  },
+  Object {
+    "end": 20449,
+    "score": 15,
+    "start": 20448,
+  },
+  Object {
+    "end": 20450,
+    "score": 15,
+    "start": 20449,
+  },
+  Object {
+    "end": 20451,
+    "score": 15,
+    "start": 20450,
+  },
+  Object {
+    "end": 20452,
+    "score": 15,
+    "start": 20451,
+  },
+  Object {
+    "end": 20453,
+    "score": 13,
+    "start": 20452,
+  },
+  Object {
+    "end": 20454,
+    "score": 12,
+    "start": 20453,
+  },
+  Object {
+    "end": 20455,
+    "score": 12,
+    "start": 20454,
+  },
+  Object {
+    "end": 20456,
+    "score": 12,
+    "start": 20455,
+  },
+  Object {
+    "end": 20457,
+    "score": 11,
+    "start": 20456,
+  },
+  Object {
+    "end": 20458,
+    "score": 11,
+    "start": 20457,
+  },
+  Object {
+    "end": 20459,
+    "score": 10,
+    "start": 20458,
+  },
+  Object {
+    "end": 20460,
+    "score": 10,
+    "start": 20459,
+  },
+  Object {
+    "end": 20461,
+    "score": 10,
+    "start": 20460,
+  },
+  Object {
+    "end": 20462,
+    "score": 10,
+    "start": 20461,
+  },
+  Object {
+    "end": 20463,
+    "score": 10,
+    "start": 20462,
+  },
+  Object {
+    "end": 20464,
+    "score": 10,
+    "start": 20463,
+  },
+  Object {
+    "end": 20465,
+    "score": 11,
+    "start": 20464,
+  },
+  Object {
+    "end": 20466,
+    "score": 12,
+    "start": 20465,
+  },
+  Object {
+    "end": 20467,
+    "score": 12,
+    "start": 20466,
+  },
+  Object {
+    "end": 20468,
+    "score": 12,
+    "start": 20467,
+  },
+  Object {
+    "end": 20469,
+    "score": 13,
+    "start": 20468,
+  },
+  Object {
+    "end": 20470,
+    "score": 12,
+    "start": 20469,
+  },
+  Object {
+    "end": 20471,
+    "score": 13,
+    "start": 20470,
+  },
+  Object {
+    "end": 20472,
+    "score": 13,
+    "start": 20471,
+  },
+  Object {
+    "end": 20473,
+    "score": 13,
+    "start": 20472,
+  },
+  Object {
+    "end": 20474,
+    "score": 13,
+    "start": 20473,
+  },
+  Object {
+    "end": 20475,
+    "score": 13,
+    "start": 20474,
+  },
+  Object {
+    "end": 20476,
+    "score": 13,
+    "start": 20475,
+  },
+  Object {
+    "end": 20477,
+    "score": 13,
+    "start": 20476,
+  },
+  Object {
+    "end": 20478,
+    "score": 13,
+    "start": 20477,
+  },
+  Object {
+    "end": 20479,
+    "score": 13,
+    "start": 20478,
+  },
+  Object {
+    "end": 20480,
+    "score": 13,
+    "start": 20479,
+  },
+  Object {
+    "end": 20481,
+    "score": 13,
+    "start": 20480,
+  },
+  Object {
+    "end": 20482,
+    "score": 13,
+    "start": 20481,
+  },
+]
+`;
+
 exports[`bigwig formats loads a larger bigwig file 1`] = `
 Array [
   Object {
