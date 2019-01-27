@@ -1,6 +1,5 @@
 import BigWig from '../src/bigwig'
 import LocalFile from '../src/localFile'
-import RemoteFile from '../src/remoteFile'
 
 describe('bigwig formats', () => {
   it('loads small bigwig file', async () => {
