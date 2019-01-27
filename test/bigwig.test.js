@@ -1,5 +1,3 @@
-import "regenerator-runtime/runtime"
-
 import BigWig from '../src/bigwig'
 import LocalFile from '../src/localFile'
 import RemoteFile from '../src/remoteFile'

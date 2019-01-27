@@ -1,5 +1,3 @@
-import "regenerator-runtime/runtime"
-
 import BigBed from '../src/bigbed'
 import LocalFile from '../src/localFile'
 

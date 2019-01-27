@@ -1,5 +1,6 @@
-const fetch = require('cross-fetch')
 import BufferCache from './bufferCache'
+
+const fetch = require('cross-fetch')
 
 export default class RemoteFile {
   constructor(source) {
@@ -66,4 +67,3 @@ export default class RemoteFile {
     return this.savedStat
   }
 }
-

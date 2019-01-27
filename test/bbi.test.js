@@ -1,5 +1,3 @@
-import "regenerator-runtime/runtime"
-
 import BBI from '../src/bbi'
 import LocalFile from '../src/localFile'
 

@@ -309,4 +309,3 @@ export default class BBIFile {
     return this.unzoomedView
   }
 }
-
