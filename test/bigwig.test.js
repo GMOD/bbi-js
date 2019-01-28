@@ -21,7 +21,7 @@ describe('bigwig formats', () => {
       filehandle: new LocalFile(require.resolve('./data/volvox.bw')),
     })
     const feats5 = await ti.getFeatures('ctgA', 20000, 21000)
-    expect(feats5.slice(10,20)).toMatchSnapshot()
+    expect(feats5.slice(10, 20)).toMatchSnapshot()
   })
 
   it('missing data', async () => {
@@ -30,8 +30,8 @@ describe('bigwig formats', () => {
     })
     const feats = await ti.getFeatures('ctgA', 4200, 5600)
     expect(feats.length).toEqual(1401)
-    expect(feats.slice(10,20)).toMatchSnapshot()
-    expect(feats.slice(1000,1010)).toMatchSnapshot()
+    expect(feats.slice(10, 20)).toMatchSnapshot()
+    expect(feats.slice(1000, 1010)).toMatchSnapshot()
   })
 
   it('loads a larger bigwig file at different scales', async () => {
@@ -59,7 +59,7 @@ describe('bigwig formats', () => {
   it('performs regularization', async () => {
     const ti = new BigWig({
       filehandle: new LocalFile(require.resolve('./data/volvox.bw')),
-      renameRefSeqs: ref => ref.replace('contig','ctg')
+      renameRefSeqs: ref => ref.replace('contig', 'ctg'),
     })
     const feats = await ti.getFeatures('contigA', 4200, 5600)
     expect(feats.length).toEqual(1401)
@@ -72,7 +72,7 @@ describe('bigwig formats', () => {
     const feats = await ti.getFeatures('GK000001.2', 1000000, 1001000)
 
     // match bigWigToBedGraph output approximately, the start and ends are not clipped like bedGraphToBigWig does though
-    var ret = `GK000001.2	999003	1000189	0
+    const ret = `GK000001.2	999003	1000189	0
     GK000001.2	1000189	1000210	1
     GK000001.2	1000210	1000245	2
     GK000001.2	1000245	1000276	1
@@ -81,18 +81,16 @@ describe('bigwig formats', () => {
     GK000001.2	1000803	1000933	0
     GK000001.2	1000933	1000972	2
     GK000001.2	1000972	1000977	1
-    GK000001.2	1000977	1001000	0`.split('\n').map(s => {
-      const ret = s.split('\t')
-      return {
-        start: +ret[1],
-        end: +ret[2],
-        score: +ret[3]
-      }
-    })
+    GK000001.2	1000977	1001000	0`
+      .split('\n')
+      .map(s => {
+        const r = s.split('\t')
+        return {
+          start: +r[1],
+          end: +r[2],
+          score: +r[3],
+        }
+      })
     expect(feats).toEqual(ret)
   })
-
-
 })
-
-
