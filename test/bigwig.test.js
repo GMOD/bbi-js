@@ -21,7 +21,7 @@ describe('bigwig formats', () => {
       filehandle: new LocalFile(require.resolve('./data/volvox.bw')),
     })
     const feats5 = await ti.getFeatures('ctgA', 20000, 21000)
-    expect(feats5).toMatchSnapshot()
+    expect(feats5.slice(10,20)).toMatchSnapshot()
   })
 
   it('missing data', async () => {
@@ -29,7 +29,10 @@ describe('bigwig formats', () => {
       filehandle: new LocalFile(require.resolve('./data/volvox.bw')),
     })
     const feats5 = await ti.getFeatures('ctgA', 4200, 5600)
-    expect(feats5).toMatchSnapshot()
+    console.log(feats5.length)
+    expect(feats5.length).toEqual(1402)
+    expect(feats5.slice(10,20)).toMatchSnapshot()
+    expect(feats5.slice(1000,1010)).toMatchSnapshot()
   })
 
   it('loads a larger bigwig file', async () => {
@@ -39,6 +42,18 @@ describe('bigwig formats', () => {
     const feats1 = await ti.getFeatures('GK000001.2', 2000000, 2100000, {
       scale: 1,
     })
-    expect(feats1).toMatchSnapshot()
+    const feats2 = await ti.getFeatures('GK000001.2', 2000000, 2100000, {
+      scale: 0.01,
+    })
+    const feats3 = await ti.getFeatures('GK000001.2', 2000000, 2100000, {
+      scale: 0.001,
+    })
+    const feats4 = await ti.getFeatures('GK000001.2', 2000000, 2100000, {
+      scale: 0.001,
+    })
+    expect(feats1.slice(10, 20)).toMatchSnapshot()
+    expect(feats2.slice(10, 20)).toMatchSnapshot()
+    expect(feats3.slice(10, 20)).toMatchSnapshot()
+    expect(feats4.slice(10, 20)).toMatchSnapshot()
   })
 })
