@@ -199,7 +199,7 @@ export default class BBIFile {
           const refRec = { name: key, id: refId, length: refSize }
 
           // dlog(key + ':' + refId + ',' + refSize);
-          refsByName[key] = refRec
+          refsByName[this.renameRefSeq(key)] = refRec
           refsByNumber[refId] = refRec
         } else {
           // parse index node

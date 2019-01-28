@@ -28,11 +28,10 @@ describe('bigwig formats', () => {
     const ti = new BigWig({
       filehandle: new LocalFile(require.resolve('./data/volvox.bw')),
     })
-    const feats5 = await ti.getFeatures('ctgA', 4200, 5600)
-    console.log(feats5.length)
-    expect(feats5.length).toEqual(1402)
-    expect(feats5.slice(10,20)).toMatchSnapshot()
-    expect(feats5.slice(1000,1010)).toMatchSnapshot()
+    const feats = await ti.getFeatures('ctgA', 4200, 5600)
+    expect(feats.length).toEqual(1402)
+    expect(feats.slice(10,20)).toMatchSnapshot()
+    expect(feats.slice(1000,1010)).toMatchSnapshot()
   })
 
   it('loads a larger bigwig file', async () => {
@@ -55,5 +54,13 @@ describe('bigwig formats', () => {
     expect(feats2.slice(10, 20)).toMatchSnapshot()
     expect(feats3.slice(10, 20)).toMatchSnapshot()
     expect(feats4.slice(10, 20)).toMatchSnapshot()
+  })
+  it('performs regularization', async () => {
+    const ti = new BigWig({
+      filehandle: new LocalFile(require.resolve('./data/volvox.bw')),
+      renameRefSeqs: ref => ref.replace('contig','ctg')
+    })
+    const feats = await ti.getFeatures('contigA', 4200, 5600)
+    expect(feats.length).toEqual(1402)
   })
 })

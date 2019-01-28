@@ -1,6 +1,6 @@
+- Add renameRefSeqs functionality where you can apply a callback to the refseq names
+
 ## [1.0.3](https://github.com/GMOD/bbi-js/compare/v1.0.2...v1.0.3) (2019-01-27)
-
-
 
 - Fix issue with properly inflating chunks (issue #1)
 
