@@ -1,3 +1,7 @@
+## [1.0.4](https://github.com/GMOD/bbi-js/compare/v1.0.3...v1.0.4) (2019-01-28)
+
+
+
 - Add renameRefSeqs functionality where you can apply a callback to the refseq names
 - Consistently apply start/end coordinate filters at different zoom levels
 
