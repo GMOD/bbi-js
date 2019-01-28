@@ -179,7 +179,7 @@ export default class RequestWorker {
         maxScore: elt.maxVal,
         minScore: elt.minVal,
         summary: true,
-      }))
+      })).filter(f => this.coordFilter(f))
   }
 
   parseBigBedBlock(bytes, startOffset) {
@@ -196,7 +196,7 @@ export default class RequestWorker {
     })
     return p
       .parse(data)
-      .result.items.filter(f => f.start <= this.max && f.end >= this.min)
+      .result.items.filter(f => this.coordFilter(f))
   }
 
   parseBigWigBlock(bytes, startOffset) {
@@ -236,8 +236,13 @@ export default class RequestWorker {
       })
     return parser
       .parse(data)
-      .result.items.filter(f => f.start <= this.max && f.end >= this.min)
+      .result.items.filter(f => this.coordFilter(f))
   }
+
+  coordFilter(f) {
+    return f.start < this.max && f.end >= this.min
+  }
+
 
   /* eslint no-param-reassign: ["error", { "props": false }] */
   async readFeatures() {
