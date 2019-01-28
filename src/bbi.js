@@ -1,9 +1,9 @@
-import Window from './window'
+import LRU from 'quick-lru'
+import { Parser } from '@gmod/binary-parser'
+import Long from 'long'
 
-const LRU = require('quick-lru')
-const { Parser } = require('@gmod/binary-parser')
-const Long = require('long')
-const LocalFile = require('./localFile')
+import Window from './window'
+import LocalFile from './localFile'
 
 const BIG_WIG_MAGIC = -2003829722
 const BIG_BED_MAGIC = -2021002517
