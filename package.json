@@ -45,7 +45,6 @@
     "buffer-crc32": "^0.2.13",
     "cross-fetch": "^3.0.0",
     "es6-promisify": "^6.0.1",
-    "jest": "^24.0.0",
     "long": "^4.0.0",
     "quick-lru": "^2.0.0"
   },
@@ -64,7 +63,7 @@
     "eslint-plugin-import": "^2.10.0",
     "eslint-plugin-prettier": "^3.0.1",
     "jasmine-core": "^3.3.0",
-    "jest-cli": "^24.0.0",
+    "jest": "^24.3.0",
     "karma": "^4.0.0",
     "karma-chrome-launcher": "^2.2.0",
     "karma-jasmine": "^2.0.1",
