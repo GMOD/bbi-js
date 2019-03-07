@@ -1,3 +1,5 @@
+- Fix issue with jest being in deps instead of devDeps
+
 ## [1.0.4](https://github.com/GMOD/bbi-js/compare/v1.0.3...v1.0.4) (2019-01-28)
 
 
