@@ -1,3 +1,7 @@
+## [1.0.6](https://github.com/GMOD/bbi-js/compare/v1.0.5...v1.0.6) (2019-03-15)
+
+
+
 - Fix issue with fixed step and variable step bigwig files not working at all
 
 ## [1.0.5](https://github.com/GMOD/bbi-js/compare/v1.0.4...v1.0.5) (2019-03-07)
