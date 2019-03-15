@@ -2,13 +2,33 @@ import BigWig from '../src/bigwig'
 import LocalFile from '../src/localFile'
 
 describe('bigwig formats', () => {
-  it('loads small bigwig file', async () => {
+  it('loads bedgraph bigwig file', async () => {
     const ti = new BigWig({
       filehandle: new LocalFile(require.resolve('./data/volvox.bw')),
     })
     const feats1 = await ti.getFeatures('ctgA', 0, 100, { scale: 1 })
     const feats2 = await ti.getFeatures('ctgA', 0, 100, { scale: 0.01 })
     const feats3 = await ti.getFeatures('ctgA', 0, 100, { scale: 0.001 })
+    const feats4 = await ti.getFeatures('ctgA', 2000, 2100, { scale: 0.001 })
+    expect(feats1).toMatchSnapshot()
+    expect(feats2).toMatchSnapshot()
+    expect(feats3).toMatchSnapshot()
+    expect(feats4).toMatchSnapshot()
+  })
+  it('loads variable step bigwig', async () => {
+    const ti = new BigWig({
+      filehandle: new LocalFile(require.resolve('./data/variable_step.bw')),
+    })
+    const feats1 = await ti.getFeatures('chr1', 0, 52, { scale: 1 })
+    expect(feats1).toMatchSnapshot()
+  })
+  it('loads fixedstep bigwig', async () => {
+    const ti = new BigWig({
+      filehandle: new LocalFile(require.resolve('./data/volvox_microarray.bw')),
+    })
+    const feats1 = await ti.getFeatures('ctgA', 0, 1000, { scale: 1 })
+    const feats2 = await ti.getFeatures('ctgA', 0, 1000, { scale: 0.01 })
+    const feats3 = await ti.getFeatures('ctgA', 0, 1000, { scale: 0.001 })
     const feats4 = await ti.getFeatures('ctgA', 2000, 2100, { scale: 0.001 })
     expect(feats1).toMatchSnapshot()
     expect(feats2).toMatchSnapshot()
@@ -94,3 +114,5 @@ describe('bigwig formats', () => {
     expect(feats).toEqual(ret)
   })
 })
+
+

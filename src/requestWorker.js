@@ -6,6 +6,10 @@ const { Parser } = require('@gmod/binary-parser')
 
 const zlib = require('zlib')
 
+const BIG_WIG_TYPE_GRAPH = 1
+const BIG_WIG_TYPE_VSTEP = 2
+const BIG_WIG_TYPE_FSTEP = 3
+
 // const BED = require('@gmod/bed')
 
 export default class RequestWorker {
@@ -213,18 +217,15 @@ export default class RequestWorker {
       .choice({
         tag: 'blockType',
         choices: {
-          3: new Parser().array('items', {
-            /* FSTEP */
+          [BIG_WIG_TYPE_FSTEP]: new Parser().array('items', {
             length: 'itemCount',
             type: new Parser().float('score'),
           }),
-          2: new Parser().array('items', {
-            /* VSTEP */
+          [BIG_WIG_TYPE_VSTEP]: new Parser().array('items', {
             length: 'itemCount',
             type: new Parser().int32('start').float('score'),
           }),
-          1: new Parser().array('items', {
-            /* GRAPH */
+          [BIG_WIG_TYPE_GRAPH]: new Parser().array('items', {
             length: 'itemCount',
             type: new Parser()
               .int32('start')
@@ -233,7 +234,21 @@ export default class RequestWorker {
           }),
         },
       })
-    return parser.parse(data).result.items.filter(f => this.coordFilter(f))
+    const results = parser.parse(data).result
+    let items = results.items
+    if (results.blockType === BIG_WIG_TYPE_FSTEP) {
+      const { itemStep: step } = results
+      items = items.map((s, i) => ({
+        ...s,
+        start: i * step,
+        end: i * step + step,
+      }))
+    } else if (results.blockType === BIG_WIG_TYPE_VSTEP) {
+      for(let i = 0; i < items.length-1; i++) {
+        items[i].end = items[i+1].start-1
+      }
+    }
+    return items.filter(f => this.coordFilter(f))
   }
 
   coordFilter(f) {

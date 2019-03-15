@@ -275,7 +275,7 @@ Array [
 ]
 `;
 
-exports[`bigwig formats loads small bigwig file 1`] = `
+exports[`bigwig formats loads bedgraph bigwig file 1`] = `
 Array [
   Object {
     "end": 3,
@@ -770,7 +770,7 @@ Array [
 ]
 `;
 
-exports[`bigwig formats loads small bigwig file 2`] = `
+exports[`bigwig formats loads bedgraph bigwig file 2`] = `
 Array [
   Object {
     "end": 162,
@@ -783,7 +783,7 @@ Array [
 ]
 `;
 
-exports[`bigwig formats loads small bigwig file 3`] = `
+exports[`bigwig formats loads bedgraph bigwig file 3`] = `
 Array [
   Object {
     "end": 642,
@@ -796,7 +796,7 @@ Array [
 ]
 `;
 
-exports[`bigwig formats loads small bigwig file 4`] = `
+exports[`bigwig formats loads bedgraph bigwig file 4`] = `
 Array [
   Object {
     "end": 2562,
@@ -805,6 +805,241 @@ Array [
     "score": 21.7625,
     "start": 1922,
     "summary": true,
+  },
+]
+`;
+
+exports[`bigwig formats loads fixedstep bigwig 1`] = `
+Array [
+  Object {
+    "end": 100,
+    "score": 281,
+    "start": 0,
+  },
+  Object {
+    "end": 200,
+    "score": 183,
+    "start": 100,
+  },
+  Object {
+    "end": 300,
+    "score": 213,
+    "start": 200,
+  },
+  Object {
+    "end": 400,
+    "score": 191,
+    "start": 300,
+  },
+  Object {
+    "end": 500,
+    "score": 288,
+    "start": 400,
+  },
+  Object {
+    "end": 600,
+    "score": 184,
+    "start": 500,
+  },
+  Object {
+    "end": 700,
+    "score": 258,
+    "start": 600,
+  },
+  Object {
+    "end": 800,
+    "score": 173,
+    "start": 700,
+  },
+  Object {
+    "end": 900,
+    "score": 274,
+    "start": 800,
+  },
+  Object {
+    "end": 1000,
+    "score": 292,
+    "start": 900,
+  },
+]
+`;
+
+exports[`bigwig formats loads fixedstep bigwig 2`] = `
+Array [
+  Object {
+    "end": 100,
+    "score": 281,
+    "start": 0,
+  },
+  Object {
+    "end": 200,
+    "score": 183,
+    "start": 100,
+  },
+  Object {
+    "end": 300,
+    "score": 213,
+    "start": 200,
+  },
+  Object {
+    "end": 400,
+    "score": 191,
+    "start": 300,
+  },
+  Object {
+    "end": 500,
+    "score": 288,
+    "start": 400,
+  },
+  Object {
+    "end": 600,
+    "score": 184,
+    "start": 500,
+  },
+  Object {
+    "end": 700,
+    "score": 258,
+    "start": 600,
+  },
+  Object {
+    "end": 800,
+    "score": 173,
+    "start": 700,
+  },
+  Object {
+    "end": 900,
+    "score": 274,
+    "start": 800,
+  },
+  Object {
+    "end": 1000,
+    "score": 292,
+    "start": 900,
+  },
+]
+`;
+
+exports[`bigwig formats loads fixedstep bigwig 3`] = `
+Array [
+  Object {
+    "end": 100,
+    "score": 281,
+    "start": 0,
+  },
+  Object {
+    "end": 200,
+    "score": 183,
+    "start": 100,
+  },
+  Object {
+    "end": 300,
+    "score": 213,
+    "start": 200,
+  },
+  Object {
+    "end": 400,
+    "score": 191,
+    "start": 300,
+  },
+  Object {
+    "end": 500,
+    "score": 288,
+    "start": 400,
+  },
+  Object {
+    "end": 600,
+    "score": 184,
+    "start": 500,
+  },
+  Object {
+    "end": 700,
+    "score": 258,
+    "start": 600,
+  },
+  Object {
+    "end": 800,
+    "score": 173,
+    "start": 700,
+  },
+  Object {
+    "end": 900,
+    "score": 274,
+    "start": 800,
+  },
+  Object {
+    "end": 1000,
+    "score": 292,
+    "start": 900,
+  },
+]
+`;
+
+exports[`bigwig formats loads fixedstep bigwig 4`] = `
+Array [
+  Object {
+    "end": 2000,
+    "score": 192,
+    "start": 1900,
+  },
+  Object {
+    "end": 2100,
+    "score": 114,
+    "start": 2000,
+  },
+]
+`;
+
+exports[`bigwig formats loads variable step bigwig 1`] = `
+Array [
+  Object {
+    "end": 14,
+    "score": 0.7819849848747253,
+    "start": 11,
+  },
+  Object {
+    "end": 18,
+    "score": 0.8109930157661438,
+    "start": 15,
+  },
+  Object {
+    "end": 22,
+    "score": 0.7696009874343872,
+    "start": 19,
+  },
+  Object {
+    "end": 26,
+    "score": 0.733830988407135,
+    "start": 23,
+  },
+  Object {
+    "end": 30,
+    "score": 0.7320680022239685,
+    "start": 27,
+  },
+  Object {
+    "end": 34,
+    "score": 0.5884150266647339,
+    "start": 31,
+  },
+  Object {
+    "end": 38,
+    "score": 0.5306519865989685,
+    "start": 35,
+  },
+  Object {
+    "end": 42,
+    "score": 0.36328500509262085,
+    "start": 39,
+  },
+  Object {
+    "end": 46,
+    "score": 0.1721539944410324,
+    "start": 43,
+  },
+  Object {
+    "end": 50,
+    "score": 0.06392999738454819,
+    "start": 47,
   },
 ]
 `;

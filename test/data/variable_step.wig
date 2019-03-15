@@ -1,0 +1,13 @@
+track type=wiggle_0 name=test_micoarray.wig description=test_microarray.wig graphType=bar
+variableStep chrom=chr1
+12    0.781985
+16    0.810993
+20    0.769601
+24    0.733831
+28    0.732068
+32    0.588415
+36    0.530652
+40    0.363285
+44    0.172154
+48    0.063930
+52    -0.023964
