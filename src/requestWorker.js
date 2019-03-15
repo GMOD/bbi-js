@@ -244,8 +244,8 @@ export default class RequestWorker {
         end: i * step + step,
       }))
     } else if (results.blockType === BIG_WIG_TYPE_VSTEP) {
-      for(let i = 0; i < items.length-1; i++) {
-        items[i].end = items[i+1].start-1
+      for (let i = 0; i < items.length - 1; i += 1) {
+        items[i].end = items[i + 1].start - 1
       }
     }
     return items.filter(f => this.coordFilter(f))

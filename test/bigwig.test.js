@@ -114,5 +114,3 @@ describe('bigwig formats', () => {
     expect(feats).toEqual(ret)
   })
 })
-
-
