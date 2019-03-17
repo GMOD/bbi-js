@@ -1,5 +1,5 @@
 import { BigWig } from '../../src/index'
-import RemoteFile from '../../src/remoteFile'
+import RemoteFile from '../lib/remoteFile'
 
 describe('test a bigwig file', () => {
   it('check it out', async () => {

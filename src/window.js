@@ -25,7 +25,6 @@ export default class Window {
   }
 
   readWigData(chrName, min, max) {
-    // console.log( 'reading wig data from '+chrName+':'+min+'..'+max);
     const chr = this.bwg.header.refsByName[chrName]
     if (!chr) {
       return []
@@ -43,21 +42,13 @@ export default class Window {
   }
 
   async readWigDataById(chr, min, max) {
-    if (!this.cirHeaderLoading) {
-      const buffer = Buffer.alloc(48)
-      this.cirHeaderLoading = this.bwg.bbi
-        .read(buffer, 0, 48, this.cirTreeOffset)
-        .then(() => {
-          this.cirBlockSize = buffer.readUInt32LE(4) // TODO little endian?
-        })
-    }
-
-    await this.cirHeaderLoading
+    const buffer = Buffer.alloc(48)
+    await this.bwg.bbi.read(buffer, 0, 48, this.cirTreeOffset).then(() => {
+      this.cirBlockSize = buffer.readUInt32LE(4) // TODO big endian?
+    })
 
     const worker = new RequestWorker(this, chr, min, max)
 
-    return Promise.all(worker.cirFobRecur([this.cirTreeOffset + 48], 1)).then(
-      arr => arr.reduce((acc, val) => acc.concat(val), []),
-    )
+    return worker.cirFobRecur([this.cirTreeOffset + 48], 1)
   }
 }
