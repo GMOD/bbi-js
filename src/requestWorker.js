@@ -256,46 +256,48 @@ export default class RequestWorker {
   }
 
   /* eslint no-param-reassign: ["error", { "props": false }] */
-  async readFeatures() {
-    const blockFetches = this.blockGroupsToFetch.map(blockGroup => {
-      const data = Buffer.alloc(blockGroup.size)
+  readFeaturePromises() {
+    return this.blockGroupsToFetch.map(blockGroup => {
+      const recvdata = Buffer.alloc(blockGroup.size)
       return this.window.bwg.bbi
-        .read(data, 0, blockGroup.size, blockGroup.offset)
+        .read(recvdata, 0, blockGroup.size, blockGroup.offset)
         .then(() => {
-          blockGroup.data = data
+          blockGroup.data = recvdata
           return blockGroup
         })
+        .then(bg => {
+          return bg.blocks.map(block => {
+            let data
+            let offset = block.offset - bg.offset
+
+            if (this.window.bwg.header.uncompressBufSize > 0) {
+              data = zlib.inflateSync(bg.data.slice(offset))
+              offset = 0
+            } else {
+              // eslint-disable-next-line
+              data = bg.data
+            }
+
+            if (this.window.isSummary) {
+              return this.parseSummaryBlock(data, offset)
+            }
+            if (this.window.bwg.type === 'bigwig') {
+              return this.parseBigWigBlock(data, offset)
+            }
+            if (this.window.bwg.type === 'bigbed') {
+              return this.parseBigBedBlock(data, offset)
+            }
+            console.warn(`Don't know what to do with ${this.window.bwg.type}`)
+            return undefined
+          })
+        })
+        .then(bgs => bgs.flat())
     })
+  }
 
-    const blockGroups = await Promise.all(blockFetches)
-    const ret = blockGroups.map(blockGroup =>
-      blockGroup.blocks.map(block => {
-        let data
-        let offset = block.offset - blockGroup.offset
-
-        if (this.window.bwg.header.uncompressBufSize > 0) {
-          data = zlib.inflateSync(blockGroup.data.slice(offset))
-          offset = 0
-        } else {
-          // eslint-disable-next-line
-          data = blockGroup.data
-        }
-
-        if (this.window.isSummary) {
-          return this.parseSummaryBlock(data, offset)
-        }
-        if (this.window.bwg.type === 'bigwig') {
-          return this.parseBigWigBlock(data, offset)
-        }
-        if (this.window.bwg.type === 'bigbed') {
-          return this.parseBigBedBlock(data, offset)
-        }
-        console.warn(`Don't know what to do with ${this.window.bwg.type}`)
-        return undefined
-      }),
-    )
-    const flatten = list =>
-      list.reduce((a, b) => a.concat(Array.isArray(b) ? flatten(b) : b), [])
-    return flatten(ret)
+  async readFeatures() {
+    const ret1 = this.readFeaturePromises()
+    const ret = await Promise.all(ret1)
+    return ret.flat()
   }
 }
