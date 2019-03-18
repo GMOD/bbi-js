@@ -1523,6 +1523,21 @@ Array [
 ]
 `;
 
+exports[`bigwig formats loads fixedstep bigwig 5`] = `
+Array [
+  Object {
+    "end": 2000,
+    "score": 192,
+    "start": 1900,
+  },
+  Object {
+    "end": 2100,
+    "score": 114,
+    "start": 2000,
+  },
+]
+`;
+
 exports[`bigwig formats loads variable step bigwig 1`] = `
 Array [
   Object {

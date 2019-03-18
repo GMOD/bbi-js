@@ -13,11 +13,8 @@ describe('bigwig formats', () => {
     const feats5 = await ti.getFeatures('ctgA', 49000, 51000)
     const feats6 = await ti.getFeatures('ctgA', 49000, 51000, { scale: 0.001 })
 
-    // from wigToBigWig
     expect(feats1[0]).toEqual({ start: 2, end: 3, score: 1 })
-    expect(feats1.slice(-1)[0]).toEqual({ start: 99, end: 100, score: 13 })
     expect(feats5.slice(-1)[0]).toEqual({ start: 49985, end: 49986, score: 3 })
-    console.log(feats6)
 
     // snapshots
     expect(feats1).toMatchSnapshot()
@@ -26,18 +23,13 @@ describe('bigwig formats', () => {
     expect(feats4).toMatchSnapshot()
   })
 
-  it('loads bedgraph bigwig file', async () => {
+  it('reads promise chunks', async () => {
     const ti = new BigWig({
       filehandle: new LocalFile(require.resolve('./data/volvox.bw')),
     })
-    const feats1 = await ti.getFeatures('ctgA', 0, 100, { scale: 1 })
-    const feats2 = await ti.getFeatures('ctgA', 0, 100, { scale: 0.01 })
-    const feats3 = await ti.getFeatures('ctgA', 0, 100, { scale: 0.001 })
-    const feats4 = await ti.getFeatures('ctgA', 2000, 2100, { scale: 0.001 })
-    expect(feats1).toMatchSnapshot()
-    expect(feats2).toMatchSnapshot()
-    expect(feats3).toMatchSnapshot()
-    expect(feats4).toMatchSnapshot()
+    const feats1 = await ti.getFeatureChunks('ctgA', 0, 100, { scale: 1 })
+    const process = feat => feat.then(console.log)
+    feats1.forEach(res => res.then(process))
   })
   it('loads variable step bigwig', async () => {
     const ti = new BigWig({

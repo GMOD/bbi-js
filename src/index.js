@@ -1,3 +1,5 @@
+import 'array-flat-polyfill'
+
 import BBI from './bbi'
 import BigWig from './bigwig'
 import BigBed from './bigbed'
