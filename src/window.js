@@ -20,7 +20,7 @@ export default class Window {
     this.cirTreeLength = cirTreeLength
     this.isSummary = isSummary
     this.featureCache = new LRU({
-      maxSize: 500000, // cache up to 50000 features and subfeatures
+      maxSize: 500, // cache up to 500 promises
     })
   }
 
@@ -43,9 +43,8 @@ export default class Window {
 
   async readWigDataById(chr, min, max) {
     const buffer = Buffer.alloc(48)
-    await this.bwg.bbi.read(buffer, 0, 48, this.cirTreeOffset).then(() => {
-      this.cirBlockSize = buffer.readUInt32LE(4) // TODO big endian?
-    })
+    await this.bwg.bbi.read(buffer, 0, 48, this.cirTreeOffset)
+    this.cirBlockSize = buffer.readUInt32LE(4) // TODO big endian?
 
     const worker = new RequestWorker(this, chr, min, max)
     return worker.cirFobRecur([this.cirTreeOffset + 48], 1)

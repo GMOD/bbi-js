@@ -1,16 +1,14 @@
 /* eslint no-bitwise: ["error", { "allow": ["|"] }] */
 
 import Range from './range'
+import { filterBlocks } from './util'
 
 const { Parser } = require('@gmod/binary-parser')
-
 const zlib = require('zlib')
 
 const BIG_WIG_TYPE_GRAPH = 1
 const BIG_WIG_TYPE_VSTEP = 2
 const BIG_WIG_TYPE_FSTEP = 3
-
-// const BED = require('@gmod/bed')
 
 export default class RequestWorker {
   /**
@@ -45,25 +43,29 @@ export default class RequestWorker {
       spans = spans ? spans.union(blockSpan) : blockSpan
     }
 
-    return spans.getRanges().map(fr => this.cirFobStartFetch(offset, fr, level))
+    const temp = spans.getRanges()
+    return temp.map(fr => this.cirFobStartFetch(offset, fr, level)).flat()
   }
 
-  async cirFobStartFetch(offset, fr, level) {
+  cirFobStartFetch(offset, fr, level) {
     const length = fr.max() - fr.min()
-    const resultBuffer = Buffer.alloc(length)
-    await this.window.bwg.bbi.read(resultBuffer, 0, length, fr.min())
-    for (let i = 0; i < offset.length; i += 1) {
-      if (fr.contains(offset[i])) {
-        this.cirFobRecur2(resultBuffer, offset[i] - fr.min(), level)
-        this.outstanding -= 1
-        if (this.outstanding === 0) {
-          return this.cirCompleted()
+    return new Promise((resolve, reject) => {
+      const resultBuffer = Buffer.alloc(length)
+      this.window.bwg.bbi.read(resultBuffer, 0, length, fr.min()).then(() => {
+        for (let i = 0; i < offset.length; i += 1) {
+          if (fr.contains(offset[i])) {
+            this.cirFobRecur2(resultBuffer, offset[i] - fr.min(), level)
+            this.outstanding -= 1
+            if (this.outstanding === 0) {
+              resolve(this.cirCompleted())
+            }
+          }
         }
-      }
-    }
-    if (this.outstanding !== 0) {
-      throw new Error('did not complete')
-    }
+        if (this.outstanding !== 0) {
+          reject(new Error('did not complete'))
+        }
+      })
+    })
   }
 
   cirFobRecur2(cirBlockData, offset, level) {
@@ -101,18 +103,17 @@ export default class RequestWorker {
     const p = parser.parse(data).result
     this.window.bwg.convert64Bits(p)
 
-    // prettier-ignore
-    const m = block =>
-      (block.startChrom < this.chr || (block.startChrom === this.chr && block.startBase <= this.max)) &&
-      (block.endChrom > this.chr || (block.endChrom === this.chr && block.endBase >= this.min))
+    const { chr, min, max } = this
 
     if (p.blocksToFetch) {
       this.blocksToFetch = p.blocksToFetch
-        .filter(m)
+        .filter(b => filterBlocks(b, chr, min, max))
         .map(l => ({ offset: l.blockOffset, size: l.blockSize }))
     }
     if (p.recurOffsets) {
-      const recurOffsets = p.recurOffsets.filter(m).map(l => l.blockOffset)
+      const recurOffsets = p.recurOffsets
+        .filter(b => filterBlocks(b, chr, min, max))
+        .map(l => l.blockOffset)
       if (recurOffsets.length > 0) {
         return this.cirFobRecur(recurOffsets, level + 1)
       }
@@ -255,7 +256,7 @@ export default class RequestWorker {
 
   /* eslint no-param-reassign: ["error", { "props": false }] */
   readFeatures() {
-    this.blockGroupsToFetch.map(blockGroup => {
+    return this.blockGroupsToFetch.map(blockGroup => {
       const recvdata = Buffer.alloc(blockGroup.size)
       return this.window.bwg.bbi
         .read(recvdata, 0, blockGroup.size, blockGroup.offset)
@@ -284,7 +285,6 @@ export default class RequestWorker {
             return undefined
           }),
         )
-        .then(bgs => bgs.flat())
     })
   }
 }
