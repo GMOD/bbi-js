@@ -24,7 +24,7 @@ export default class BigWig extends BBI {
   async getFeatures(refName, start, end, opts = {}) {
     const tmp = await this.getFeatureChunks(refName, start, end, opts)
     const ret = await Promise.all(tmp).then(res => res.flat())
-    const ret2 = await Promise.all(ret).then(res => res.flat())
+    const ret2 = await Promise.all(ret)
     return ret2.flat().flat()
   }
 }

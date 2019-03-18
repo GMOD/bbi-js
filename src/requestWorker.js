@@ -285,6 +285,7 @@ export default class RequestWorker {
             return undefined
           }),
         )
+        .then(res => res.flat())
     })
   }
 }

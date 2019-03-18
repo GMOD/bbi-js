@@ -809,6 +809,540 @@ Array [
 ]
 `;
 
+exports[`bigwig formats loads bedgraph bigwig file 5`] = `
+Array [
+  Object {
+    "end": 3,
+    "score": 1,
+    "start": 2,
+  },
+  Object {
+    "end": 4,
+    "score": 1,
+    "start": 3,
+  },
+  Object {
+    "end": 5,
+    "score": 1,
+    "start": 4,
+  },
+  Object {
+    "end": 6,
+    "score": 1,
+    "start": 5,
+  },
+  Object {
+    "end": 7,
+    "score": 1,
+    "start": 6,
+  },
+  Object {
+    "end": 8,
+    "score": 2,
+    "start": 7,
+  },
+  Object {
+    "end": 9,
+    "score": 2,
+    "start": 8,
+  },
+  Object {
+    "end": 10,
+    "score": 2,
+    "start": 9,
+  },
+  Object {
+    "end": 11,
+    "score": 2,
+    "start": 10,
+  },
+  Object {
+    "end": 12,
+    "score": 2,
+    "start": 11,
+  },
+  Object {
+    "end": 13,
+    "score": 2,
+    "start": 12,
+  },
+  Object {
+    "end": 14,
+    "score": 2,
+    "start": 13,
+  },
+  Object {
+    "end": 15,
+    "score": 2,
+    "start": 14,
+  },
+  Object {
+    "end": 16,
+    "score": 3,
+    "start": 15,
+  },
+  Object {
+    "end": 17,
+    "score": 4,
+    "start": 16,
+  },
+  Object {
+    "end": 18,
+    "score": 5,
+    "start": 17,
+  },
+  Object {
+    "end": 19,
+    "score": 5,
+    "start": 18,
+  },
+  Object {
+    "end": 20,
+    "score": 5,
+    "start": 19,
+  },
+  Object {
+    "end": 21,
+    "score": 5,
+    "start": 20,
+  },
+  Object {
+    "end": 22,
+    "score": 5,
+    "start": 21,
+  },
+  Object {
+    "end": 23,
+    "score": 5,
+    "start": 22,
+  },
+  Object {
+    "end": 24,
+    "score": 5,
+    "start": 23,
+  },
+  Object {
+    "end": 25,
+    "score": 5,
+    "start": 24,
+  },
+  Object {
+    "end": 26,
+    "score": 5,
+    "start": 25,
+  },
+  Object {
+    "end": 27,
+    "score": 5,
+    "start": 26,
+  },
+  Object {
+    "end": 28,
+    "score": 5,
+    "start": 27,
+  },
+  Object {
+    "end": 29,
+    "score": 5,
+    "start": 28,
+  },
+  Object {
+    "end": 30,
+    "score": 5,
+    "start": 29,
+  },
+  Object {
+    "end": 31,
+    "score": 5,
+    "start": 30,
+  },
+  Object {
+    "end": 32,
+    "score": 5,
+    "start": 31,
+  },
+  Object {
+    "end": 33,
+    "score": 5,
+    "start": 32,
+  },
+  Object {
+    "end": 34,
+    "score": 5,
+    "start": 33,
+  },
+  Object {
+    "end": 35,
+    "score": 5,
+    "start": 34,
+  },
+  Object {
+    "end": 36,
+    "score": 5,
+    "start": 35,
+  },
+  Object {
+    "end": 37,
+    "score": 5,
+    "start": 36,
+  },
+  Object {
+    "end": 38,
+    "score": 5,
+    "start": 37,
+  },
+  Object {
+    "end": 39,
+    "score": 5,
+    "start": 38,
+  },
+  Object {
+    "end": 40,
+    "score": 5,
+    "start": 39,
+  },
+  Object {
+    "end": 41,
+    "score": 5,
+    "start": 40,
+  },
+  Object {
+    "end": 42,
+    "score": 5,
+    "start": 41,
+  },
+  Object {
+    "end": 43,
+    "score": 6,
+    "start": 42,
+  },
+  Object {
+    "end": 44,
+    "score": 7,
+    "start": 43,
+  },
+  Object {
+    "end": 45,
+    "score": 7,
+    "start": 44,
+  },
+  Object {
+    "end": 46,
+    "score": 7,
+    "start": 45,
+  },
+  Object {
+    "end": 47,
+    "score": 7,
+    "start": 46,
+  },
+  Object {
+    "end": 48,
+    "score": 8,
+    "start": 47,
+  },
+  Object {
+    "end": 49,
+    "score": 8,
+    "start": 48,
+  },
+  Object {
+    "end": 50,
+    "score": 8,
+    "start": 49,
+  },
+  Object {
+    "end": 51,
+    "score": 8,
+    "start": 50,
+  },
+  Object {
+    "end": 52,
+    "score": 8,
+    "start": 51,
+  },
+  Object {
+    "end": 53,
+    "score": 8,
+    "start": 52,
+  },
+  Object {
+    "end": 54,
+    "score": 8,
+    "start": 53,
+  },
+  Object {
+    "end": 55,
+    "score": 8,
+    "start": 54,
+  },
+  Object {
+    "end": 56,
+    "score": 9,
+    "start": 55,
+  },
+  Object {
+    "end": 57,
+    "score": 9,
+    "start": 56,
+  },
+  Object {
+    "end": 58,
+    "score": 9,
+    "start": 57,
+  },
+  Object {
+    "end": 59,
+    "score": 9,
+    "start": 58,
+  },
+  Object {
+    "end": 60,
+    "score": 9,
+    "start": 59,
+  },
+  Object {
+    "end": 61,
+    "score": 9,
+    "start": 60,
+  },
+  Object {
+    "end": 62,
+    "score": 9,
+    "start": 61,
+  },
+  Object {
+    "end": 63,
+    "score": 9,
+    "start": 62,
+  },
+  Object {
+    "end": 64,
+    "score": 9,
+    "start": 63,
+  },
+  Object {
+    "end": 65,
+    "score": 9,
+    "start": 64,
+  },
+  Object {
+    "end": 66,
+    "score": 10,
+    "start": 65,
+  },
+  Object {
+    "end": 67,
+    "score": 10,
+    "start": 66,
+  },
+  Object {
+    "end": 68,
+    "score": 10,
+    "start": 67,
+  },
+  Object {
+    "end": 69,
+    "score": 10,
+    "start": 68,
+  },
+  Object {
+    "end": 70,
+    "score": 10,
+    "start": 69,
+  },
+  Object {
+    "end": 71,
+    "score": 10,
+    "start": 70,
+  },
+  Object {
+    "end": 72,
+    "score": 10,
+    "start": 71,
+  },
+  Object {
+    "end": 73,
+    "score": 10,
+    "start": 72,
+  },
+  Object {
+    "end": 74,
+    "score": 10,
+    "start": 73,
+  },
+  Object {
+    "end": 75,
+    "score": 10,
+    "start": 74,
+  },
+  Object {
+    "end": 76,
+    "score": 10,
+    "start": 75,
+  },
+  Object {
+    "end": 77,
+    "score": 11,
+    "start": 76,
+  },
+  Object {
+    "end": 78,
+    "score": 11,
+    "start": 77,
+  },
+  Object {
+    "end": 79,
+    "score": 11,
+    "start": 78,
+  },
+  Object {
+    "end": 80,
+    "score": 11,
+    "start": 79,
+  },
+  Object {
+    "end": 81,
+    "score": 11,
+    "start": 80,
+  },
+  Object {
+    "end": 82,
+    "score": 11,
+    "start": 81,
+  },
+  Object {
+    "end": 83,
+    "score": 11,
+    "start": 82,
+  },
+  Object {
+    "end": 84,
+    "score": 11,
+    "start": 83,
+  },
+  Object {
+    "end": 85,
+    "score": 11,
+    "start": 84,
+  },
+  Object {
+    "end": 86,
+    "score": 11,
+    "start": 85,
+  },
+  Object {
+    "end": 87,
+    "score": 11,
+    "start": 86,
+  },
+  Object {
+    "end": 88,
+    "score": 11,
+    "start": 87,
+  },
+  Object {
+    "end": 89,
+    "score": 11,
+    "start": 88,
+  },
+  Object {
+    "end": 90,
+    "score": 11,
+    "start": 89,
+  },
+  Object {
+    "end": 91,
+    "score": 12,
+    "start": 90,
+  },
+  Object {
+    "end": 92,
+    "score": 12,
+    "start": 91,
+  },
+  Object {
+    "end": 93,
+    "score": 12,
+    "start": 92,
+  },
+  Object {
+    "end": 94,
+    "score": 12,
+    "start": 93,
+  },
+  Object {
+    "end": 95,
+    "score": 13,
+    "start": 94,
+  },
+  Object {
+    "end": 96,
+    "score": 13,
+    "start": 95,
+  },
+  Object {
+    "end": 97,
+    "score": 13,
+    "start": 96,
+  },
+  Object {
+    "end": 98,
+    "score": 13,
+    "start": 97,
+  },
+  Object {
+    "end": 99,
+    "score": 13,
+    "start": 98,
+  },
+  Object {
+    "end": 100,
+    "score": 13,
+    "start": 99,
+  },
+]
+`;
+
+exports[`bigwig formats loads bedgraph bigwig file 6`] = `
+Array [
+  Object {
+    "end": 162,
+    "maxScore": 13,
+    "minScore": 1,
+    "score": 9.0125,
+    "start": 2,
+    "summary": true,
+  },
+]
+`;
+
+exports[`bigwig formats loads bedgraph bigwig file 7`] = `
+Array [
+  Object {
+    "end": 642,
+    "maxScore": 24,
+    "minScore": 1,
+    "score": 9.746875,
+    "start": 2,
+    "summary": true,
+  },
+]
+`;
+
+exports[`bigwig formats loads bedgraph bigwig file 8`] = `
+Array [
+  Object {
+    "end": 2562,
+    "maxScore": 32,
+    "minScore": 13,
+    "score": 21.7625,
+    "start": 1922,
+    "summary": true,
+  },
+]
+`;
+
 exports[`bigwig formats loads fixedstep bigwig 1`] = `
 Array [
   Object {
