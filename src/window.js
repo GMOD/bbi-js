@@ -48,7 +48,6 @@ export default class Window {
     })
 
     const worker = new RequestWorker(this, chr, min, max)
-
     return worker.cirFobRecur([this.cirTreeOffset + 48], 1)
   }
 }

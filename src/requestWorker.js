@@ -52,20 +52,18 @@ export default class RequestWorker {
     const length = fr.max() - fr.min()
     const resultBuffer = Buffer.alloc(length)
     await this.window.bwg.bbi.read(resultBuffer, 0, length, fr.min())
-    return new Promise((resolve, reject) => {
-      for (let i = 0; i < offset.length; i += 1) {
-        if (fr.contains(offset[i])) {
-          this.cirFobRecur2(resultBuffer, offset[i] - fr.min(), level)
-          this.outstanding -= 1
-          if (this.outstanding === 0) {
-            resolve(this.cirCompleted())
-          }
+    for (let i = 0; i < offset.length; i += 1) {
+      if (fr.contains(offset[i])) {
+        this.cirFobRecur2(resultBuffer, offset[i] - fr.min(), level)
+        this.outstanding -= 1
+        if (this.outstanding === 0) {
+          return this.cirCompleted()
         }
       }
-      if (this.outstanding !== 0) {
-        reject(new Error('did not complete'))
-      }
-    })
+    }
+    if (this.outstanding !== 0) {
+      throw new Error('did not complete')
+    }
   }
 
   cirFobRecur2(cirBlockData, offset, level) {
@@ -256,26 +254,21 @@ export default class RequestWorker {
   }
 
   /* eslint no-param-reassign: ["error", { "props": false }] */
-  readFeaturePromises() {
-    return this.blockGroupsToFetch.map(blockGroup => {
+  readFeatures() {
+    this.blockGroupsToFetch.map(blockGroup => {
       const recvdata = Buffer.alloc(blockGroup.size)
       return this.window.bwg.bbi
         .read(recvdata, 0, blockGroup.size, blockGroup.offset)
-        .then(() => {
-          blockGroup.data = recvdata
-          return blockGroup
-        })
-        .then(bg => {
-          return bg.blocks.map(block => {
+        .then(() =>
+          blockGroup.blocks.map(block => {
             let data
-            let offset = block.offset - bg.offset
+            let offset = block.offset - blockGroup.offset
 
             if (this.window.bwg.header.uncompressBufSize > 0) {
-              data = zlib.inflateSync(bg.data.slice(offset))
+              data = zlib.inflateSync(recvdata.slice(offset))
               offset = 0
             } else {
-              // eslint-disable-next-line
-              data = bg.data
+              data = recvdata
             }
 
             if (this.window.isSummary) {
@@ -289,15 +282,9 @@ export default class RequestWorker {
             }
             console.warn(`Don't know what to do with ${this.window.bwg.type}`)
             return undefined
-          })
-        })
+          }),
+        )
         .then(bgs => bgs.flat())
     })
-  }
-
-  async readFeatures() {
-    const ret1 = this.readFeaturePromises()
-    const ret = await Promise.all(ret1)
-    return ret.flat()
   }
 }
