@@ -10,18 +10,25 @@ const BIG_WIG_TYPE_GRAPH = 1
 const BIG_WIG_TYPE_VSTEP = 2
 const BIG_WIG_TYPE_FSTEP = 3
 
-// const BED = require('@gmod/bed')
-
+/**
+ * Worker object for reading data from a bigwig or bigbed file.
+ * Manages the state necessary for traversing the index trees and
+ * so forth.
+ *
+ * Adapted by Robert Buels from bigwig.js in the Dalliance Genome
+ * Explorer by Thomas Down.
+ * @constructs
+ */
 export default class RequestWorker {
-  /**
-   * Worker object for reading data from a bigwig or bigbed file.
-   * Manages the state necessary for traversing the index trees and
-   * so forth.
-   *
-   * Adapted by Robert Buels from bigwig.js in the Dalliance Genome
-   * Explorer by Thomas Down.
-   * @constructs
-   */
+  private window: any
+  private source: string
+  private le: boolean
+  private blocksToFetch: any[]
+  private outstanding: number
+  private chr: string
+  private min: number
+  private max: number
+
   constructor(win, chr, min, max) {
     this.window = win
     this.source = win.bwg.name || undefined
@@ -35,7 +42,7 @@ export default class RequestWorker {
     this.max = max
   }
 
-  cirFobRecur(offset, level) {
+  cirFobRecur(offset: any, level: number) {
     this.outstanding += offset.length
 
     const maxCirBlockSpan = 4 + this.window.cirBlockSize * 32 // Upper bound on size, based on a completely full leaf node.
@@ -45,10 +52,10 @@ export default class RequestWorker {
       spans = spans ? spans.union(blockSpan) : blockSpan
     }
 
-    return spans.getRanges().map(fr => this.cirFobStartFetch(offset, fr, level))
+    return spans.getRanges().map((fr: any) => this.cirFobStartFetch(offset, fr, level))
   }
 
-  async cirFobStartFetch(offset, fr, level) {
+  async cirFobStartFetch(offset: any, fr: any, level: number) {
     const length = fr.max() - fr.min()
     const resultBuffer = Buffer.alloc(length)
     await this.window.bwg.bbi.read(resultBuffer, 0, length, fr.min())
@@ -58,7 +65,7 @@ export default class RequestWorker {
           this.cirFobRecur2(resultBuffer, offset[i] - fr.min(), level)
           this.outstanding -= 1
           if (this.outstanding === 0) {
-            resolve(this.cirCompleted())
+            resolve(this.readFeatures())
           }
         }
       }
@@ -68,7 +75,7 @@ export default class RequestWorker {
     })
   }
 
-  cirFobRecur2(cirBlockData, offset, level) {
+  cirFobRecur2(cirBlockData: Buffer, offset: number, level: number) {
     const data = cirBlockData.slice(offset)
 
     const parser = new Parser()
@@ -109,9 +116,7 @@ export default class RequestWorker {
       (block.endChrom > this.chr || (block.endChrom === this.chr && block.endBase >= this.min))
 
     if (p.blocksToFetch) {
-      this.blocksToFetch = p.blocksToFetch
-        .filter(m)
-        .map(l => ({ offset: l.blockOffset, size: l.blockSize }))
+      this.blocksToFetch = p.blocksToFetch.filter(m).map((l: any) => ({ offset: l.blockOffset, size: l.blockSize }))
     }
     if (p.recurOffsets) {
       const recurOffsets = p.recurOffsets.filter(m).map(l => l.blockOffset)
@@ -122,17 +127,7 @@ export default class RequestWorker {
     return null
   }
 
-  cirCompleted() {
-    // merge contiguous blocks
-    this.blockGroupsToFetch = RequestWorker.groupBlocks(this.blocksToFetch)
-
-    if (this.blockGroupsToFetch.length === 0) {
-      return []
-    }
-    return this.readFeatures()
-  }
-
-  static groupBlocks(blocks) {
+  static groupBlocks(blocks: any[]) {
     // sort the blocks by file offset
     blocks.sort((b0, b1) => (b0.offset | 0) - (b1.offset | 0))
 
@@ -159,7 +154,7 @@ export default class RequestWorker {
     return blockGroups
   }
 
-  parseSummaryBlock(bytes, startOffset) {
+  parseSummaryBlock(bytes: Buffer, startOffset: number) {
     const data = bytes.slice(startOffset)
     const p = new Parser().endianess(this.le).array('summary', {
       length: data.byteLength / 64,
@@ -187,7 +182,7 @@ export default class RequestWorker {
       .filter(f => this.coordFilter(f))
   }
 
-  parseBigBedBlock(bytes, startOffset) {
+  parseBigBedBlock(bytes: Buffer, startOffset: number) {
     const data = bytes.slice(startOffset)
     const p = new Parser().endianess(this.le).array('items', {
       type: new Parser()
@@ -199,10 +194,10 @@ export default class RequestWorker {
         }),
       readUntil: 'eof',
     })
-    return p.parse(data).result.items.filter(f => this.coordFilter(f))
+    return p.parse(data).result.items.filter((f: any) => this.coordFilter(f))
   }
 
-  parseBigWigBlock(bytes, startOffset) {
+  parseBigWigBlock(bytes: Buffer, startOffset: number) {
     const data = bytes.slice(startOffset)
     const parser = new Parser()
       .endianess(this.le)
@@ -238,7 +233,7 @@ export default class RequestWorker {
     let items = results.items
     if (results.blockType === BIG_WIG_TYPE_FSTEP) {
       const { itemStep: step } = results
-      items = items.map((s, i) => ({
+      items = items.map((s: any, i: number) => ({
         ...s,
         start: i * step,
         end: i * step + step,
@@ -248,28 +243,27 @@ export default class RequestWorker {
         items[i].end = items[i + 1].start - 1
       }
     }
-    return items.filter(f => this.coordFilter(f))
+    return items.filter((f: any) => this.coordFilter(f))
   }
 
-  coordFilter(f) {
+  coordFilter(f: any) {
     return f.start < this.max && f.end >= this.min
   }
 
   /* eslint no-param-reassign: ["error", { "props": false }] */
   async readFeatures() {
-    const blockFetches = this.blockGroupsToFetch.map(blockGroup => {
+    const blockGroupsToFetch = RequestWorker.groupBlocks(this.blocksToFetch)
+    const blockFetches = blockGroupsToFetch.map((blockGroup: any) => {
       const data = Buffer.alloc(blockGroup.size)
-      return this.window.bwg.bbi
-        .read(data, 0, blockGroup.size, blockGroup.offset)
-        .then(() => {
-          blockGroup.data = data
-          return blockGroup
-        })
+      return this.window.bwg.bbi.read(data, 0, blockGroup.size, blockGroup.offset).then(() => {
+        blockGroup.data = data
+        return blockGroup
+      })
     })
 
     const blockGroups = await Promise.all(blockFetches)
-    const ret = blockGroups.map(blockGroup =>
-      blockGroup.blocks.map(block => {
+    const ret = blockGroups.map((blockGroup: any) =>
+      blockGroup.blocks.map((block: any) => {
         let data
         let offset = block.offset - blockGroup.offset
 
@@ -294,8 +288,7 @@ export default class RequestWorker {
         return undefined
       }),
     )
-    const flatten = list =>
-      list.reduce((a, b) => a.concat(Array.isArray(b) ? flatten(b) : b), [])
+    const flatten = (list: any) => list.reduce((a: any, b: any) => a.concat(Array.isArray(b) ? flatten(b) : b), [])
     return flatten(ret)
   }
 }

@@ -9,14 +9,7 @@ const BIG_WIG_MAGIC = -2003829722
 const BIG_BED_MAGIC = -2021002517
 
 export default class BBIFile {
-  constructor({
-    filehandle,
-    path,
-    cacheSize,
-    fetchSizeLimit,
-    chunkSizeLimit,
-    renameRefSeqs = n => n,
-  }) {
+  constructor({ filehandle, path, cacheSize, fetchSizeLimit, chunkSizeLimit, renameRefSeqs = n => n }) {
     this.renameRefSeq = renameRefSeqs
 
     if (filehandle) {
@@ -45,11 +38,7 @@ export default class BBIFile {
       const key = keys[i]
       const val = obj[key]
       if (key.endsWith('64')) {
-        obj[key.slice(0, -2)] = Long.fromBytes(
-          val,
-          false,
-          !this.isBigEndian,
-        ).toNumber()
+        obj[key.slice(0, -2)] = Long.fromBytes(val, false, !this.isBigEndian).toNumber()
         delete obj[key]
       } else if (typeof obj[key] === 'object' && val !== null) {
         this.convert64Bits(val)
@@ -71,9 +60,7 @@ export default class BBIFile {
     this.type = header.magic === BIG_BED_MAGIC ? 'bigbed' : 'bigwig'
 
     if (header.asOffset) {
-      header.autoSql = buf
-        .slice(header.asOffset, buf.indexOf(0, header.asOffset))
-        .toString('utf8')
+      header.autoSql = buf.slice(header.asOffset, buf.indexOf(0, header.asOffset)).toString('utf8')
     }
     if (header.totalSummaryOffset) {
       const tail = buf.slice(header.totalSummaryOffset)
@@ -163,12 +150,7 @@ export default class BBIFile {
     }
 
     const data = Buffer.alloc(unzoomedDataOffset - header.chromTreeOffset)
-    await this.bbi.read(
-      data,
-      0,
-      unzoomedDataOffset - header.chromTreeOffset,
-      header.chromTreeOffset,
-    )
+    await this.bbi.read(data, 0, unzoomedDataOffset - header.chromTreeOffset, header.chromTreeOffset)
 
     const p = await this.getParsers()
     const ret = p.chromTreeParser.parse(data).result
@@ -263,13 +245,7 @@ export default class BBIFile {
       if (nzl) {
         cirLen = nzl.dataOffset - header.unzoomedIndexOffset
       }
-      this.unzoomedView = new Window(
-        this,
-        header.unzoomedIndexOffset,
-        cirLen,
-        false,
-        this.autoSql,
-      )
+      this.unzoomedView = new Window(this, header.unzoomedIndexOffset, cirLen, false, this.autoSql)
     }
     return this.unzoomedView
   }
