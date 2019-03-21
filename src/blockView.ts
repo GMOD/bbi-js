@@ -7,7 +7,7 @@ import RequestWorker from './requestWorker'
  * @constructs
  */
 
-export default class Window {
+export default class BlockView {
   private cirTreeOffset: number
   private cirTreeLength: number
   private cirBlockSize: number

@@ -1,16 +1,45 @@
 import LRU from 'quick-lru'
 import { Parser } from '@gmod/binary-parser'
-import Long from 'long'
+import * as Long from 'long';
 
-import Window from './window'
+
+import BlockView from './blockView'
 import LocalFile from './localFile'
 
 const BIG_WIG_MAGIC = -2003829722
 const BIG_BED_MAGIC = -2021002517
 
+interface Options {
+  filehandle?: any;
+  path?: string;
+  renameRefSeqs?: (a:string) => string;
+}
+
+interface Statistics {
+  scoreSum: number,
+  basesCovered: number,
+  scoreSumSquares: number
+}
+interface Header {
+  autoSql: string,
+  totalSummary: Statistics,
+  zoomLevels: any,
+  unzoomedIndexOffset: number,
+  unzoomedDataOffset: number,
+  chromTreeOffset: number,
+  fileSize: number
+}
+
 export default class BBIFile {
-  constructor({ filehandle: any, path: string, renameRefSeqs = (n:string): string => n }) {
-    this.renameRefSeq = renameRefSeqs
+  private unzoomedView: BlockView
+  private bbi: any
+  private header: Header
+  private type:string|undefined
+  public renameRefSeq: (a: string)=>string
+
+  constructor(options: Options) {
+    const {filehandle, renameRefSeqs, path} = options
+    this.renameRefSeq = renameRefSeqs || ((s:string):string => s)
 
     if (filehandle) {
       this.bbi = filehandle
@@ -23,7 +52,7 @@ export default class BBIFile {
 
   // mutates obj for keys ending with '64' to longs, and removes the '64' suffix
   /* eslint no-param-reassign: ["error", { "props": false }] */
-  convert64Bits(obj) {
+  convert64Bits(obj:any) : any{
     const keys = Object.keys(obj)
     for (let i = 0; i < keys.length; i += 1) {
       const key = keys[i]
@@ -37,10 +66,9 @@ export default class BBIFile {
     }
   }
 
-  async getHeader() {
-    if (this.header) {
-      return this.header
-    }
+
+// todo: memoize
+  async getHeader() : Promise<any> {
     const ret = await this.getParsers()
     const buf = Buffer.alloc(2000)
     await this.bbi.read(buf, 0, 2000, 0)
@@ -58,30 +86,28 @@ export default class BBIFile {
       header.totalSummary = ret.totalSummaryParser.parse(tail).result
       this.convert64Bits(header.totalSummary)
     }
-    const chroms = await this.readChromTree(header)
-    Object.assign(header, chroms)
-    this.header = header
-    return header
+    const chroms = await this.readChromTree()
+    this.header = {...header, ...chroms}
+    return this.header
   }
 
-  async detectEndianness() {
+  async isBigEndian() : Promise<boolean> {
     const buf = Buffer.allocUnsafe(4)
     await this.bbi.read(buf, 0, 4, 0)
     let ret = buf.readInt32LE(0)
     if (ret === BIG_WIG_MAGIC || ret === BIG_BED_MAGIC) {
-      this.isBigEndian = false
-      return
+      return false
     }
     ret = buf.readInt32BE(0)
     if (ret === BIG_WIG_MAGIC || ret === BIG_BED_MAGIC) {
-      this.isBigEndian = true
-      return
+      return true
     }
     throw new Error('not a BigWig/BigBed file')
   }
 
-  async getParsers() {
-    await this.detectEndianness()
+
+  async getParsers() : Promise<any> {
+    this.isBigEndian = await this.isBigEndian()
 
     const le = this.isBigEndian ? 'big' : 'little'
     const headerParser = new Parser()
@@ -118,7 +144,7 @@ export default class BBIFile {
     /* istanbul ignore next */
     const chromTreeParser = new Parser()
       .endianess(le)
-      .uint32('magic', { assert: s => s === 2026540177 })
+      .uint32('magic')
       .uint32('blockSize')
       .uint32('keySize')
       .uint32('valSize')
@@ -131,9 +157,15 @@ export default class BBIFile {
     }
   }
 
-  async readChromTree(header) {
+
+  async readChromTree():any {
+    if(!this.header) {
+      throw new Error("need to read header first")
+    }
     const refsByNumber = {}
     const refsByName = {}
+    const {header} = this
+    const {chromTreeOffset} = header
 
     let unzoomedDataOffset = header.unzoomedDataOffset
     while (unzoomedDataOffset % 4 !== 0) {
@@ -148,16 +180,14 @@ export default class BBIFile {
     this.convert64Bits(ret)
 
     const rootNodeOffset = 32
-    const bptReadNode = currentOffset => {
+    const bptReadNode = (currentOffset:number) => {
       let offset = currentOffset
       if (offset >= data.length) throw new Error('reading beyond end of buffer')
       const isLeafNode = data.readUInt8(offset)
       const cnt = data.readUInt16LE(offset + 2)
-      // dlog('ReadNode: ' + offset + '     type=' + isLeafNode + '   count=' + cnt);
       offset += 4
       for (let n = 0; n < cnt; n += 1) {
         if (isLeafNode) {
-          // parse leaf node
           let key = ''
           for (let ki = 0; ki < ret.keySize; ki += 1, offset += 1) {
             const charCode = data.readUInt8(offset)
@@ -170,14 +200,12 @@ export default class BBIFile {
           offset += 8
 
           const refRec = { name: key, id: refId, length: refSize }
-
-          // dlog(key + ':' + refId + ',' + refSize);
-          refsByName[this.renameRefSeq(key)] = refRec
+          refsByName[key] = this.renameRefSeq(refRec) // did have renameRefSeqs here
           refsByNumber[refId] = refRec
         } else {
           // parse index node
           offset += ret.keySize
-          let childOffset = Long.fromBytes(offset).toNumber()
+          let childOffset = Long.fromBytes(data.slice(offset,offset+8)).toNumber()
           offset += 8
           childOffset -= header.chromTreeOffset
           bptReadNode(childOffset)
@@ -191,53 +219,45 @@ export default class BBIFile {
     }
   }
 
-  getView(scale) {
-    const header = this.header
-    if (!header.zoomLevels || !header.zoomLevels.length) return null
-
-    if (!this.viewCache || this.viewCache.scale !== scale) {
-      this.viewCache = {
-        scale,
-        view: this.getViewHelper(scale),
-      }
+  //todo: memoize
+  getView(scale: number) : BlockView {
+    if(!this.header) {
+      throw new Error("need to read header first")
     }
-    return this.viewCache.view
-  }
-
-  getViewHelper(scale) {
-    const header = this.header
+    const {header} = this
+    const {zoomLevels, fileSize}=header
     const basesPerPx = 1 / scale
     // console.log('getting view for '+basesPerSpan+' bases per span');
-    let maxLevel = header.zoomLevels.length
-    if (!header.fileSize) {
+    let maxLevel = zoomLevels.length
+    if (!fileSize) {
       // if we don't know the file size, we can't fetch the highest zoom level :-(
       maxLevel -= 1
     }
 
     for (let i = maxLevel; i > 0; i -= 1) {
-      const zh = header.zoomLevels[i]
+      const zh = zoomLevels[i]
       if (zh && zh.reductionLevel <= 2 * basesPerPx) {
         const indexLength =
-          i < header.zoomLevels.length - 1
-            ? header.zoomLevels[i + 1].dataOffset - zh.indexOffset
-            : header.fileSize - 4 - zh.indexOffset
+          i < zoomLevels.length - 1
+            ? zoomLevels[i + 1].dataOffset - zh.indexOffset
+            : fileSize - 4 - zh.indexOffset
         // console.log( 'using zoom level '+i);
-        return new Window(this, zh.indexOffset, indexLength, true)
+        return new BlockView(this, zh.indexOffset, indexLength, true)
       }
     }
     return this.getUnzoomedView()
   }
 
-  getUnzoomedView() {
-    const header = this.header
-    if (!this.unzoomedView) {
-      let cirLen = 4000
-      const nzl = header.zoomLevels[0]
-      if (nzl) {
-        cirLen = nzl.dataOffset - header.unzoomedIndexOffset
-      }
-      this.unzoomedView = new Window(this, header.unzoomedIndexOffset, cirLen, false, this.autoSql)
+//todo memoize
+  private getUnzoomedView():BlockView {
+    if(!this.header) {
+      throw new Error("need to read header first")
     }
-    return this.unzoomedView
+    let cirLen = 4000
+    const nzl = this.header.zoomLevels[0]
+    if (nzl) {
+      cirLen = nzl.dataOffset - this.header.unzoomedIndexOffset
+    }
+    return new BlockView(this, this.header.unzoomedIndexOffset, cirLen, false)
   }
 }
