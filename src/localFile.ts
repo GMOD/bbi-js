@@ -9,13 +9,16 @@ const fsFStat = fs && promisify(fs.fstat)
 const fsReadFile = fs && promisify(fs.readFile)
 
 export default class LocalFile {
-  constructor(source) {
+  private fd: any
+  private position: number
+  private filename: string
+  constructor(source:string) {
     this.position = 0
     this.filename = source
     this.fd = fsOpen(this.filename, 'r')
   }
 
-  async read(buffer, offset = 0, length, position) {
+  async read(buffer: Buffer, offset: number = 0, length:number, position:number) {
     let readPosition = position
     if (readPosition === null) {
       readPosition = this.position
@@ -29,11 +32,8 @@ export default class LocalFile {
   async readFile() {
     return fsReadFile(this.filename)
   }
-
+  // todo memoize
   async stat() {
-    if (!this.statCache) {
-      this.statCache = await fsFStat(await this.fd)
-    }
-    return this.statCache
+    return fsFStat(await this.fd)
   }
 }

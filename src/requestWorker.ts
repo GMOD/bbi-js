@@ -1,15 +1,51 @@
 /* eslint no-bitwise: ["error", { "allow": ["|"] }] */
-
-import Range from './range'
-
 const { Parser } = require('@gmod/binary-parser')
-
 const zlib = require('zlib')
-
+import Range from './range'
+import LocalFile from './localFile'
+import {convert64Bits,groupBlocks} from './util'
 const BIG_WIG_TYPE_GRAPH = 1
 const BIG_WIG_TYPE_VSTEP = 2
 const BIG_WIG_TYPE_FSTEP = 3
 
+interface Feature {
+  start: number
+  end: number
+  score: number
+  minScore?: number
+  maxScore?: number
+  summary?: boolean
+}
+
+interface DataBlock {
+  startChrom: number,
+  endChrom: number,
+  startBase: number,
+  endBase: number,
+  validCnt: number,
+  minVal: number,
+  maxVal: number,
+  sumData: number,
+  sumSqData: number
+}
+
+interface SummaryBlock {
+  chromId: number,
+  startBase: number,
+  endBase: number,
+  validCnt: number,
+  minVal: number,
+  maxVal: number,
+  sumData: number,
+  sumSqData: number
+}
+interface Options {
+  type: string,
+  compressed: boolean,
+  isBigEndian: boolean,
+  cirBlockSize: number,
+  name?: string
+}
 /**
  * Worker object for reading data from a bigwig or bigbed file.
  * Manages the state necessary for traversing the index trees and
@@ -21,23 +57,32 @@ const BIG_WIG_TYPE_FSTEP = 3
  */
 export default class RequestWorker {
   private window: any
-  private source: string
-  private le: boolean
+  private source: string|undefined
+  private le: string
   private blocksToFetch: any[]
   private outstanding: number
-  private chr: string
+  private chrId: number
   private min: number
   private max: number
+  private data: LocalFile
+  private cirBlockSize: number
+  private type: string
+  private compressed: boolean
+  private isBigEndian: boolean
 
-  constructor(win, chr, min, max) {
-    this.window = win
-    this.source = win.bwg.name || undefined
-    this.le = this.window.bwg.isBigEndian ? 'big' : 'little'
+  constructor(data: LocalFile, chrId:number, min:number, max:number, opts: Options) {
+    this.source = opts.name
+    this.cirBlockSize = opts.cirBlockSize
+    this.compressed = opts.compressed
+    this.type = opts.type
+    this.isBigEndian = opts.isBigEndian
+    this.le = opts.isBigEndian ? 'big' : 'little'
+    this.data = data
 
     this.blocksToFetch = []
     this.outstanding = 0
 
-    this.chr = chr
+    this.chrId = chrId
     this.min = min
     this.max = max
   }
@@ -45,7 +90,7 @@ export default class RequestWorker {
   cirFobRecur(offset: any, level: number) {
     this.outstanding += offset.length
 
-    const maxCirBlockSpan = 4 + this.window.cirBlockSize * 32 // Upper bound on size, based on a completely full leaf node.
+    const maxCirBlockSpan = 4 + this.cirBlockSize * 32 // Upper bound on size, based on a completely full leaf node.
     let spans
     for (let i = 0; i < offset.length; i += 1) {
       const blockSpan = new Range(offset[i], offset[i] + maxCirBlockSpan)
@@ -58,7 +103,7 @@ export default class RequestWorker {
   async cirFobStartFetch(offset: any, fr: any, level: number) {
     const length = fr.max() - fr.min()
     const resultBuffer = Buffer.alloc(length)
-    await this.window.bwg.bbi.read(resultBuffer, 0, length, fr.min())
+    await this.data.read(resultBuffer, 0, length, fr.min())
     return new Promise((resolve, reject) => {
       for (let i = 0; i < offset.length; i += 1) {
         if (fr.contains(offset[i])) {
@@ -108,50 +153,23 @@ export default class RequestWorker {
         },
       })
     const p = parser.parse(data).result
-    this.window.bwg.convert64Bits(p)
+    convert64Bits(p,this.isBigEndian)
 
     // prettier-ignore
-    const m = block =>
-      (block.startChrom < this.chr || (block.startChrom === this.chr && block.startBase <= this.max)) &&
-      (block.endChrom > this.chr || (block.endChrom === this.chr && block.endBase >= this.min))
+    const m = (block:DataBlock):boolean =>
+      (block.startChrom < this.chrId || (block.startChrom === this.chrId && block.startBase <= this.max)) &&
+      (block.endChrom > this.chrId || (block.endChrom === this.chrId && block.endBase >= this.min))
 
     if (p.blocksToFetch) {
-      this.blocksToFetch = p.blocksToFetch.filter(m).map((l: any) => ({ offset: l.blockOffset, size: l.blockSize }))
+      this.blocksToFetch = p.blocksToFetch.filter(m).map((l: any):any => ({ offset: l.blockOffset, size: l.blockSize }))
     }
     if (p.recurOffsets) {
-      const recurOffsets = p.recurOffsets.filter(m).map(l => l.blockOffset)
+      const recurOffsets = p.recurOffsets.filter(m).map((l:any):any => l.blockOffset)
       if (recurOffsets.length > 0) {
         return this.cirFobRecur(recurOffsets, level + 1)
       }
     }
     return null
-  }
-
-  static groupBlocks(blocks: any[]) {
-    // sort the blocks by file offset
-    blocks.sort((b0, b1) => (b0.offset | 0) - (b1.offset | 0))
-
-    // group blocks that are within 2KB of eachother
-    const blockGroups = []
-    let lastBlock
-    let lastBlockEnd
-    for (let i = 0; i < blocks.length; i += 1) {
-      if (lastBlock && blocks[i].offset - lastBlockEnd <= 2000) {
-        lastBlock.size += blocks[i].size - lastBlockEnd + blocks[i].offset
-        lastBlock.blocks.push(blocks[i])
-      } else {
-        blockGroups.push(
-          (lastBlock = {
-            blocks: [blocks[i]],
-            size: blocks[i].size,
-            offset: blocks[i].offset,
-          }),
-        )
-      }
-      lastBlockEnd = lastBlock.offset + lastBlock.size
-    }
-
-    return blockGroups
   }
 
   parseSummaryBlock(bytes: Buffer, startOffset: number) {
@@ -160,8 +178,8 @@ export default class RequestWorker {
       length: data.byteLength / 64,
       type: new Parser()
         .int32('chromId')
-        .int32('start')
-        .int32('end')
+        .int32('startBase')
+        .int32('endBase')
         .int32('validCnt')
         .float('minVal')
         .float('maxVal')
@@ -170,16 +188,16 @@ export default class RequestWorker {
     })
     return p
       .parse(data)
-      .result.summary.filter(elt => elt.chromId === this.chr)
-      .map(elt => ({
-        start: elt.start,
-        end: elt.end,
+      .result.summary.filter((elt: SummaryBlock):boolean => elt.chromId === this.chrId)
+      .map((elt:SummaryBlock):Feature => ({
+        start: elt.startBase,
+        end: elt.endBase,
         score: elt.sumData / elt.validCnt || 1,
         maxScore: elt.maxVal,
         minScore: elt.minVal,
         summary: true,
       }))
-      .filter(f => this.coordFilter(f))
+      .filter((f:Feature):boolean => this.coordFilter(f))
   }
 
   parseBigBedBlock(bytes: Buffer, startOffset: number) {
@@ -246,16 +264,15 @@ export default class RequestWorker {
     return items.filter((f: any) => this.coordFilter(f))
   }
 
-  coordFilter(f: any) {
+  coordFilter(f: Feature):boolean {
     return f.start < this.max && f.end >= this.min
   }
 
-  /* eslint no-param-reassign: ["error", { "props": false }] */
   async readFeatures() {
-    const blockGroupsToFetch = RequestWorker.groupBlocks(this.blocksToFetch)
+    const blockGroupsToFetch = groupBlocks(this.blocksToFetch)
     const blockFetches = blockGroupsToFetch.map((blockGroup: any) => {
       const data = Buffer.alloc(blockGroup.size)
-      return this.window.bwg.bbi.read(data, 0, blockGroup.size, blockGroup.offset).then(() => {
+      return this.data.read(data, 0, blockGroup.size, blockGroup.offset).then(() => {
         blockGroup.data = data
         return blockGroup
       })
@@ -267,7 +284,7 @@ export default class RequestWorker {
         let data
         let offset = block.offset - blockGroup.offset
 
-        if (this.window.bwg.header.uncompressBufSize > 0) {
+        if (this.compressed) {
           data = zlib.inflateSync(blockGroup.data.slice(offset))
           offset = 0
         } else {
@@ -275,17 +292,17 @@ export default class RequestWorker {
           data = blockGroup.data
         }
 
-        if (this.window.isSummary) {
+        switch(this.type) {
+          case 'summary':
           return this.parseSummaryBlock(data, offset)
-        }
-        if (this.window.bwg.type === 'bigwig') {
+          case 'bigwig':
           return this.parseBigWigBlock(data, offset)
-        }
-        if (this.window.bwg.type === 'bigbed') {
+          case 'bigbed':
           return this.parseBigBedBlock(data, offset)
+          default:
+          console.warn(`Don't know what to do with ${this.type}`)
+          return undefined
         }
-        console.warn(`Don't know what to do with ${this.window.bwg.type}`)
-        return undefined
       }),
     )
     const flatten = (list: any) => list.reduce((a: any, b: any) => a.concat(Array.isArray(b) ? flatten(b) : b), [])

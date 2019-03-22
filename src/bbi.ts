@@ -1,6 +1,7 @@
 import LRU from 'quick-lru'
 import { Parser } from '@gmod/binary-parser'
 import * as Long from 'long';
+import {convert64Bits} from './util'
 
 
 import BlockView from './blockView'
@@ -50,24 +51,10 @@ export default class BBIFile {
     }
   }
 
-  // mutates obj for keys ending with '64' to longs, and removes the '64' suffix
-  /* eslint no-param-reassign: ["error", { "props": false }] */
-  convert64Bits(obj:any) : any{
-    const keys = Object.keys(obj)
-    for (let i = 0; i < keys.length; i += 1) {
-      const key = keys[i]
-      const val = obj[key]
-      if (key.endsWith('64')) {
-        obj[key.slice(0, -2)] = Long.fromBytes(val, false, !this.isBigEndian).toNumber()
-        delete obj[key]
-      } else if (typeof obj[key] === 'object' && val !== null) {
-        this.convert64Bits(val)
-      }
-    }
-  }
 
 
-// todo: memoize
+
+  // todo: memoize
   async getHeader() : Promise<any> {
     const ret = await this.getParsers()
     const buf = Buffer.alloc(2000)
@@ -75,7 +62,7 @@ export default class BBIFile {
     const res = ret.headerParser.parse(buf)
 
     const header = res.result
-    this.convert64Bits(header)
+    convert64Bits(header, this.isBigEndian)
     this.type = header.magic === BIG_BED_MAGIC ? 'bigbed' : 'bigwig'
 
     if (header.asOffset) {
@@ -177,7 +164,7 @@ export default class BBIFile {
 
     const p = await this.getParsers()
     const ret = p.chromTreeParser.parse(data).result
-    this.convert64Bits(ret)
+    convert64Bits(ret, this.isBigEndian)
 
     const rootNodeOffset = 32
     const bptReadNode = (currentOffset:number) => {
