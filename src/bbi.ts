@@ -67,7 +67,7 @@ export default class BBIFile {
   }
 
   // todo: memoize
-  async getHeader(): Promise<any> {
+  async getHeader(): Promise<Header> {
     const ret = await this.getParsers()
     const buf = Buffer.alloc(2000)
     await this.bbi.read(buf, 0, 2000, 0)
@@ -192,7 +192,7 @@ export default class BBIFile {
           offset += 8
 
           const refRec = { name: key, id: refId, length: refSize }
-          refsByName[key] = this.renameRefSeqs(key)
+          refsByName[this.renameRefSeqs(key)] = refId
           refsByNumber[refId] = refRec
         } else {
           // parse index node

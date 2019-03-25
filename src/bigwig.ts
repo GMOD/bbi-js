@@ -6,7 +6,7 @@ interface Options {
 }
 export default class BigWig extends BBI {
   async getFeatures(refName: string, start: number, end: number, opts: Options = { scale: 1 }) {
-    await this.initData()
+    const { chroms, header } = await this.initData()
     const chrName = this.renameRefSeqs(refName)
     let view
 

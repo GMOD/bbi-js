@@ -43,7 +43,8 @@ export default class BlockView {
   // todo:memoize/lru
   async readWigData(chrName: string, min: number, max: number): Promise<any> {
     const chr = this.refsByName[chrName]
-    if (!chr) {
+    //console.log('chrName',chrName,this.refsByName)
+    if (chr === undefined) {
       return []
     }
     const buffer = Buffer.alloc(48)
