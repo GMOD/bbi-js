@@ -29,23 +29,26 @@ interface Header {
   uncompressedDataSize: number
   chromTreeOffset: number
   fileSize: number
+}
+
+interface ChromTree {
   refsByName: any
   refsByNumber: any
 }
 
 export default class BBIFile {
   private bbi: any
-  private header?: Header
+  private header: Promise<Header>
+  private chroms: Promise<ChromTree>
   private type: string
   private isBE: boolean
-  public renameRefSeq: (a: string) => string
+  public renameRefSeqs: (a: string) => string
 
   constructor(options: Options) {
     const { filehandle, renameRefSeqs, path } = options
-    this.renameRefSeq = renameRefSeqs || ((s: string): string => s)
+    this.renameRefSeqs = renameRefSeqs || ((s: string): string => s)
     this.type = ''
     this.isBE = false
-
     if (filehandle) {
       this.bbi = filehandle
     } else if (path) {
@@ -53,6 +56,12 @@ export default class BBIFile {
     } else {
       throw new Error('no file given')
     }
+    this.header = this.getHeader()
+    this.chroms = this.readChromTree()
+  }
+
+  async initData(): Promise<any> {
+    return { ...await this.header, ...await this.chroms }
   }
 
   // todo: memoize
@@ -74,9 +83,7 @@ export default class BBIFile {
       header.totalSummary = ret.totalSummaryParser.parse(tail).result
       convert64Bits(header.totalSummary, this.isBE)
     }
-    const chroms = await this.readChromTree()
-    this.header = { ...header, ...chroms }
-    return this.header
+    return header
   }
 
   async isBigEndian(): Promise<boolean> {
@@ -96,7 +103,7 @@ export default class BBIFile {
   async getParsers(): Promise<any> {
     this.isBE = await this.isBigEndian()
 
-    const le = this.isBigEndian ? 'big' : 'little'
+    const le = this.isBE ? 'big' : 'little'
     const headerParser = new Parser()
       .endianess(le)
       .int32('magic')
@@ -144,22 +151,19 @@ export default class BBIFile {
     }
   }
 
-  async readChromTree(): Promise<any> {
-    if (!this.header) {
-      throw new Error('need to read header first')
-    }
+  async readChromTree(): Promise<ChromTree> {
+    const header = await this.header
     const refsByNumber: any = {}
     const refsByName: any = {}
-    const { header } = this
     const { chromTreeOffset } = header
+    let { unzoomedDataOffset } = header
 
-    let unzoomedDataOffset = header.unzoomedDataOffset
     while (unzoomedDataOffset % 4 !== 0) {
       unzoomedDataOffset += 1
     }
 
-    const data = Buffer.alloc(unzoomedDataOffset - header.chromTreeOffset)
-    await this.bbi.read(data, 0, unzoomedDataOffset - header.chromTreeOffset, header.chromTreeOffset)
+    const data = Buffer.alloc(unzoomedDataOffset - chromTreeOffset)
+    await this.bbi.read(data, 0, unzoomedDataOffset - chromTreeOffset, chromTreeOffset)
 
     const p = await this.getParsers()
     const ret = p.chromTreeParser.parse(data).result
@@ -186,14 +190,15 @@ export default class BBIFile {
           offset += 8
 
           const refRec = { name: key, id: refId, length: refSize }
-          refsByName[key] = this.renameRefSeq(key)
+          refsByName[key] = this.renameRefSeqs(key)
           refsByNumber[refId] = refRec
         } else {
           // parse index node
           offset += ret.keySize
-          let childOffset = Long.fromBytes(Array<number>(data.slice(offset, offset + 8))).toNumber()
+          const bytes = data.slice(offset, offset + 8) as unknown
+          let childOffset = Long.fromBytes(bytes as number[]).toNumber()
           offset += 8
-          childOffset -= header.chromTreeOffset
+          childOffset -= chromTreeOffset
           bptReadNode(childOffset)
         }
       }
@@ -206,14 +211,11 @@ export default class BBIFile {
   }
 
   //todo: memoize
-  getView(scale: number): BlockView {
-    if (!this.header) {
-      throw new Error('need to read header first')
-    }
-    const { header } = this
+  async getView(scale: number): Promise<BlockView> {
+    const header = await this.header
     const { zoomLevels, fileSize } = header
+    const chroms = await this.chroms
     const basesPerPx = 1 / scale
-    // console.log('getting view for '+basesPerSpan+' bases per span');
     let maxLevel = zoomLevels.length
     if (!fileSize) {
       // if we don't know the file size, we can't fetch the highest zoom level :-(
@@ -227,12 +229,12 @@ export default class BBIFile {
           i < zoomLevels.length - 1 ? zoomLevels[i + 1].dataOffset - zh.indexOffset : fileSize - 4 - zh.indexOffset
         return new BlockView(
           this.bbi,
-          this.header.refsByName,
+          chroms.refsByName,
           zh.indexOffset,
           indexLength,
           this.isBE,
           true,
-          this.header.uncompressedDataSize > 0,
+          header.uncompressedDataSize > 0,
           this.type,
         )
       }
@@ -241,23 +243,22 @@ export default class BBIFile {
   }
 
   //todo memoize
-  private getUnzoomedView(): BlockView {
-    if (!this.header) {
-      throw new Error('need to read header first')
-    }
+  private async getUnzoomedView(): Promise<BlockView> {
+    const header = await this.header
+    const chroms = await this.chroms
     let cirLen = 4000
-    const nzl = this.header.zoomLevels[0]
+    const nzl = header.zoomLevels[0]
     if (nzl) {
-      cirLen = nzl.dataOffset - this.header.unzoomedIndexOffset
+      cirLen = nzl.dataOffset - header.unzoomedIndexOffset
     }
     return new BlockView(
       this.bbi,
-      this.header.refsByName,
-      this.header.unzoomedIndexOffset,
+      chroms.refsByName,
+      header.unzoomedIndexOffset,
       cirLen,
       this.isBE,
       false,
-      this.header.uncompressedDataSize > 0,
+      header.uncompressedDataSize > 0,
       this.type,
     )
   }

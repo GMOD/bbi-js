@@ -39,8 +39,9 @@ export default class BlockView {
     this.bbi = bbi
     this.type = isSummary ? 'summary' : type
   }
+
   // todo:memoize/lru
-  async readWigData(chrName: string, min: number, max: number) {
+  async readWigData(chrName: string, min: number, max: number): Promise<any> {
     const chr = this.refsByName[chrName]
     if (!chr) {
       return []
