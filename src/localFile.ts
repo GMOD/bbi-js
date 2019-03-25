@@ -1,5 +1,5 @@
 const { promisify } = require('es6-promisify')
-declare var __webpack_require__: any;
+declare var __webpack_require__: any
 
 // don't load fs native module if running in webpacked code
 const fs = typeof __webpack_require__ !== 'function' ? require('fs') : null // eslint-disable-line camelcase

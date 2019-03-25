@@ -91,13 +91,13 @@ export default class RequestWorker {
     this.outstanding += offset.length
 
     const maxCirBlockSpan = 4 + this.cirBlockSize * 32 // Upper bound on size, based on a completely full leaf node.
-    let spans
-    for (let i = 0; i < offset.length; i += 1) {
+    let spans = new Range(offset[0], offset[0] + maxCirBlockSpan)
+    for (let i = 1; i < offset.length; i += 1) {
       const blockSpan = new Range(offset[i], offset[i] + maxCirBlockSpan)
-      spans = spans ? spans.union(blockSpan) : blockSpan
+      spans = spans.union(blockSpan)
     }
 
-    return spans.getRanges().map((fr: any) => this.cirFobStartFetch(offset, fr, level))
+    return spans.getRanges().map((fr: Range) => this.cirFobStartFetch(offset, fr, level))
   }
 
   async cirFobStartFetch(offset: any, fr: any, level: number) {

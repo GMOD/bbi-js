@@ -26,20 +26,25 @@ interface Header {
   zoomLevels: any
   unzoomedIndexOffset: number
   unzoomedDataOffset: number
+  uncompressedDataSize: number
   chromTreeOffset: number
   fileSize: number
+  refsByName: any
+  refsByNumber: any
 }
 
 export default class BBIFile {
-  private unzoomedView: BlockView
   private bbi: any
-  private header: Header
-  private type: string | undefined
+  private header?: Header
+  private type: string
+  private isBE: boolean
   public renameRefSeq: (a: string) => string
 
   constructor(options: Options) {
     const { filehandle, renameRefSeqs, path } = options
     this.renameRefSeq = renameRefSeqs || ((s: string): string => s)
+    this.type = ''
+    this.isBE = false
 
     if (filehandle) {
       this.bbi = filehandle
@@ -58,7 +63,7 @@ export default class BBIFile {
     const res = ret.headerParser.parse(buf)
 
     const header = res.result
-    convert64Bits(header, this.isBigEndian)
+    convert64Bits(header, this.isBE)
     this.type = header.magic === BIG_BED_MAGIC ? 'bigbed' : 'bigwig'
 
     if (header.asOffset) {
@@ -67,7 +72,7 @@ export default class BBIFile {
     if (header.totalSummaryOffset) {
       const tail = buf.slice(header.totalSummaryOffset)
       header.totalSummary = ret.totalSummaryParser.parse(tail).result
-      this.convert64Bits(header.totalSummary)
+      convert64Bits(header.totalSummary, this.isBE)
     }
     const chroms = await this.readChromTree()
     this.header = { ...header, ...chroms }
@@ -89,7 +94,7 @@ export default class BBIFile {
   }
 
   async getParsers(): Promise<any> {
-    this.isBigEndian = await this.isBigEndian()
+    this.isBE = await this.isBigEndian()
 
     const le = this.isBigEndian ? 'big' : 'little'
     const headerParser = new Parser()
@@ -139,12 +144,12 @@ export default class BBIFile {
     }
   }
 
-  async readChromTree(): any {
+  async readChromTree(): Promise<any> {
     if (!this.header) {
       throw new Error('need to read header first')
     }
-    const refsByNumber = {}
-    const refsByName = {}
+    const refsByNumber: any = {}
+    const refsByName: any = {}
     const { header } = this
     const { chromTreeOffset } = header
 
@@ -158,7 +163,7 @@ export default class BBIFile {
 
     const p = await this.getParsers()
     const ret = p.chromTreeParser.parse(data).result
-    convert64Bits(ret, this.isBigEndian)
+    convert64Bits(ret, this.isBE)
 
     const rootNodeOffset = 32
     const bptReadNode = (currentOffset: number) => {
@@ -181,12 +186,12 @@ export default class BBIFile {
           offset += 8
 
           const refRec = { name: key, id: refId, length: refSize }
-          refsByName[key] = this.renameRefSeq(refRec) // did have renameRefSeqs here
+          refsByName[key] = this.renameRefSeq(key)
           refsByNumber[refId] = refRec
         } else {
           // parse index node
           offset += ret.keySize
-          let childOffset = Long.fromBytes(data.slice(offset, offset + 8)).toNumber()
+          let childOffset = Long.fromBytes(Array<number>(data.slice(offset, offset + 8))).toNumber()
           offset += 8
           childOffset -= header.chromTreeOffset
           bptReadNode(childOffset)
@@ -220,7 +225,16 @@ export default class BBIFile {
       if (zh && zh.reductionLevel <= 2 * basesPerPx) {
         const indexLength =
           i < zoomLevels.length - 1 ? zoomLevels[i + 1].dataOffset - zh.indexOffset : fileSize - 4 - zh.indexOffset
-  return new BlockView(this.bbi, this.header.refsByName, zh.indexOffset, indexLength, this.isBigEndian, true, this.header.uncompressedDataSize>0)
+        return new BlockView(
+          this.bbi,
+          this.header.refsByName,
+          zh.indexOffset,
+          indexLength,
+          this.isBE,
+          true,
+          this.header.uncompressedDataSize > 0,
+          this.type,
+        )
       }
     }
     return this.getUnzoomedView()
@@ -236,7 +250,15 @@ export default class BBIFile {
     if (nzl) {
       cirLen = nzl.dataOffset - this.header.unzoomedIndexOffset
     }
-    return new BlockView(this, this.header.unzoomedIndexOffset, cirLen, false)
-    return new BlockView(this.bbi, this.header.refsByName, zh.indexOffset, indexLength, this.isBigEndian, false, this.header.uncompressedDataSize>0)
+    return new BlockView(
+      this.bbi,
+      this.header.refsByName,
+      this.header.unzoomedIndexOffset,
+      cirLen,
+      this.isBE,
+      false,
+      this.header.uncompressedDataSize > 0,
+      this.type,
+    )
   }
 }
