@@ -26,7 +26,7 @@ interface Header {
   zoomLevels: any
   unzoomedIndexOffset: number
   unzoomedDataOffset: number
-  uncompressedDataSize: number
+  uncompressBufSize: number
   chromTreeOffset: number
   fileSize: number
 }
@@ -61,7 +61,9 @@ export default class BBIFile {
   }
 
   async initData(): Promise<any> {
-    return { ...await this.header, ...await this.chroms }
+    const header = await this.header
+    const chroms = await this.chroms
+    return { header, chroms }
   }
 
   // todo: memoize
@@ -212,9 +214,8 @@ export default class BBIFile {
 
   //todo: memoize
   async getView(scale: number): Promise<BlockView> {
-    const header = await this.header
+    const { header, chroms } = await this.initData()
     const { zoomLevels, fileSize } = header
-    const chroms = await this.chroms
     const basesPerPx = 1 / scale
     let maxLevel = zoomLevels.length
     if (!fileSize) {
@@ -234,7 +235,7 @@ export default class BBIFile {
           indexLength,
           this.isBE,
           true,
-          header.uncompressedDataSize > 0,
+          header.uncompressBufSize > 0,
           this.type,
         )
       }
@@ -258,7 +259,7 @@ export default class BBIFile {
       cirLen,
       this.isBE,
       false,
-      header.uncompressedDataSize > 0,
+      header.uncompressBufSize > 0,
       this.type,
     )
   }
