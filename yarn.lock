@@ -1677,6 +1677,23 @@ babel-plugin-jest-hoist@^24.3.0:
   dependencies:
     "@types/babel__traverse" "^7.0.6"
 
+babel-plugin-syntax-object-rest-spread@7.0.0-alpha.19:
+  version "7.0.0-alpha.19"
+  resolved "https://registry.yarnpkg.com/babel-plugin-syntax-object-rest-spread/-/babel-plugin-syntax-object-rest-spread-7.0.0-alpha.19.tgz#f68e6b6622ce4c66a858d25442352ff3f4880642"
+  integrity sha512-Jo9wXmU9AtufOFPdQpedc+j7Ck5okGYsK0zkk2NZNae61SAtuMF5M3aRUeZusrssPqWC32pOiBokbApIFHdlXw==
+
+babel-plugin-syntax-typescript@7.0.0-alpha.19:
+  version "7.0.0-alpha.19"
+  resolved "https://registry.yarnpkg.com/babel-plugin-syntax-typescript/-/babel-plugin-syntax-typescript-7.0.0-alpha.19.tgz#fc5876863db297549f5d840d248eac3310241f84"
+  integrity sha512-jLuaWfoQsVr8/hmZtWB+86tZ5jYmOYV6kq70EkSUT7RR+gfeYOExS0FjObbbp+WExZNpBaRZvlyikNk3hCQGeQ==
+
+babel-plugin-transform-typescript@7.0.0-alpha.19:
+  version "7.0.0-alpha.19"
+  resolved "https://registry.yarnpkg.com/babel-plugin-transform-typescript/-/babel-plugin-transform-typescript-7.0.0-alpha.19.tgz#9b06c066393d6752e6e539e8b0b5929a78feb5b1"
+  integrity sha512-OtkOYcYRffmC38/UjDZn2cvM2qarqDT748TbSJtVpNb7EvDLQcfPn9+0adk8oqmhc0lk+Ldy/2daGMNMxW0vuQ==
+  dependencies:
+    babel-plugin-syntax-typescript "7.0.0-alpha.19"
+
 babel-preset-jest@^24.3.0:
   version "24.3.0"
   resolved "https://registry.yarnpkg.com/babel-preset-jest/-/babel-preset-jest-24.3.0.tgz#db88497e18869f15b24d9c0e547d8e0ab950796d"
@@ -1684,6 +1701,14 @@ babel-preset-jest@^24.3.0:
   dependencies:
     "@babel/plugin-syntax-object-rest-spread" "^7.0.0"
     babel-plugin-jest-hoist "^24.3.0"
+
+babel-preset-typescript@^7.0.0-alpha.19:
+  version "7.0.0-alpha.19"
+  resolved "https://registry.yarnpkg.com/babel-preset-typescript/-/babel-preset-typescript-7.0.0-alpha.19.tgz#32b8590c87a050faeb44db332db9f9106e5170e7"
+  integrity sha512-2VGIgn58ohmVXhc+qAx0OsihQHQm5R+Y1Mu7bu98HbCJtR/CzEdZs8qCtPb1XmYKF8XRNvZQge44dPTVimI2/w==
+  dependencies:
+    babel-plugin-syntax-object-rest-spread "7.0.0-alpha.19"
+    babel-plugin-transform-typescript "7.0.0-alpha.19"
 
 babel-runtime@^6.0.0:
   version "6.26.0"

@@ -1,7 +1,7 @@
 import BBI from './bbi'
 
 export default class BigBed extends BBI {
-  async getFeatures(refName:string, start:number, end:number) {
+  async getFeatures(refName: string, start: number, end: number) {
     await this.getHeader()
     const chrName = this.renameRefSeq(refName)
 

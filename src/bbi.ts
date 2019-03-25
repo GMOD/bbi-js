@@ -1,8 +1,7 @@
 import LRU from 'quick-lru'
 import { Parser } from '@gmod/binary-parser'
-import * as Long from 'long';
-import {convert64Bits} from './util'
-
+import * as Long from 'long'
+import { convert64Bits } from './util'
 
 import BlockView from './blockView'
 import LocalFile from './localFile'
@@ -11,23 +10,23 @@ const BIG_WIG_MAGIC = -2003829722
 const BIG_BED_MAGIC = -2021002517
 
 interface Options {
-  filehandle?: any;
-  path?: string;
-  renameRefSeqs?: (a:string) => string;
+  filehandle?: any
+  path?: string
+  renameRefSeqs?: (a: string) => string
 }
 
 interface Statistics {
-  scoreSum: number,
-  basesCovered: number,
+  scoreSum: number
+  basesCovered: number
   scoreSumSquares: number
 }
 interface Header {
-  autoSql: string,
-  totalSummary: Statistics,
-  zoomLevels: any,
-  unzoomedIndexOffset: number,
-  unzoomedDataOffset: number,
-  chromTreeOffset: number,
+  autoSql: string
+  totalSummary: Statistics
+  zoomLevels: any
+  unzoomedIndexOffset: number
+  unzoomedDataOffset: number
+  chromTreeOffset: number
   fileSize: number
 }
 
@@ -35,12 +34,12 @@ export default class BBIFile {
   private unzoomedView: BlockView
   private bbi: any
   private header: Header
-  private type:string|undefined
-  public renameRefSeq: (a: string)=>string
+  private type: string | undefined
+  public renameRefSeq: (a: string) => string
 
   constructor(options: Options) {
-    const {filehandle, renameRefSeqs, path} = options
-    this.renameRefSeq = renameRefSeqs || ((s:string):string => s)
+    const { filehandle, renameRefSeqs, path } = options
+    this.renameRefSeq = renameRefSeqs || ((s: string): string => s)
 
     if (filehandle) {
       this.bbi = filehandle
@@ -51,11 +50,8 @@ export default class BBIFile {
     }
   }
 
-
-
-
   // todo: memoize
-  async getHeader() : Promise<any> {
+  async getHeader(): Promise<any> {
     const ret = await this.getParsers()
     const buf = Buffer.alloc(2000)
     await this.bbi.read(buf, 0, 2000, 0)
@@ -74,11 +70,11 @@ export default class BBIFile {
       this.convert64Bits(header.totalSummary)
     }
     const chroms = await this.readChromTree()
-    this.header = {...header, ...chroms}
+    this.header = { ...header, ...chroms }
     return this.header
   }
 
-  async isBigEndian() : Promise<boolean> {
+  async isBigEndian(): Promise<boolean> {
     const buf = Buffer.allocUnsafe(4)
     await this.bbi.read(buf, 0, 4, 0)
     let ret = buf.readInt32LE(0)
@@ -92,8 +88,7 @@ export default class BBIFile {
     throw new Error('not a BigWig/BigBed file')
   }
 
-
-  async getParsers() : Promise<any> {
+  async getParsers(): Promise<any> {
     this.isBigEndian = await this.isBigEndian()
 
     const le = this.isBigEndian ? 'big' : 'little'
@@ -144,15 +139,14 @@ export default class BBIFile {
     }
   }
 
-
-  async readChromTree():any {
-    if(!this.header) {
-      throw new Error("need to read header first")
+  async readChromTree(): any {
+    if (!this.header) {
+      throw new Error('need to read header first')
     }
     const refsByNumber = {}
     const refsByName = {}
-    const {header} = this
-    const {chromTreeOffset} = header
+    const { header } = this
+    const { chromTreeOffset } = header
 
     let unzoomedDataOffset = header.unzoomedDataOffset
     while (unzoomedDataOffset % 4 !== 0) {
@@ -167,7 +161,7 @@ export default class BBIFile {
     convert64Bits(ret, this.isBigEndian)
 
     const rootNodeOffset = 32
-    const bptReadNode = (currentOffset:number) => {
+    const bptReadNode = (currentOffset: number) => {
       let offset = currentOffset
       if (offset >= data.length) throw new Error('reading beyond end of buffer')
       const isLeafNode = data.readUInt8(offset)
@@ -192,7 +186,7 @@ export default class BBIFile {
         } else {
           // parse index node
           offset += ret.keySize
-          let childOffset = Long.fromBytes(data.slice(offset,offset+8)).toNumber()
+          let childOffset = Long.fromBytes(data.slice(offset, offset + 8)).toNumber()
           offset += 8
           childOffset -= header.chromTreeOffset
           bptReadNode(childOffset)
@@ -207,12 +201,12 @@ export default class BBIFile {
   }
 
   //todo: memoize
-  getView(scale: number) : BlockView {
-    if(!this.header) {
-      throw new Error("need to read header first")
+  getView(scale: number): BlockView {
+    if (!this.header) {
+      throw new Error('need to read header first')
     }
-    const {header} = this
-    const {zoomLevels, fileSize}=header
+    const { header } = this
+    const { zoomLevels, fileSize } = header
     const basesPerPx = 1 / scale
     // console.log('getting view for '+basesPerSpan+' bases per span');
     let maxLevel = zoomLevels.length
@@ -225,20 +219,17 @@ export default class BBIFile {
       const zh = zoomLevels[i]
       if (zh && zh.reductionLevel <= 2 * basesPerPx) {
         const indexLength =
-          i < zoomLevels.length - 1
-            ? zoomLevels[i + 1].dataOffset - zh.indexOffset
-            : fileSize - 4 - zh.indexOffset
-        // console.log( 'using zoom level '+i);
-        return new BlockView(this, zh.indexOffset, indexLength, true)
+          i < zoomLevels.length - 1 ? zoomLevels[i + 1].dataOffset - zh.indexOffset : fileSize - 4 - zh.indexOffset
+  return new BlockView(this.bbi, this.header.refsByName, zh.indexOffset, indexLength, this.isBigEndian, true, this.header.uncompressedDataSize>0)
       }
     }
     return this.getUnzoomedView()
   }
 
-//todo memoize
-  private getUnzoomedView():BlockView {
-    if(!this.header) {
-      throw new Error("need to read header first")
+  //todo memoize
+  private getUnzoomedView(): BlockView {
+    if (!this.header) {
+      throw new Error('need to read header first')
     }
     let cirLen = 4000
     const nzl = this.header.zoomLevels[0]
@@ -246,5 +237,6 @@ export default class BBIFile {
       cirLen = nzl.dataOffset - this.header.unzoomedIndexOffset
     }
     return new BlockView(this, this.header.unzoomedIndexOffset, cirLen, false)
+    return new BlockView(this.bbi, this.header.refsByName, zh.indexOffset, indexLength, this.isBigEndian, false, this.header.uncompressedDataSize>0)
   }
 }

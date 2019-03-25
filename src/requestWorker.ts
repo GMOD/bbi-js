@@ -3,7 +3,7 @@ const { Parser } = require('@gmod/binary-parser')
 const zlib = require('zlib')
 import Range from './range'
 import LocalFile from './localFile'
-import {convert64Bits,groupBlocks} from './util'
+import { convert64Bits, groupBlocks } from './util'
 const BIG_WIG_TYPE_GRAPH = 1
 const BIG_WIG_TYPE_VSTEP = 2
 const BIG_WIG_TYPE_FSTEP = 3
@@ -18,32 +18,32 @@ interface Feature {
 }
 
 interface DataBlock {
-  startChrom: number,
-  endChrom: number,
-  startBase: number,
-  endBase: number,
-  validCnt: number,
-  minVal: number,
-  maxVal: number,
-  sumData: number,
+  startChrom: number
+  endChrom: number
+  startBase: number
+  endBase: number
+  validCnt: number
+  minVal: number
+  maxVal: number
+  sumData: number
   sumSqData: number
 }
 
 interface SummaryBlock {
-  chromId: number,
-  startBase: number,
-  endBase: number,
-  validCnt: number,
-  minVal: number,
-  maxVal: number,
-  sumData: number,
+  chromId: number
+  startBase: number
+  endBase: number
+  validCnt: number
+  minVal: number
+  maxVal: number
+  sumData: number
   sumSqData: number
 }
 interface Options {
-  type: string,
-  compressed: boolean,
-  isBigEndian: boolean,
-  cirBlockSize: number,
+  type: string
+  compressed: boolean
+  isBigEndian: boolean
+  cirBlockSize: number
   name?: string
 }
 /**
@@ -57,7 +57,7 @@ interface Options {
  */
 export default class RequestWorker {
   private window: any
-  private source: string|undefined
+  private source: string | undefined
   private le: string
   private blocksToFetch: any[]
   private outstanding: number
@@ -70,7 +70,7 @@ export default class RequestWorker {
   private compressed: boolean
   private isBigEndian: boolean
 
-  constructor(data: LocalFile, chrId:number, min:number, max:number, opts: Options) {
+  constructor(data: LocalFile, chrId: number, min: number, max: number, opts: Options) {
     this.source = opts.name
     this.cirBlockSize = opts.cirBlockSize
     this.compressed = opts.compressed
@@ -153,7 +153,7 @@ export default class RequestWorker {
         },
       })
     const p = parser.parse(data).result
-    convert64Bits(p,this.isBigEndian)
+    convert64Bits(p, this.isBigEndian)
 
     // prettier-ignore
     const m = (block:DataBlock):boolean =>
@@ -161,10 +161,12 @@ export default class RequestWorker {
       (block.endChrom > this.chrId || (block.endChrom === this.chrId && block.endBase >= this.min))
 
     if (p.blocksToFetch) {
-      this.blocksToFetch = p.blocksToFetch.filter(m).map((l: any):any => ({ offset: l.blockOffset, size: l.blockSize }))
+      this.blocksToFetch = p.blocksToFetch
+        .filter(m)
+        .map((l: any): any => ({ offset: l.blockOffset, size: l.blockSize }))
     }
     if (p.recurOffsets) {
-      const recurOffsets = p.recurOffsets.filter(m).map((l:any):any => l.blockOffset)
+      const recurOffsets = p.recurOffsets.filter(m).map((l: any): any => l.blockOffset)
       if (recurOffsets.length > 0) {
         return this.cirFobRecur(recurOffsets, level + 1)
       }
@@ -188,16 +190,18 @@ export default class RequestWorker {
     })
     return p
       .parse(data)
-      .result.summary.filter((elt: SummaryBlock):boolean => elt.chromId === this.chrId)
-      .map((elt:SummaryBlock):Feature => ({
-        start: elt.startBase,
-        end: elt.endBase,
-        score: elt.sumData / elt.validCnt || 1,
-        maxScore: elt.maxVal,
-        minScore: elt.minVal,
-        summary: true,
-      }))
-      .filter((f:Feature):boolean => this.coordFilter(f))
+      .result.summary.filter((elt: SummaryBlock): boolean => elt.chromId === this.chrId)
+      .map(
+        (elt: SummaryBlock): Feature => ({
+          start: elt.startBase,
+          end: elt.endBase,
+          score: elt.sumData / elt.validCnt || 1,
+          maxScore: elt.maxVal,
+          minScore: elt.minVal,
+          summary: true,
+        }),
+      )
+      .filter((f: Feature): boolean => this.coordFilter(f))
   }
 
   parseBigBedBlock(bytes: Buffer, startOffset: number) {
@@ -264,7 +268,7 @@ export default class RequestWorker {
     return items.filter((f: any) => this.coordFilter(f))
   }
 
-  coordFilter(f: Feature):boolean {
+  coordFilter(f: Feature): boolean {
     return f.start < this.max && f.end >= this.min
   }
 
@@ -292,16 +296,16 @@ export default class RequestWorker {
           data = blockGroup.data
         }
 
-        switch(this.type) {
+        switch (this.type) {
           case 'summary':
-          return this.parseSummaryBlock(data, offset)
+            return this.parseSummaryBlock(data, offset)
           case 'bigwig':
-          return this.parseBigWigBlock(data, offset)
+            return this.parseBigWigBlock(data, offset)
           case 'bigbed':
-          return this.parseBigBedBlock(data, offset)
+            return this.parseBigBedBlock(data, offset)
           default:
-          console.warn(`Don't know what to do with ${this.type}`)
-          return undefined
+            console.warn(`Don't know what to do with ${this.type}`)
+            return undefined
         }
       }),
     )

@@ -1,13 +1,11 @@
 import BBI from './bbi'
 
-
-
 interface Options {
-  basesPerSpan?: number;
-  scale?: number;
+  basesPerSpan?: number
+  scale?: number
 }
 export default class BigWig extends BBI {
-  async getFeatures(refName:string, start:number, end:number, opts: Options={scale:1}) {
+  async getFeatures(refName: string, start: number, end: number, opts: Options = { scale: 1 }) {
     await this.getHeader()
     const chrName = this.renameRefSeq(refName)
     let view

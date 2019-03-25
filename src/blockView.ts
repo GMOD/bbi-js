@@ -7,19 +7,25 @@ import RequestWorker from './requestWorker'
  * @constructs
  */
 
-
-
 export default class BlockView {
   private cirTreeOffset: number
   private cirTreeLength: number
   private cirBlockSize: number
   private isSummary: boolean
-  private bbi: LocalFile
+  private bbi: any
   private isCompressed: boolean
   private isBigEndian: boolean
   private refsByName: any
 
-  constructor(bbi: any, refsByName: any, cirTreeOffset: number, cirTreeLength: number, isBigEndian: boolean, isSummary: boolean, isCompressed: boolean) {
+  constructor(
+    bbi: any,
+    refsByName: any,
+    cirTreeOffset: number,
+    cirTreeLength: number,
+    isBigEndian: boolean,
+    isSummary: boolean,
+    isCompressed: boolean,
+  ) {
     if (!(cirTreeOffset >= 0)) throw new Error('invalid cirTreeOffset!')
     if (!(cirTreeLength > 0)) throw new Error('invalid cirTreeLength!')
 
@@ -48,7 +54,7 @@ export default class BlockView {
       compressed: this.isCompressed,
       cirBlockSize: this.cirBlockSize,
       type: this.type,
-      isSummary: this.isSummary
+      isSummary: this.isSummary,
     })
 
     return Promise.all(worker.cirFobRecur([this.cirTreeOffset + 48], 1)).then((arr: any) =>
