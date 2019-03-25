@@ -1,4 +1,3 @@
-import LRU from 'quick-lru'
 import { Parser } from '@gmod/binary-parser'
 import * as Long from 'long'
 import { convert64Bits } from './util'
@@ -44,7 +43,7 @@ export default class BBIFile {
   private isBE: boolean
   public renameRefSeqs: (a: string) => string
 
-  constructor(options: Options) {
+  public constructor(options: Options) {
     const { filehandle, renameRefSeqs, path } = options
     this.renameRefSeqs = renameRefSeqs || ((s: string): string => s)
     this.type = ''
@@ -60,14 +59,14 @@ export default class BBIFile {
     this.chroms = this.readChromTree()
   }
 
-  async initData(): Promise<any> {
+  public async initData(): Promise<any> {
     const header = await this.header
     const chroms = await this.chroms
     return { header, chroms }
   }
 
   // todo: memoize
-  async getHeader(): Promise<Header> {
+  public async getHeader(): Promise<Header> {
     const ret = await this.getParsers()
     const buf = Buffer.alloc(2000)
     await this.bbi.read(buf, 0, 2000, 0)
@@ -88,7 +87,7 @@ export default class BBIFile {
     return header
   }
 
-  async isBigEndian(): Promise<boolean> {
+  private async isBigEndian(): Promise<boolean> {
     const buf = Buffer.allocUnsafe(4)
     await this.bbi.read(buf, 0, 4, 0)
     let ret = buf.readInt32LE(0)
@@ -102,7 +101,7 @@ export default class BBIFile {
     throw new Error('not a BigWig/BigBed file')
   }
 
-  async getParsers(): Promise<any> {
+  private async getParsers(): Promise<any> {
     this.isBE = await this.isBigEndian()
 
     const le = this.isBE ? 'big' : 'little'
@@ -137,7 +136,6 @@ export default class BBIFile {
       .double('scoreSum')
       .double('scoreSumSquares')
 
-    /* istanbul ignore next */
     const chromTreeParser = new Parser()
       .endianess(le)
       .uint32('magic')
@@ -153,7 +151,7 @@ export default class BBIFile {
     }
   }
 
-  async readChromTree(): Promise<ChromTree> {
+  private async readChromTree(): Promise<ChromTree> {
     const header = await this.header
     const refsByNumber: any = {}
     const refsByName: any = {}
@@ -213,7 +211,7 @@ export default class BBIFile {
   }
 
   //todo: memoize
-  async getView(scale: number): Promise<BlockView> {
+  public async getView(scale: number): Promise<BlockView> {
     const { header, chroms } = await this.initData()
     const { zoomLevels, fileSize } = header
     const basesPerPx = 1 / scale

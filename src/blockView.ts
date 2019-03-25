@@ -17,7 +17,7 @@ export default class BlockView {
   private refsByName: any
   private type: string
 
-  constructor(
+  public constructor(
     bbi: any,
     refsByName: any,
     cirTreeOffset: number,
@@ -41,7 +41,7 @@ export default class BlockView {
   }
 
   // todo:memoize/lru
-  async readWigData(chrName: string, min: number, max: number): Promise<any> {
+  public async readWigData(chrName: string, min: number, max: number): Promise<any> {
     const chr = this.refsByName[chrName]
     //console.log('chrName',chrName,this.refsByName)
     if (chr === undefined) {

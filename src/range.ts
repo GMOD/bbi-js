@@ -5,19 +5,19 @@ export default class Range {
    * Dalliance Genome Explorer, (c) Thomas Down 2006-2010.
    */
   private ranges: any
-  constructor(arg1: any, arg2?: any) {
+  public constructor(arg1: any, arg2?: any) {
     this.ranges = arguments.length === 2 ? [{ min: arg1, max: arg2 }] : 0 in arg1 ? Object.assign({}, arg1) : [arg1]
   }
 
-  min(): number {
+  public min(): number {
     return this.ranges[0].min
   }
 
-  max(): number {
+  public max(): number {
     return this.ranges[this.ranges.length - 1].max
   }
 
-  contains(pos: number): boolean {
+  public contains(pos: number): boolean {
     for (let s = 0; s < this.ranges.length; s += 1) {
       const r = this.ranges[s]
       if (r.min <= pos && r.max >= pos) {
@@ -27,19 +27,19 @@ export default class Range {
     return false
   }
 
-  isContiguous(): boolean {
+  public isContiguous(): boolean {
     return this.ranges.length > 1
   }
 
-  getRanges(): Range[] {
+  public getRanges(): Range[] {
     return this.ranges.map((r: Range) => new Range(r.min, r.max))
   }
 
-  toString(): string {
+  public toString(): string {
     return this.ranges.map((r: Range) => `[${r.min}-${r.max}]`).join(',')
   }
 
-  union(s1: Range): Range {
+  public union(s1: Range): Range {
     const s0 = this
     const ranges = s0
       .ranges()
@@ -65,7 +65,7 @@ export default class Range {
     return new Range(oranges)
   }
 
-  intersection(arg: Range): Range {
+  public intersection(arg: Range): Range {
     let s0 = this
     let s1 = arg
     const r0 = s0.ranges()
@@ -102,7 +102,7 @@ export default class Range {
     return new Range(or)
   }
 
-  coverage(): number {
+  public coverage(): number {
     let tot = 0
     const rl = this.ranges()
     for (let ri = 0; ri < rl.length; ri += 1) {
@@ -112,7 +112,7 @@ export default class Range {
     return tot
   }
 
-  rangeOrder(tmpa: Range, tmpb: Range): number {
+  public rangeOrder(tmpa: Range, tmpb: Range): number {
     let a = tmpa
     let b = tmpb
     if (arguments.length < 2) {

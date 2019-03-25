@@ -1,21 +1,14 @@
 /* eslint no-bitwise: ["error", { "allow": ["|"] }] */
-const { Parser } = require('@gmod/binary-parser')
-const zlib = require('zlib')
+import { Parser } from '@gmod/binary-parser'
+import * as zlib from 'zlib'
 import Range from './range'
 import LocalFile from './localFile'
 import { convert64Bits, groupBlocks } from './util'
+import Feature from './feature'
+
 const BIG_WIG_TYPE_GRAPH = 1
 const BIG_WIG_TYPE_VSTEP = 2
 const BIG_WIG_TYPE_FSTEP = 3
-
-interface Feature {
-  start: number
-  end: number
-  score: number
-  minScore?: number
-  maxScore?: number
-  summary?: boolean
-}
 
 interface DataBlock {
   startChrom: number
@@ -70,7 +63,7 @@ export default class RequestWorker {
   private compressed: boolean
   private isBigEndian: boolean
 
-  constructor(data: LocalFile, chrId: number, min: number, max: number, opts: Options) {
+  public constructor(data: LocalFile, chrId: number, min: number, max: number, opts: Options) {
     this.source = opts.name
     this.cirBlockSize = opts.cirBlockSize
     this.compressed = opts.compressed
@@ -87,7 +80,7 @@ export default class RequestWorker {
     this.max = max
   }
 
-  cirFobRecur(offset: any, level: number) {
+  public cirFobRecur(offset: any, level: number): Promise<Feature[]>[] {
     this.outstanding += offset.length
 
     const maxCirBlockSpan = 4 + this.cirBlockSize * 32 // Upper bound on size, based on a completely full leaf node.
@@ -100,7 +93,7 @@ export default class RequestWorker {
     return spans.getRanges().map((fr: Range) => this.cirFobStartFetch(offset, fr, level))
   }
 
-  async cirFobStartFetch(offset: any, fr: any, level: number) {
+  private async cirFobStartFetch(offset: any, fr: any, level: number): Promise<Feature[]> {
     const length = fr.max() - fr.min()
     const resultBuffer = Buffer.alloc(length)
     await this.data.read(resultBuffer, 0, length, fr.min())
@@ -120,7 +113,7 @@ export default class RequestWorker {
     })
   }
 
-  cirFobRecur2(cirBlockData: Buffer, offset: number, level: number) {
+  private cirFobRecur2(cirBlockData: Buffer, offset: number, level: number) {
     const data = cirBlockData.slice(offset)
 
     const parser = new Parser()
@@ -154,11 +147,11 @@ export default class RequestWorker {
       })
     const p = parser.parse(data).result
     convert64Bits(p, this.isBigEndian)
+    const { chrId, max, min } = this
 
-    // prettier-ignore
-    const m = (block:DataBlock):boolean =>
-      (block.startChrom < this.chrId || (block.startChrom === this.chrId && block.startBase <= this.max)) &&
-      (block.endChrom > this.chrId || (block.endChrom === this.chrId && block.endBase >= this.min))
+    const m = (b: DataBlock): boolean =>
+      (b.startChrom < chrId || (b.startChrom === chrId && b.startBase <= max)) &&
+      (b.endChrom > chrId || (b.endChrom === chrId && b.endBase >= min))
 
     if (p.blocksToFetch) {
       this.blocksToFetch = p.blocksToFetch
@@ -174,7 +167,7 @@ export default class RequestWorker {
     return null
   }
 
-  parseSummaryBlock(bytes: Buffer, startOffset: number) {
+  private parseSummaryBlock(bytes: Buffer, startOffset: number) {
     const data = bytes.slice(startOffset)
     const p = new Parser().endianess(this.le).array('summary', {
       length: data.byteLength / 64,
@@ -204,7 +197,7 @@ export default class RequestWorker {
       .filter((f: Feature): boolean => this.coordFilter(f))
   }
 
-  parseBigBedBlock(bytes: Buffer, startOffset: number) {
+  private parseBigBedBlock(bytes: Buffer, startOffset: number) {
     const data = bytes.slice(startOffset)
     const p = new Parser().endianess(this.le).array('items', {
       type: new Parser()
@@ -219,7 +212,7 @@ export default class RequestWorker {
     return p.parse(data).result.items.filter((f: any) => this.coordFilter(f))
   }
 
-  parseBigWigBlock(bytes: Buffer, startOffset: number) {
+  private parseBigWigBlock(bytes: Buffer, startOffset: number) {
     const data = bytes.slice(startOffset)
     const parser = new Parser()
       .endianess(this.le)
@@ -268,11 +261,11 @@ export default class RequestWorker {
     return items.filter((f: any) => this.coordFilter(f))
   }
 
-  coordFilter(f: Feature): boolean {
+  private coordFilter(f: Feature): boolean {
     return f.start < this.max && f.end >= this.min
   }
 
-  async readFeatures() {
+  private async readFeatures(): Promise<Feature[]> {
     const blockGroupsToFetch = groupBlocks(this.blocksToFetch)
     const blockFetches = blockGroupsToFetch.map((blockGroup: any) => {
       const data = Buffer.alloc(blockGroup.size)

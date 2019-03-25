@@ -1,12 +1,17 @@
 import BBI from './bbi'
-
+import Feature from './feature'
 interface Options {
   basesPerSpan?: number
   scale?: number
 }
 export default class BigWig extends BBI {
-  async getFeatures(refName: string, start: number, end: number, opts: Options = { scale: 1 }) {
-    const { chroms, header } = await this.initData()
+  public async getFeatures(
+    refName: string,
+    start: number,
+    end: number,
+    opts: Options = { scale: 1 },
+  ): Promise<Feature[]> {
+    await this.initData()
     const chrName = this.renameRefSeqs(refName)
     let view
 
@@ -19,7 +24,7 @@ export default class BigWig extends BBI {
     }
 
     if (!view) {
-      return null
+      throw new Error('unable to get block view for data')
     }
 
     return view.readWigData(chrName, start, end)
