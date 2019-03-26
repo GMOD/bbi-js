@@ -1,6 +1,5 @@
 import { Parser } from '@gmod/binary-parser'
 import * as Long from 'long'
-
 import BlockView from './blockView'
 import LocalFile from './localFile'
 
@@ -38,15 +37,14 @@ export default class BBIFile {
   private bbi: any
   private header: Promise<Header>
   private chroms: Promise<ChromTree>
+  private isBE: Promise<boolean>
   private type: string
-  private isBE: boolean
   public renameRefSeqs: (a: string) => string
 
   public constructor(options: Options) {
     const { filehandle, renameRefSeqs, path } = options
     this.renameRefSeqs = renameRefSeqs || ((s: string): string => s)
     this.type = ''
-    this.isBE = false
     if (filehandle) {
       this.bbi = filehandle
     } else if (path) {
@@ -54,24 +52,24 @@ export default class BBIFile {
     } else {
       throw new Error('no file given')
     }
+    this.isBE = this.isBigEndian()
     this.header = this.getHeader()
     this.chroms = this.readChromTree()
   }
 
   public async initData(): Promise<any> {
     const header = await this.header
+    const isBE = await this.isBE
     const chroms = await this.chroms
-    return { header, chroms }
+    return { header, chroms, isBE }
   }
 
   // todo: memoize
   public async getHeader(): Promise<Header> {
-    const ret = await this.getParsers()
+    const ret = await this.getParsers(await this.isBE)
     const buf = Buffer.alloc(2000)
     await this.bbi.read(buf, 0, 2000, 0)
-    const res = ret.headerParser.parse(buf)
-
-    const header = res.result
+    const header = ret.headerParser.parse(buf).result
     this.type = header.magic === BIG_BED_MAGIC ? 'bigbed' : 'bigwig'
 
     if (header.asOffset) {
@@ -98,10 +96,9 @@ export default class BBIFile {
     throw new Error('not a BigWig/BigBed file')
   }
 
-  private async getParsers(): Promise<any> {
-    this.isBE = await this.isBigEndian()
-
-    const le = this.isBE ? 'big' : 'little'
+  private getParsers(isBE:boolean): any {
+    const le = isBE ? 'big' : 'little'
+    /* istanbul ignore next */
     const headerParser = new Parser()
       .endianess(le)
       .int32('magic')
@@ -125,6 +122,7 @@ export default class BBIFile {
           .buffer('indexOffset', { length: 8, formatter: function(buf:any):number { return Long.fromBytes(buf, true, this.endian==='le').toNumber() } })
           })
 
+    /* istanbul ignore next */
     const totalSummaryParser = new Parser()
       .endianess(le)
       .buffer('basesCovered', { length: 8, formatter: function(buf:any):number { return Long.fromBytes(buf, true, this.endian==='le').toNumber() } })
@@ -133,6 +131,7 @@ export default class BBIFile {
       .double('scoreSum')
       .double('scoreSumSquares')
 
+    /* istanbul ignore next */
     const chromTreeParser = new Parser()
       .endianess(le)
       .uint32('magic')
@@ -150,10 +149,12 @@ export default class BBIFile {
 
   private async readChromTree(): Promise<ChromTree> {
     const header = await this.header
+    const isBE = await this.isBE
     const refsByNumber: any = {}
     const refsByName: any = {}
     const { chromTreeOffset } = header
     let { unzoomedDataOffset } = header
+
 
     while (unzoomedDataOffset % 4 !== 0) {
       unzoomedDataOffset += 1
@@ -162,7 +163,7 @@ export default class BBIFile {
     const data = Buffer.alloc(unzoomedDataOffset - chromTreeOffset)
     await this.bbi.read(data, 0, unzoomedDataOffset - chromTreeOffset, chromTreeOffset)
 
-    const p = await this.getParsers()
+    const p = await this.getParsers(isBE)
     const ret = p.chromTreeParser.parse(data).result
 
     const rootNodeOffset = 32
@@ -208,7 +209,7 @@ export default class BBIFile {
 
   //todo: memoize
   public async getView(scale: number): Promise<BlockView> {
-    const { header, chroms } = await this.initData()
+    const { header, chroms, isBE } = await this.initData()
     const { zoomLevels, fileSize } = header
     const basesPerPx = 1 / scale
     let maxLevel = zoomLevels.length
@@ -227,7 +228,7 @@ export default class BBIFile {
           chroms.refsByName,
           zh.indexOffset,
           indexLength,
-          this.isBE,
+          isBE,
           true,
           header.uncompressBufSize > 0,
           this.type,
@@ -239,8 +240,7 @@ export default class BBIFile {
 
   //todo memoize
   private async getUnzoomedView(): Promise<BlockView> {
-    const header = await this.header
-    const chroms = await this.chroms
+    const { header, chroms, isBE } = await this.initData()
     let cirLen = 4000
     const nzl = header.zoomLevels[0]
     if (nzl) {
@@ -251,7 +251,7 @@ export default class BBIFile {
       chroms.refsByName,
       header.unzoomedIndexOffset,
       cirLen,
-      this.isBE,
+      isBE,
       false,
       header.uncompressBufSize > 0,
       this.type,

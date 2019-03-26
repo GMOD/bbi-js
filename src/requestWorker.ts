@@ -117,6 +117,7 @@ export default class RequestWorker {
   private cirFobRecur2(cirBlockData: Buffer, offset: number, level: number) {
     const data = cirBlockData.slice(offset)
 
+    /* istanbul ignore next */
     const parser = new Parser()
       .endianess(this.le)
       .uint8('isLeaf')
