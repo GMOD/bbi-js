@@ -1,9 +1,10 @@
 /* eslint no-bitwise: ["error", { "allow": ["|"] }] */
 import { Parser } from '@gmod/binary-parser'
+import * as Long from 'long'
 import * as zlib from 'zlib'
 import Range from './range'
 import LocalFile from './localFile'
-import { convert64Bits, groupBlocks } from './util'
+import { groupBlocks } from './util'
 import Feature from './feature'
 
 const BIG_WIG_TYPE_GRAPH = 1
@@ -131,8 +132,8 @@ export default class RequestWorker {
               .uint32('startBase')
               .uint32('endChrom')
               .uint32('endBase')
-              .buffer('blockOffset64', { length: 8 })
-              .buffer('blockSize64', { length: 8 }),
+              .buffer('blockOffset', { length: 8, formatter: function(buf:any):number { return Long.fromBytes(buf, true, this.endian==='le').toNumber() } })
+              .buffer('blockSize', { length: 8, formatter: function(buf:any):number { return Long.fromBytes(buf, true, this.endian==='le').toNumber() } })
           }),
           0: new Parser().array('recurOffsets', {
             length: 'cnt',
@@ -141,12 +142,11 @@ export default class RequestWorker {
               .uint32('startBase')
               .uint32('endChrom')
               .uint32('endBase')
-              .buffer('blockOffset64', { length: 8 }),
+              .buffer('blockOffset', { length: 8, formatter: function(buf:any):number { return Long.fromBytes(buf, true, this.endian==='le').toNumber() } })
           }),
         },
       })
     const p = parser.parse(data).result
-    convert64Bits(p, this.isBigEndian)
     const { chrId, max, min } = this
 
     const m = (b: DataBlock): boolean =>

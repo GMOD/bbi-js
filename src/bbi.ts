@@ -1,6 +1,5 @@
 import { Parser } from '@gmod/binary-parser'
 import * as Long from 'long'
-import { convert64Bits } from './util'
 
 import BlockView from './blockView'
 import LocalFile from './localFile'
@@ -73,7 +72,6 @@ export default class BBIFile {
     const res = ret.headerParser.parse(buf)
 
     const header = res.result
-    convert64Bits(header, this.isBE)
     this.type = header.magic === BIG_BED_MAGIC ? 'bigbed' : 'bigwig'
 
     if (header.asOffset) {
@@ -82,7 +80,6 @@ export default class BBIFile {
     if (header.totalSummaryOffset) {
       const tail = buf.slice(header.totalSummaryOffset)
       header.totalSummary = ret.totalSummaryParser.parse(tail).result
-      convert64Bits(header.totalSummary, this.isBE)
     }
     return header
   }
@@ -110,13 +107,13 @@ export default class BBIFile {
       .int32('magic')
       .uint16('version')
       .uint16('numZoomLevels')
-      .buffer('chromTreeOffset64', { length: 8 })
-      .buffer('unzoomedDataOffset64', { length: 8 })
-      .buffer('unzoomedIndexOffset64', { length: 8 })
+      .buffer('chromTreeOffset', { length: 8, formatter: function(buf:any):number { return Long.fromBytes(buf, true, this.endian==='le').toNumber() } })
+      .buffer('unzoomedDataOffset', { length: 8, formatter: function(buf:any):number { return Long.fromBytes(buf, true, this.endian==='le').toNumber() } })
+      .buffer('unzoomedIndexOffset', { length: 8, formatter: function(buf:any):number { return Long.fromBytes(buf, true, this.endian==='le').toNumber() } })
       .uint16('fieldCount')
       .uint16('definedFieldCount')
-      .buffer('asOffset64', { length: 8 })
-      .buffer('totalSummaryOffset64', { length: 8 })
+      .buffer('asOffset', { length: 8, formatter: function(buf:any):number { return Long.fromBytes(buf, true, this.endian==='le').toNumber() } })
+      .buffer('totalSummaryOffset', { length: 8, formatter: function(buf:any):number { return Long.fromBytes(buf, true, this.endian==='le').toNumber() } })
       .uint32('uncompressBufSize')
       .skip(8) // reserved
       .array('zoomLevels', {
@@ -124,13 +121,13 @@ export default class BBIFile {
         type: new Parser()
           .uint32('reductionLevel')
           .uint32('reserved')
-          .buffer('dataOffset64', { length: 8 })
-          .buffer('indexOffset64', { length: 8 }),
-      })
+          .buffer('dataOffset', { length: 8, formatter: function(buf:any):number { return Long.fromBytes(buf, true, this.endian==='le').toNumber() } })
+          .buffer('indexOffset', { length: 8, formatter: function(buf:any):number { return Long.fromBytes(buf, true, this.endian==='le').toNumber() } })
+          })
 
     const totalSummaryParser = new Parser()
       .endianess(le)
-      .buffer('basesCovered64', { length: 8 })
+      .buffer('basesCovered', { length: 8, formatter: function(buf:any):number { return Long.fromBytes(buf, true, this.endian==='le').toNumber() } })
       .double('scoreMin')
       .double('scoreMax')
       .double('scoreSum')
@@ -142,7 +139,7 @@ export default class BBIFile {
       .uint32('blockSize')
       .uint32('keySize')
       .uint32('valSize')
-      .buffer('itemCount64', { length: 8 })
+      .buffer('itemCount', { length: 8, formatter: function(buf:any):number { return Long.fromBytes(buf, true, this.endian==='le').toNumber() } })
 
     return {
       chromTreeParser,
@@ -167,7 +164,6 @@ export default class BBIFile {
 
     const p = await this.getParsers()
     const ret = p.chromTreeParser.parse(data).result
-    convert64Bits(ret, this.isBE)
 
     const rootNodeOffset = 32
     const bptReadNode = (currentOffset: number) => {
