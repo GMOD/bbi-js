@@ -33,13 +33,13 @@ interface ChromTree {
   refsByNumber: any
 }
 
-export default class BBIFile {
+export default abstract class BBIFile {
   private bbi: any
   private header: Promise<Header>
   private chroms: Promise<ChromTree>
   private isBE: Promise<boolean>
   private type: string
-  public renameRefSeqs: (a: string) => string
+  protected renameRefSeqs: (a: string) => string
 
   public constructor(options: Options) {
     const { filehandle, renameRefSeqs, path } = options

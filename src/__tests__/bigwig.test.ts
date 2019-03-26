@@ -113,4 +113,12 @@ describe('bigwig formats', () => {
       })
     expect(feats).toEqual(ret)
   })
+
+  it('test memoize', async () => {
+    const ti = new BigWig({
+      filehandle: new LocalFile(require.resolve('./data/cow.bw')),
+    })
+    await ti.getHeader()
+    await ti.getHeader()
+  })
 })
