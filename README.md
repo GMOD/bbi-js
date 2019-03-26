@@ -15,6 +15,9 @@ A parser for bigwig and bigbed file formats
     await ti.getHeader()
     const feats = await ti.getFeatures('chr1', 0, 100, { scale: 1 })
 
+## Documentation
+
+See [docs](docs/README.md)
 
 ## Academic Use
 

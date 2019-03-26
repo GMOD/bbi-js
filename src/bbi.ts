@@ -252,7 +252,7 @@ export default class BBIFile {
   }
 
   //todo: memoize
-  public async getView(scale: number): Promise<BlockView> {
+  protected async getView(scale: number): Promise<BlockView> {
     const { header, chroms, isBE } = await this.initData()
     const { zoomLevels, fileSize } = header
     const basesPerPx = 1 / scale
