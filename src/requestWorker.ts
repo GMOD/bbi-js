@@ -133,8 +133,18 @@ export default class RequestWorker {
               .uint32('startBase')
               .uint32('endChrom')
               .uint32('endBase')
-              .buffer('blockOffset', { length: 8, formatter: function(buf:any):number { return Long.fromBytes(buf, true, this.endian==='le').toNumber() } })
-              .buffer('blockSize', { length: 8, formatter: function(buf:any):number { return Long.fromBytes(buf, true, this.endian==='le').toNumber() } })
+              .buffer('blockOffset', {
+                length: 8,
+                formatter: function(buf: any): number {
+                  return Long.fromBytes(buf, true, this.endian === 'le').toNumber()
+                },
+              })
+              .buffer('blockSize', {
+                length: 8,
+                formatter: function(buf: any): number {
+                  return Long.fromBytes(buf, true, this.endian === 'le').toNumber()
+                },
+              }),
           }),
           0: new Parser().array('recurOffsets', {
             length: 'cnt',
@@ -143,7 +153,12 @@ export default class RequestWorker {
               .uint32('startBase')
               .uint32('endChrom')
               .uint32('endBase')
-              .buffer('blockOffset', { length: 8, formatter: function(buf:any):number { return Long.fromBytes(buf, true, this.endian==='le').toNumber() } })
+              .buffer('blockOffset', {
+                length: 8,
+                formatter: function(buf: any): number {
+                  return Long.fromBytes(buf, true, this.endian === 'le').toNumber()
+                },
+              }),
           }),
         },
       })

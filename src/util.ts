@@ -1,5 +1,3 @@
-import * as Long from 'long'
-
 // sort blocks by file offset and
 // group blocks that are within 2KB of eachother
 export function groupBlocks(blocks: any[]): any[] {

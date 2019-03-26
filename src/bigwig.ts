@@ -5,6 +5,14 @@ interface Options {
   scale?: number
 }
 export default class BigWig extends BBI {
+  /**
+   * Gets features from a BigWig file
+   *
+   * @param refName - The chromosome name
+   * @param start - The start of a region
+   * @param end - The end of a region
+   * @param opts - An object containing basesPerSpan (e.g. pixels per basepair) or scale used to infer the zoomLevel to use
+   */
   public async getFeatures(
     refName: string,
     start: number,

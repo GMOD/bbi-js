@@ -96,7 +96,7 @@ export default class BBIFile {
     throw new Error('not a BigWig/BigBed file')
   }
 
-  private getParsers(isBE:boolean): any {
+  private getParsers(isBE: boolean): any {
     const le = isBE ? 'big' : 'little'
     /* istanbul ignore next */
     const headerParser = new Parser()
@@ -104,13 +104,38 @@ export default class BBIFile {
       .int32('magic')
       .uint16('version')
       .uint16('numZoomLevels')
-      .buffer('chromTreeOffset', { length: 8, formatter: function(buf:any):number { return Long.fromBytes(buf, true, this.endian==='le').toNumber() } })
-      .buffer('unzoomedDataOffset', { length: 8, formatter: function(buf:any):number { return Long.fromBytes(buf, true, this.endian==='le').toNumber() } })
-      .buffer('unzoomedIndexOffset', { length: 8, formatter: function(buf:any):number { return Long.fromBytes(buf, true, this.endian==='le').toNumber() } })
+      .buffer('chromTreeOffset', {
+        length: 8,
+        formatter: function(buf: any): number {
+          return Long.fromBytes(buf, true, this.endian === 'le').toNumber()
+        },
+      })
+      .buffer('unzoomedDataOffset', {
+        length: 8,
+        formatter: function(buf: any): number {
+          return Long.fromBytes(buf, true, this.endian === 'le').toNumber()
+        },
+      })
+      .buffer('unzoomedIndexOffset', {
+        length: 8,
+        formatter: function(buf: any): number {
+          return Long.fromBytes(buf, true, this.endian === 'le').toNumber()
+        },
+      })
       .uint16('fieldCount')
       .uint16('definedFieldCount')
-      .buffer('asOffset', { length: 8, formatter: function(buf:any):number { return Long.fromBytes(buf, true, this.endian==='le').toNumber() } })
-      .buffer('totalSummaryOffset', { length: 8, formatter: function(buf:any):number { return Long.fromBytes(buf, true, this.endian==='le').toNumber() } })
+      .buffer('asOffset', {
+        length: 8,
+        formatter: function(buf: any): number {
+          return Long.fromBytes(buf, true, this.endian === 'le').toNumber()
+        },
+      })
+      .buffer('totalSummaryOffset', {
+        length: 8,
+        formatter: function(buf: any): number {
+          return Long.fromBytes(buf, true, this.endian === 'le').toNumber()
+        },
+      })
       .uint32('uncompressBufSize')
       .skip(8) // reserved
       .array('zoomLevels', {
@@ -118,14 +143,29 @@ export default class BBIFile {
         type: new Parser()
           .uint32('reductionLevel')
           .uint32('reserved')
-          .buffer('dataOffset', { length: 8, formatter: function(buf:any):number { return Long.fromBytes(buf, true, this.endian==='le').toNumber() } })
-          .buffer('indexOffset', { length: 8, formatter: function(buf:any):number { return Long.fromBytes(buf, true, this.endian==='le').toNumber() } })
+          .buffer('dataOffset', {
+            length: 8,
+            formatter: function(buf: any): number {
+              return Long.fromBytes(buf, true, this.endian === 'le').toNumber()
+            },
           })
+          .buffer('indexOffset', {
+            length: 8,
+            formatter: function(buf: any): number {
+              return Long.fromBytes(buf, true, this.endian === 'le').toNumber()
+            },
+          }),
+      })
 
     /* istanbul ignore next */
     const totalSummaryParser = new Parser()
       .endianess(le)
-      .buffer('basesCovered', { length: 8, formatter: function(buf:any):number { return Long.fromBytes(buf, true, this.endian==='le').toNumber() } })
+      .buffer('basesCovered', {
+        length: 8,
+        formatter: function(buf: any): number {
+          return Long.fromBytes(buf, true, this.endian === 'le').toNumber()
+        },
+      })
       .double('scoreMin')
       .double('scoreMax')
       .double('scoreSum')
@@ -138,7 +178,12 @@ export default class BBIFile {
       .uint32('blockSize')
       .uint32('keySize')
       .uint32('valSize')
-      .buffer('itemCount', { length: 8, formatter: function(buf:any):number { return Long.fromBytes(buf, true, this.endian==='le').toNumber() } })
+      .buffer('itemCount', {
+        length: 8,
+        formatter: function(buf: any): number {
+          return Long.fromBytes(buf, true, this.endian === 'le').toNumber()
+        },
+      })
 
     return {
       chromTreeParser,
@@ -154,7 +199,6 @@ export default class BBIFile {
     const refsByName: any = {}
     const { chromTreeOffset } = header
     let { unzoomedDataOffset } = header
-
 
     while (unzoomedDataOffset % 4 !== 0) {
       unzoomedDataOffset += 1
