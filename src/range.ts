@@ -4,24 +4,20 @@ export default class Range {
    * Adapted from a combination of Range and _Compound in the
    * Dalliance Genome Explorer, (c) Thomas Down 2006-2010.
    */
-  constructor() {
-    this.ranges =
-      arguments.length === 2
-        ? [{ min: arguments[0], max: arguments[1] }]
-        : 0 in arguments[0]
-        ? Object.assign({}, arguments[0])
-        : [arguments[0]]
+  private ranges: any
+  public constructor(arg1: any, arg2?: any) {
+    this.ranges = arguments.length === 2 ? [{ min: arg1, max: arg2 }] : 0 in arg1 ? Object.assign({}, arg1) : [arg1]
   }
 
-  min() {
+  public min(): number {
     return this.ranges[0].min
   }
 
-  max() {
+  public max(): number {
     return this.ranges[this.ranges.length - 1].max
   }
 
-  contains(pos) {
+  public contains(pos: number): boolean {
     for (let s = 0; s < this.ranges.length; s += 1) {
       const r = this.ranges[s]
       if (r.min <= pos && r.max >= pos) {
@@ -31,19 +27,19 @@ export default class Range {
     return false
   }
 
-  isContiguous() {
+  public isContiguous(): boolean {
     return this.ranges.length > 1
   }
 
-  getRanges() {
-    return this.ranges.map(r => new Range(r.min, r.max))
+  public getRanges(): Range[] {
+    return this.ranges.map((r: Range) => new Range(r.min, r.max))
   }
 
-  toString() {
-    return this.ranges.map(r => `[${r.min}-${r.max}]`).join(',')
+  public toString(): string {
+    return this.ranges.map((r: Range) => `[${r.min}-${r.max}]`).join(',')
   }
 
-  union(s1) {
+  public union(s1: Range): Range {
     const s0 = this
     const ranges = s0
       .ranges()
@@ -69,7 +65,7 @@ export default class Range {
     return new Range(oranges)
   }
 
-  intersection(arg) {
+  public intersection(arg: Range): Range {
     let s0 = this
     let s1 = arg
     const r0 = s0.ranges()
@@ -98,7 +94,7 @@ export default class Range {
     }
 
     if (or.length === 0) {
-      return null // FIXME
+      throw new Error('found range of length 0')
     }
     if (or.length === 1) {
       return or[0]
@@ -106,7 +102,7 @@ export default class Range {
     return new Range(or)
   }
 
-  coverage() {
+  public coverage(): number {
     let tot = 0
     const rl = this.ranges()
     for (let ri = 0; ri < rl.length; ri += 1) {
@@ -116,7 +112,7 @@ export default class Range {
     return tot
   }
 
-  rangeOrder(tmpa, tmpb) {
+  public rangeOrder(tmpa: Range, tmpb: Range): number {
     let a = tmpa
     let b = tmpb
     if (arguments.length < 2) {

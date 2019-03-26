@@ -1,5 +1,5 @@
-import BigWig from '../src/bigwig'
-import LocalFile from '../src/localFile'
+import BigWig from '../bigwig'
+import LocalFile from '../localFile'
 
 describe('bigwig formats', () => {
   it('loads bedgraph bigwig file', async () => {

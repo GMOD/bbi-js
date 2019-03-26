@@ -1,5 +1,5 @@
-import BBI from '../src/bbi'
-import LocalFile from '../src/localFile'
+import BBI from '../bbi'
+import LocalFile from '../localFile'
 
 describe('index formats', () => {
   it('loads small bigwig header', async () => {

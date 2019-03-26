@@ -24,20 +24,6 @@ string  spID;		\\"SWISS-PROT protein Accession number\\"
   "fieldCount": 11,
   "magic": -2021002517,
   "numZoomLevels": 7,
-  "refsByName": Object {
-    "chr7": Object {
-      "id": 0,
-      "length": 158821424,
-      "name": "chr7",
-    },
-  },
-  "refsByNumber": Object {
-    "0": Object {
-      "id": 0,
-      "length": 158821424,
-      "name": "chr7",
-    },
-  },
   "totalSummary": Object {
     "basesCovered": 76490855,
     "scoreMax": 36,
@@ -105,20 +91,6 @@ Object {
   "fieldCount": 0,
   "magic": -2003829722,
   "numZoomLevels": 7,
-  "refsByName": Object {
-    "ctgA": Object {
-      "id": 0,
-      "length": 50001,
-      "name": "ctgA",
-    },
-  },
-  "refsByNumber": Object {
-    "0": Object {
-      "id": 0,
-      "length": 50001,
-      "name": "ctgA",
-    },
-  },
   "totalSummary": Object {
     "basesCovered": 49984,
     "scoreMax": 38,

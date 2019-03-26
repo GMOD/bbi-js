@@ -1,24 +1,53 @@
-import LRU from 'quick-lru'
 import { Parser } from '@gmod/binary-parser'
-import Long from 'long'
+import * as Long from 'long'
+import { convert64Bits } from './util'
 
-import Window from './window'
+import BlockView from './blockView'
 import LocalFile from './localFile'
 
 const BIG_WIG_MAGIC = -2003829722
 const BIG_BED_MAGIC = -2021002517
 
-export default class BBIFile {
-  constructor({
-    filehandle,
-    path,
-    cacheSize,
-    fetchSizeLimit,
-    chunkSizeLimit,
-    renameRefSeqs = n => n,
-  }) {
-    this.renameRefSeq = renameRefSeqs
+interface Options {
+  filehandle?: any
+  path?: string
+  renameRefSeqs?: (a: string) => string
+}
 
+interface Statistics {
+  scoreSum: number
+  basesCovered: number
+  scoreSumSquares: number
+}
+interface Header {
+  autoSql: string
+  totalSummary: Statistics
+  zoomLevels: any
+  unzoomedIndexOffset: number
+  unzoomedDataOffset: number
+  uncompressBufSize: number
+  chromTreeOffset: number
+  fileSize: number
+}
+
+interface ChromTree {
+  refsByName: any
+  refsByNumber: any
+}
+
+export default class BBIFile {
+  private bbi: any
+  private header: Promise<Header>
+  private chroms: Promise<ChromTree>
+  private type: string
+  private isBE: boolean
+  public renameRefSeqs: (a: string) => string
+
+  public constructor(options: Options) {
+    const { filehandle, renameRefSeqs, path } = options
+    this.renameRefSeqs = renameRefSeqs || ((s: string): string => s)
+    this.type = ''
+    this.isBE = false
     if (filehandle) {
       this.bbi = filehandle
     } else if (path) {
@@ -26,86 +55,56 @@ export default class BBIFile {
     } else {
       throw new Error('no file given')
     }
-
-    this.featureCache = new LRU({
-      maxSize: cacheSize !== undefined ? cacheSize : 20000,
-      length: featureArray => featureArray.length,
-    })
-
-    this.fetchSizeLimit = fetchSizeLimit || 50000000
-    this.chunkSizeLimit = chunkSizeLimit || 10000000
-    this.gotHeader = this.getHeader()
+    this.header = this.getHeader()
+    this.chroms = this.readChromTree()
   }
 
-  // mutates obj for keys ending with '64' to longs, and removes the '64' suffix
-  /* eslint no-param-reassign: ["error", { "props": false }] */
-  convert64Bits(obj) {
-    const keys = Object.keys(obj)
-    for (let i = 0; i < keys.length; i += 1) {
-      const key = keys[i]
-      const val = obj[key]
-      if (key.endsWith('64')) {
-        obj[key.slice(0, -2)] = Long.fromBytes(
-          val,
-          false,
-          !this.isBigEndian,
-        ).toNumber()
-        delete obj[key]
-      } else if (typeof obj[key] === 'object' && val !== null) {
-        this.convert64Bits(val)
-      }
-    }
+  public async initData(): Promise<any> {
+    const header = await this.header
+    const chroms = await this.chroms
+    return { header, chroms }
   }
 
-  async getHeader() {
-    if (this.header) {
-      return this.header
-    }
+  // todo: memoize
+  public async getHeader(): Promise<Header> {
     const ret = await this.getParsers()
     const buf = Buffer.alloc(2000)
     await this.bbi.read(buf, 0, 2000, 0)
     const res = ret.headerParser.parse(buf)
 
     const header = res.result
-    this.convert64Bits(header)
+    convert64Bits(header, this.isBE)
     this.type = header.magic === BIG_BED_MAGIC ? 'bigbed' : 'bigwig'
 
     if (header.asOffset) {
-      header.autoSql = buf
-        .slice(header.asOffset, buf.indexOf(0, header.asOffset))
-        .toString('utf8')
+      header.autoSql = buf.slice(header.asOffset, buf.indexOf(0, header.asOffset)).toString('utf8')
     }
     if (header.totalSummaryOffset) {
       const tail = buf.slice(header.totalSummaryOffset)
       header.totalSummary = ret.totalSummaryParser.parse(tail).result
-      this.convert64Bits(header.totalSummary)
+      convert64Bits(header.totalSummary, this.isBE)
     }
-    const chroms = await this.readChromTree(header)
-    Object.assign(header, chroms)
-    this.header = header
     return header
   }
 
-  async detectEndianness() {
+  private async isBigEndian(): Promise<boolean> {
     const buf = Buffer.allocUnsafe(4)
     await this.bbi.read(buf, 0, 4, 0)
     let ret = buf.readInt32LE(0)
     if (ret === BIG_WIG_MAGIC || ret === BIG_BED_MAGIC) {
-      this.isBigEndian = false
-      return
+      return false
     }
     ret = buf.readInt32BE(0)
     if (ret === BIG_WIG_MAGIC || ret === BIG_BED_MAGIC) {
-      this.isBigEndian = true
-      return
+      return true
     }
     throw new Error('not a BigWig/BigBed file')
   }
 
-  async getParsers() {
-    await this.detectEndianness()
+  private async getParsers(): Promise<any> {
+    this.isBE = await this.isBigEndian()
 
-    const le = this.isBigEndian ? 'big' : 'little'
+    const le = this.isBE ? 'big' : 'little'
     const headerParser = new Parser()
       .endianess(le)
       .int32('magic')
@@ -137,10 +136,9 @@ export default class BBIFile {
       .double('scoreSum')
       .double('scoreSumSquares')
 
-    /* istanbul ignore next */
     const chromTreeParser = new Parser()
       .endianess(le)
-      .uint32('magic', { assert: s => s === 2026540177 })
+      .uint32('magic')
       .uint32('blockSize')
       .uint32('keySize')
       .uint32('valSize')
@@ -153,38 +151,33 @@ export default class BBIFile {
     }
   }
 
-  async readChromTree(header) {
-    const refsByNumber = {}
-    const refsByName = {}
+  private async readChromTree(): Promise<ChromTree> {
+    const header = await this.header
+    const refsByNumber: any = {}
+    const refsByName: any = {}
+    const { chromTreeOffset } = header
+    let { unzoomedDataOffset } = header
 
-    let unzoomedDataOffset = header.unzoomedDataOffset
     while (unzoomedDataOffset % 4 !== 0) {
       unzoomedDataOffset += 1
     }
 
-    const data = Buffer.alloc(unzoomedDataOffset - header.chromTreeOffset)
-    await this.bbi.read(
-      data,
-      0,
-      unzoomedDataOffset - header.chromTreeOffset,
-      header.chromTreeOffset,
-    )
+    const data = Buffer.alloc(unzoomedDataOffset - chromTreeOffset)
+    await this.bbi.read(data, 0, unzoomedDataOffset - chromTreeOffset, chromTreeOffset)
 
     const p = await this.getParsers()
     const ret = p.chromTreeParser.parse(data).result
-    this.convert64Bits(ret)
+    convert64Bits(ret, this.isBE)
 
     const rootNodeOffset = 32
-    const bptReadNode = currentOffset => {
+    const bptReadNode = (currentOffset: number) => {
       let offset = currentOffset
       if (offset >= data.length) throw new Error('reading beyond end of buffer')
       const isLeafNode = data.readUInt8(offset)
       const cnt = data.readUInt16LE(offset + 2)
-      // dlog('ReadNode: ' + offset + '     type=' + isLeafNode + '   count=' + cnt);
       offset += 4
       for (let n = 0; n < cnt; n += 1) {
         if (isLeafNode) {
-          // parse leaf node
           let key = ''
           for (let ki = 0; ki < ret.keySize; ki += 1, offset += 1) {
             const charCode = data.readUInt8(offset)
@@ -197,16 +190,15 @@ export default class BBIFile {
           offset += 8
 
           const refRec = { name: key, id: refId, length: refSize }
-
-          // dlog(key + ':' + refId + ',' + refSize);
-          refsByName[this.renameRefSeq(key)] = refRec
+          refsByName[this.renameRefSeqs(key)] = refId
           refsByNumber[refId] = refRec
         } else {
           // parse index node
           offset += ret.keySize
-          let childOffset = Long.fromBytes(offset).toNumber()
+          const bytes = data.slice(offset, offset + 8) as unknown
+          let childOffset = Long.fromBytes(bytes as number[]).toNumber()
           offset += 8
-          childOffset -= header.chromTreeOffset
+          childOffset -= chromTreeOffset
           bptReadNode(childOffset)
         }
       }
@@ -218,59 +210,55 @@ export default class BBIFile {
     }
   }
 
-  getView(scale) {
-    const header = this.header
-    if (!header.zoomLevels || !header.zoomLevels.length) return null
-
-    if (!this.viewCache || this.viewCache.scale !== scale) {
-      this.viewCache = {
-        scale,
-        view: this.getViewHelper(scale),
-      }
-    }
-    return this.viewCache.view
-  }
-
-  getViewHelper(scale) {
-    const header = this.header
+  //todo: memoize
+  public async getView(scale: number): Promise<BlockView> {
+    const { header, chroms } = await this.initData()
+    const { zoomLevels, fileSize } = header
     const basesPerPx = 1 / scale
-    // console.log('getting view for '+basesPerSpan+' bases per span');
-    let maxLevel = header.zoomLevels.length
-    if (!header.fileSize) {
+    let maxLevel = zoomLevels.length
+    if (!fileSize) {
       // if we don't know the file size, we can't fetch the highest zoom level :-(
       maxLevel -= 1
     }
 
     for (let i = maxLevel; i > 0; i -= 1) {
-      const zh = header.zoomLevels[i]
+      const zh = zoomLevels[i]
       if (zh && zh.reductionLevel <= 2 * basesPerPx) {
         const indexLength =
-          i < header.zoomLevels.length - 1
-            ? header.zoomLevels[i + 1].dataOffset - zh.indexOffset
-            : header.fileSize - 4 - zh.indexOffset
-        // console.log( 'using zoom level '+i);
-        return new Window(this, zh.indexOffset, indexLength, true)
+          i < zoomLevels.length - 1 ? zoomLevels[i + 1].dataOffset - zh.indexOffset : fileSize - 4 - zh.indexOffset
+        return new BlockView(
+          this.bbi,
+          chroms.refsByName,
+          zh.indexOffset,
+          indexLength,
+          this.isBE,
+          true,
+          header.uncompressBufSize > 0,
+          this.type,
+        )
       }
     }
     return this.getUnzoomedView()
   }
 
-  getUnzoomedView() {
-    const header = this.header
-    if (!this.unzoomedView) {
-      let cirLen = 4000
-      const nzl = header.zoomLevels[0]
-      if (nzl) {
-        cirLen = nzl.dataOffset - header.unzoomedIndexOffset
-      }
-      this.unzoomedView = new Window(
-        this,
-        header.unzoomedIndexOffset,
-        cirLen,
-        false,
-        this.autoSql,
-      )
+  //todo memoize
+  private async getUnzoomedView(): Promise<BlockView> {
+    const header = await this.header
+    const chroms = await this.chroms
+    let cirLen = 4000
+    const nzl = header.zoomLevels[0]
+    if (nzl) {
+      cirLen = nzl.dataOffset - header.unzoomedIndexOffset
     }
-    return this.unzoomedView
+    return new BlockView(
+      this.bbi,
+      chroms.refsByName,
+      header.unzoomedIndexOffset,
+      cirLen,
+      this.isBE,
+      false,
+      header.uncompressBufSize > 0,
+      this.type,
+    )
   }
 }
