@@ -18,7 +18,7 @@ export default class BigWig extends BBI {
     start: number,
     end: number,
     opts: Options = { scale: 1 },
-  ): Promise<Feature[]> {
+  ): Observable<Feature[]> {
     await this.initData()
     const chrName = this.renameRefSeqs(refName)
     let view

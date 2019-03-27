@@ -41,7 +41,7 @@ export default class BlockView {
   }
 
   // todo:memoize/lru
-  public async readWigData(chrName: string, min: number, max: number): Promise<any> {
+  public async readWigData(chrName: string, min: number, max: number): Observable<Feature[]> {
     const chr = this.refsByName[chrName]
     //console.log('chrName',chrName,this.refsByName)
     if (chr === undefined) {
@@ -59,8 +59,6 @@ export default class BlockView {
       type: this.type,
     })
 
-    return Promise.all(worker.cirFobRecur([this.cirTreeOffset + 48], 1)).then((arr: any) =>
-      arr.reduce((acc: any, val: any) => acc.concat(val), []),
-    )
+    return worker.cirFobRecur([this.cirTreeOffset + 48], 1)
   }
 }

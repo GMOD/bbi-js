@@ -81,7 +81,7 @@ export default class RequestWorker {
     this.max = max
   }
 
-  public cirFobRecur(offset: any, level: number): Promise<Feature[]>[] {
+  public cirFobRecur(offset: any, level: number): Observable<Feature[]> {
     this.outstanding += offset.length
 
     const maxCirBlockSpan = 4 + this.cirBlockSize * 32 // Upper bound on size, based on a completely full leaf node.
@@ -90,8 +90,9 @@ export default class RequestWorker {
       const blockSpan = new Range(offset[i], offset[i] + maxCirBlockSpan)
       spans = spans.union(blockSpan)
     }
-
-    return spans.getRanges().map((fr: Range) => this.cirFobStartFetch(offset, fr, level))
+    Observable.create(observer => {
+      spans.getRanges().map((fr: Range) => this.cirFobStartFetch(offset, fr, level, observer))
+    })
   }
 
   private async cirFobStartFetch(offset: any, fr: any, level: number): Promise<Feature[]> {
