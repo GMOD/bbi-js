@@ -1,5 +1,6 @@
 import BBI from './bbi'
 import Feature from './feature'
+import { Observable,Observer } from 'rxjs'
 
 export default class BigBed extends BBI {
   /**
@@ -11,7 +12,7 @@ export default class BigBed extends BBI {
    * @param opts - An object containing basesPerSpan (e.g. pixels per basepair) or scale used to infer the zoomLevel to use
    * @return array of features
    */
-  public async getFeatures(refName: string, start: number, end: number): Promise<Feature[]> {
+  public async getFeatures(refName: string, start: number, end: number): Promise<Observable<Feature[]>> {
     await this.initData()
     const chrName = this.renameRefSeqs(refName)
 
@@ -19,7 +20,8 @@ export default class BigBed extends BBI {
     if (!view) {
       throw new Error('unable to get block view for data')
     }
-
-    return view.readWigData(chrName, start, end)
+    return new Observable((observer:Observer<Feature[]>) => {
+      view.readWigData(chrName, start, end, observer)
+    })
   }
 }

@@ -6,7 +6,7 @@ import Range from './range'
 import LocalFile from './localFile'
 import { groupBlocks } from './util'
 import Feature from './feature'
-
+import {Observer} from 'rxjs'
 const BIG_WIG_TYPE_GRAPH = 1
 const BIG_WIG_TYPE_VSTEP = 2
 const BIG_WIG_TYPE_FSTEP = 3
@@ -35,7 +35,7 @@ interface SummaryBlock {
 }
 interface Options {
   type: string
-  compressed: boolean
+  isCompressed: boolean
   isBigEndian: boolean
   cirBlockSize: number
   name?: string
@@ -51,27 +51,20 @@ interface Options {
  */
 export default class RequestWorker {
   private window: any
-  private source: string | undefined
-  private le: string
   private blocksToFetch: any[]
   private outstanding: number
   private chrId: number
   private min: number
   private max: number
   private data: LocalFile
-  private cirBlockSize: number
-  private type: string
-  private compressed: boolean
-  private isBigEndian: boolean
+  private opts: Options
+  private observer: Observer<Feature[]>
 
-  public constructor(data: LocalFile, chrId: number, min: number, max: number, opts: Options) {
-    this.source = opts.name
-    this.cirBlockSize = opts.cirBlockSize
-    this.compressed = opts.compressed
-    this.type = opts.type
-    this.isBigEndian = opts.isBigEndian
-    this.le = opts.isBigEndian ? 'big' : 'little'
+  public constructor(data: LocalFile, chrId: number, min: number, max: number, observer: Observer<Feature[]>, opts: Options) {
+    Object.assign(this, opts)
+    this.opts = opts
     this.data = data
+    this.observer = observer
 
     this.blocksToFetch = []
     this.outstanding = 0
@@ -81,38 +74,34 @@ export default class RequestWorker {
     this.max = max
   }
 
-  public cirFobRecur(offset: any, level: number): Observable<Feature[]> {
+  public cirFobRecur(offset: any, level: number) {
     this.outstanding += offset.length
 
-    const maxCirBlockSpan = 4 + this.cirBlockSize * 32 // Upper bound on size, based on a completely full leaf node.
+    const maxCirBlockSpan = 4 + this.opts.cirBlockSize * 32 // Upper bound on size, based on a completely full leaf node.
     let spans = new Range(offset[0], offset[0] + maxCirBlockSpan)
     for (let i = 1; i < offset.length; i += 1) {
       const blockSpan = new Range(offset[i], offset[i] + maxCirBlockSpan)
       spans = spans.union(blockSpan)
     }
-    Observable.create(observer => {
-      spans.getRanges().map((fr: Range) => this.cirFobStartFetch(offset, fr, level, observer))
-    })
+    spans.getRanges().map((fr: Range) => this.cirFobStartFetch(offset, fr, level))
   }
 
-  private async cirFobStartFetch(offset: any, fr: any, level: number): Promise<Feature[]> {
+  private async cirFobStartFetch(offset: any, fr: any, level: number) {
     const length = fr.max() - fr.min()
     const resultBuffer = Buffer.alloc(length)
     await this.data.read(resultBuffer, 0, length, fr.min())
-    return new Promise((resolve, reject) => {
-      for (let i = 0; i < offset.length; i += 1) {
-        if (fr.contains(offset[i])) {
-          this.cirFobRecur2(resultBuffer, offset[i] - fr.min(), level)
-          this.outstanding -= 1
-          if (this.outstanding === 0) {
-            resolve(this.readFeatures())
-          }
+    for (let i = 0; i < offset.length; i += 1) {
+      if (fr.contains(offset[i])) {
+        this.cirFobRecur2(resultBuffer, offset[i] - fr.min(), level)
+        this.outstanding -= 1
+        if (this.outstanding === 0) {
+          this.readFeatures()
         }
       }
-      if (this.outstanding !== 0) {
-        reject(new Error('did not complete'))
-      }
-    })
+    }
+    if (this.outstanding !== 0) {
+      new Error('did not complete')
+    }
   }
 
   private cirFobRecur2(cirBlockData: Buffer, offset: number, level: number) {
@@ -120,7 +109,7 @@ export default class RequestWorker {
 
     /* istanbul ignore next */
     const parser = new Parser()
-      .endianess(this.le)
+      .endianess(this.opts.isBigEndian?'be':'le')
       .uint8('isLeaf')
       .skip(1)
       .uint16('cnt')
@@ -186,7 +175,7 @@ export default class RequestWorker {
 
   private parseSummaryBlock(bytes: Buffer, startOffset: number) {
     const data = bytes.slice(startOffset)
-    const p = new Parser().endianess(this.le).array('summary', {
+    const p = new Parser().endianess(this.opts.isBigEndian?'be':'le').array('summary', {
       length: data.byteLength / 64,
       type: new Parser()
         .int32('chromId')
@@ -216,7 +205,7 @@ export default class RequestWorker {
 
   private parseBigBedBlock(bytes: Buffer, startOffset: number) {
     const data = bytes.slice(startOffset)
-    const p = new Parser().endianess(this.le).array('items', {
+    const p = new Parser().endianess(this.opts.isBigEndian?'be':'le').array('items', {
       type: new Parser()
         .uint32('chromId')
         .int32('start')
@@ -232,7 +221,7 @@ export default class RequestWorker {
   private parseBigWigBlock(bytes: Buffer, startOffset: number) {
     const data = bytes.slice(startOffset)
     const parser = new Parser()
-      .endianess(this.le)
+      .endianess(this.opts.isBigEndian?'be':'le')
       .skip(4)
       .int32('blockStart')
       .skip(4)
@@ -282,44 +271,27 @@ export default class RequestWorker {
     return f.start < this.max && f.end >= this.min
   }
 
-  private async readFeatures(): Promise<Feature[]> {
+  private readFeatures() {
     const blockGroupsToFetch = groupBlocks(this.blocksToFetch)
-    const blockFetches = blockGroupsToFetch.map((blockGroup: any) => {
-      const data = Buffer.alloc(blockGroup.size)
-      return this.data.read(data, 0, blockGroup.size, blockGroup.offset).then(() => {
-        blockGroup.data = data
-        return blockGroup
+    blockGroupsToFetch.forEach(async (blockGroup: any) => {
+      let data = Buffer.alloc(blockGroup.size)
+      await this.data.read(data, 0, blockGroup.size, blockGroup.offset)
+      blockGroup.blocks.forEach((block: any) => {
+        let of = block.offset - blockGroup.offset
+        const proc = this.opts.isCompressed ? zlib.inflateSync(data.slice(of)) : data
+        const offset = this.opts.isCompressed ? 0 :of
+
+        switch (this.opts.type) {
+          case 'summary':
+            this.observer.next(this.parseSummaryBlock(data, offset))
+          case 'bigwig':
+            this.observer.next(this.parseBigWigBlock(data, offset))
+          case 'bigbed':
+            this.observer.next(this.parseBigBedBlock(data, offset))
+          default:
+            console.warn(`Don't know what to do with ${this.opts.type}`)
+        }
       })
     })
-
-    const blockGroups = await Promise.all(blockFetches)
-    const ret = blockGroups.map((blockGroup: any) =>
-      blockGroup.blocks.map((block: any) => {
-        let data
-        let offset = block.offset - blockGroup.offset
-
-        if (this.compressed) {
-          data = zlib.inflateSync(blockGroup.data.slice(offset))
-          offset = 0
-        } else {
-          // eslint-disable-next-line
-          data = blockGroup.data
-        }
-
-        switch (this.type) {
-          case 'summary':
-            return this.parseSummaryBlock(data, offset)
-          case 'bigwig':
-            return this.parseBigWigBlock(data, offset)
-          case 'bigbed':
-            return this.parseBigBedBlock(data, offset)
-          default:
-            console.warn(`Don't know what to do with ${this.type}`)
-            return undefined
-        }
-      }),
-    )
-    const flatten = (list: any) => list.reduce((a: any, b: any) => a.concat(Array.isArray(b) ? flatten(b) : b), [])
-    return flatten(ret)
   }
 }

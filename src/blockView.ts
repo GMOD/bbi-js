@@ -1,4 +1,6 @@
 import RequestWorker from './requestWorker'
+import {Observer} from 'rxjs'
+import Feature from './feature'
 /**
  * View into a subset of the data in a BigWig file.
  *
@@ -41,7 +43,7 @@ export default class BlockView {
   }
 
   // todo:memoize/lru
-  public async readWigData(chrName: string, min: number, max: number): Observable<Feature[]> {
+  public async readWigData(chrName: string, min: number, max: number, observer: Observer<Feature[]>) {
     const chr = this.refsByName[chrName]
     //console.log('chrName',chrName,this.refsByName)
     if (chr === undefined) {
@@ -52,13 +54,15 @@ export default class BlockView {
       this.cirBlockSize = buffer.readUInt32LE(4) // TODO little endian?
     })
 
-    const worker = new RequestWorker(this.bbi, chr, min, max, {
-      isBigEndian: this.isBigEndian,
-      compressed: this.isCompressed,
-      cirBlockSize: this.cirBlockSize,
-      type: this.type,
+    const {isBigEndian,isCompressed,cirBlockSize,type} = this
+
+    const worker = new RequestWorker(this.bbi, chr, min, max, observer, {
+      isBigEndian,
+      isCompressed,
+      cirBlockSize,
+      type,
     })
 
-    return worker.cirFobRecur([this.cirTreeOffset + 48], 1)
+    worker.cirFobRecur([this.cirTreeOffset + 48], 1)
   }
 }
