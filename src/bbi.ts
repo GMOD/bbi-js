@@ -34,13 +34,12 @@ interface ChromTree {
   refsByNumber: any
 }
 
-
 /*
  * Takes a function that has one argument, abortSignal, that returns a promise
  * and it works by retrying the function if a previous attempt to initialize the parse cache was aborted
  */
 class AbortAwareCache {
-  private cache: Map<(abortSignal:AbortSignal)=>Promise<any>,any> = new Map()
+  private cache: Map<(abortSignal: AbortSignal) => Promise<any>, any> = new Map()
 
   public abortableMemoize(fn: (abortSignal?: AbortSignal) => Promise<any>) {
     let cache = this.cache
@@ -48,12 +47,14 @@ class AbortAwareCache {
       if (!cache.has(fn)) {
         const fnReturn = fn(abortSignal)
         cache.set(fn, fnReturn)
-        fnReturn.catch(() => {
-          if (abortSignal && abortSignal.aborted) cache.delete(fn)
-        })
+        if (abortSignal) {
+          fnReturn.catch(() => {
+            if (abortSignal.aborted) cache.delete(fn)
+          })
+        }
         return cache.get(fn)
       }
-      return cache.get(fn).catch((e:AbortError) => {
+      return cache.get(fn).catch((e: AbortError | DOMException) => {
         if (e.code === 'ERR_ABORTED' || e.name === 'AbortError') {
           return fn(abortSignal)
         }
@@ -63,12 +64,11 @@ class AbortAwareCache {
   }
 }
 
-
 export default abstract class BBIFile {
   private bbi: any
   private fileType: string
   protected renameRefSeqs: (a: string) => string
-  public parseHeader: (abortSignal?:AbortSignal) => Promise<any>
+  public parseHeader: (abortSignal?: AbortSignal) => Promise<any>
   private cache: AbortAwareCache
 
   public constructor(options: Options) {
@@ -85,7 +85,6 @@ export default abstract class BBIFile {
     }
     this.parseHeader = this.cache.abortableMemoize(this._parseHeader.bind(this))
   }
-
 
   public async _parseHeader(abortSignal?: AbortSignal): Promise<any> {
     const isBE = await this.isBigEndian(abortSignal)

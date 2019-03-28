@@ -1,6 +1,17 @@
 import BigWig from '../src/bigwig'
 import LocalFile from '../src/localFile'
 
+class HalfAbortController {
+  public signal: any
+  public constructor() {
+    this.signal = { aborted: false }
+  }
+
+  public abort() {
+    this.signal.aborted = true
+  }
+}
+
 describe('bigwig formats', () => {
   it('loads bedgraph bigwig file', async () => {
     const ti = new BigWig({
@@ -120,5 +131,15 @@ describe('bigwig formats', () => {
     })
     await ti.getHeader()
     await ti.getHeader()
+  })
+
+  it('abort loading a bigwig file', async () => {
+    const ti = new BigWig({
+      filehandle: new LocalFile(require.resolve('./data/volvox.bw')),
+    })
+    const aborter = new HalfAbortController()
+    const indexDataP = ti.parseHeader(aborter.signal)
+    aborter.abort()
+    await expect(indexDataP).rejects.toThrow(/aborted/)
   })
 })
