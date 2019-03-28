@@ -43,8 +43,10 @@ export default class BigWig extends BBI {
     })
   }
 
-  public async getFeatures(refName: string, start: number, end: number, opts:Options= {scale: 1}): Promise<Feature[]> {
-    const observables = await this.getFeatureStream(refName,start,end,opts)
-    return observables.pipe(toArray(),concatAll()).just(1).toPromise()
-  }
+//   public async getFeatures(refName: string, start: number, end: number, opts:Options= {scale: 1}): Promise<Feature[]> {
+//     const observables = await this.getFeatureStream(refName,start,end,opts)
+//     observables.subscribe(x => console.log(x))
+//     return observables.pipe(toArray(),concatAll()).just(1).toPromise()
+
+//   }
 }

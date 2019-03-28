@@ -1,5 +1,5 @@
-import BigBed from '../bigbed'
-import LocalFile from '../localFile'
+import BigBed from '../src/bigbed'
+import LocalFile from '../src/localFile'
 
 describe('bigbed formats', () => {
   it('loads small bigwig file', async () => {

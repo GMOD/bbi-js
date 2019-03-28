@@ -1,5 +1,5 @@
-import { BigBed, BigWig } from '../index'
-import LocalFile from '../localFile'
+import { BigBed, BigWig } from '../src/index'
+import LocalFile from '../src/localFile'
 
 describe('index formats', () => {
   it('loads small bigwig header', async () => {

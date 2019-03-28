@@ -24,12 +24,9 @@
     "docs": "typedoc --theme markdown --out docs --readme none src/",
     "prebuild": "npm run clean",
     "build": "tsc",
-    "preversion": "npm run docs && npm run lint && npm test && npm run build",
+    "preversion": "npm run lint && npm test && npm run docs && npm run build",
     "version": "standard-changelog && git add CHANGELOG.md",
     "postpublish": "git push origin master --follow-tags"
-  },
-  "jest": {
-    "testEnvironment": "node"
   },
   "keywords": [
     "bionode",
