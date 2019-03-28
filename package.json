@@ -23,7 +23,7 @@
     "clean": "rimraf dist",
     "docs": "typedoc --theme markdown --out docs --readme none src/",
     "prebuild": "npm run clean",
-    "build": "tsc",
+    "build": "tsc && babel ./src --out-dir dist --extensions '.ts'",
     "preversion": "npm run lint && npm test && npm run docs && npm run build",
     "version": "standard-changelog && git add CHANGELOG.md",
     "postpublish": "git push origin master --follow-tags"
@@ -48,8 +48,10 @@
   "devDependencies": {
     "@babel/cli": "^7.2.3",
     "@babel/core": "^7.4.0",
+    "@babel/plugin-proposal-class-properties": "^7.4.0",
     "@babel/plugin-transform-runtime": "^7.4.0",
     "@babel/preset-env": "^7.4.2",
+    "@babel/preset-typescript": "^7.3.3",
     "@babel/runtime": "^7.4.2",
     "@types/jest": "^24.0.11",
     "@types/long": "^4.0.0",

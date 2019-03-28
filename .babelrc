@@ -1,6 +1,6 @@
 {
 "comments": true,
-  "presets": [["@babel/preset-env", {
+  "presets": ["@babel/preset-typescript",["@babel/preset-env", {
       "targets": {
         "node": 6,
         "browsers": [
@@ -13,6 +13,7 @@
   "plugins": [
     ["@babel/transform-runtime", {
       "regenerator": true
-    }]
+    }],
+		"@babel/proposal-class-properties",
   ]
 }
