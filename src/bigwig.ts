@@ -1,7 +1,6 @@
 import BBI from './bbi'
 import Feature from './feature'
 import { Observable, Observer } from 'rxjs'
-import { toArray, mergeMap } from 'rxjs/operators'
 
 import BlockView from './blockView'
 interface Options {
@@ -43,8 +42,13 @@ export default class BigWig extends BBI {
     })
   }
 
-    public async getFeatures(refName: string, start: number, end: number, opts:Options= {scale: 1}): Promise<Feature[]> {
-      const observables = await this.getFeatureStream(refName,start,end,opts)
-      return observables.toPromise()
-    }
+  public async getFeatures(
+    refName: string,
+    start: number,
+    end: number,
+    opts: Options = { scale: 1 },
+  ): Promise<Feature[]> {
+    const observables = await this.getFeatureStream(refName, start, end, opts)
+    return observables.toPromise()
+  }
 }

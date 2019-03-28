@@ -38,13 +38,13 @@ export default abstract class BBIFile {
   private header: Promise<Header>
   private chroms: Promise<ChromTree>
   private isBE: Promise<boolean>
-  private type: string
+  private fileType: string
   protected renameRefSeqs: (a: string) => string
 
   public constructor(options: Options) {
     const { filehandle, renameRefSeqs, path } = options
     this.renameRefSeqs = renameRefSeqs || ((s: string): string => s)
-    this.type = ''
+    this.fileType = ''
     if (filehandle) {
       this.bbi = filehandle
     } else if (path) {
@@ -70,7 +70,7 @@ export default abstract class BBIFile {
     const buf = Buffer.alloc(2000)
     await this.bbi.read(buf, 0, 2000, 0)
     const header = ret.headerParser.parse(buf).result
-    this.type = header.magic === BIG_BED_MAGIC ? 'bigbed' : 'bigwig'
+    this.fileType = header.magic === BIG_BED_MAGIC ? 'bigbed' : 'bigwig'
 
     if (header.asOffset) {
       header.autoSql = buf.slice(header.asOffset, buf.indexOf(0, header.asOffset)).toString('utf8')
@@ -211,7 +211,7 @@ export default abstract class BBIFile {
     const ret = p.chromTreeParser.parse(data).result
 
     const rootNodeOffset = 32
-    const bptReadNode = (currentOffset: number) => {
+    const bptReadNode = (currentOffset: number): void => {
       let offset = currentOffset
       if (offset >= data.length) throw new Error('reading beyond end of buffer')
       const isLeafNode = data.readUInt8(offset)
@@ -273,9 +273,8 @@ export default abstract class BBIFile {
           zh.indexOffset,
           indexLength,
           isBE,
-          true,
           header.uncompressBufSize > 0,
-          this.type,
+          'summary',
         )
       }
     }
@@ -296,9 +295,8 @@ export default abstract class BBIFile {
       header.unzoomedIndexOffset,
       cirLen,
       isBE,
-      false,
       header.uncompressBufSize > 0,
-      this.type,
+      this.fileType,
     )
   }
 }

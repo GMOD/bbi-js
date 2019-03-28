@@ -9,10 +9,9 @@ export default class BigBed extends BBI {
    * @param refName - The chromosome name
    * @param start - The start of a region
    * @param end - The end of a region
-   * @param opts - An object containing basesPerSpan (e.g. pixels per basepair) or scale used to infer the zoomLevel to use
-   * @return array of features
+   * @return Promise with an Observable of array of features
    */
-  public async getFeatures(refName: string, start: number, end: number): Promise<Observable<Feature[]>> {
+  public async getFeatureStream(refName: string, start: number, end: number): Promise<Observable<Feature[]>> {
     await this.initData()
     const chrName = this.renameRefSeqs(refName)
 
@@ -23,5 +22,10 @@ export default class BigBed extends BBI {
     return new Observable((observer: Observer<Feature[]>) => {
       view.readWigData(chrName, start, end, observer)
     })
+  }
+
+  public async getFeatures(refName: string, start: number, end: number): Promise<Feature[]> {
+    const observables = await this.getFeatureStream(refName, start, end)
+    return observables.toPromise()
   }
 }

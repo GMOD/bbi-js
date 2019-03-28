@@ -35,7 +35,7 @@ interface SummaryBlock {
   sumSqData: number
 }
 interface Options {
-  type: string
+  blockType: string
   isCompressed: boolean
   isBigEndian: boolean
   cirBlockSize: number
@@ -57,21 +57,20 @@ export default class RequestWorker {
   private chrId: number
   private min: number
   private max: number
-  private data: LocalFile
+  private bbi: LocalFile
   private opts: Options
   private observer: Observer<Feature[]>
 
   public constructor(
-    data: LocalFile,
+    bbi: LocalFile,
     chrId: number,
     min: number,
     max: number,
     observer: Observer<Feature[]>,
     opts: Options,
   ) {
-    Object.assign(this, opts)
     this.opts = opts
-    this.data = data
+    this.bbi = bbi
     this.observer = observer
 
     this.blocksToFetch = []
@@ -97,7 +96,7 @@ export default class RequestWorker {
   private async cirFobStartFetch(offset: any, fr: any, level: number) {
     const length = fr.max() - fr.min()
     const resultBuffer = Buffer.alloc(length)
-    await this.data.read(resultBuffer, 0, length, fr.min())
+    await this.bbi.read(resultBuffer, 0, length, fr.min())
     for (let i = 0; i < offset.length; i += 1) {
       if (fr.contains(offset[i])) {
         this.cirFobRecur2(resultBuffer, offset[i] - fr.min(), level)
@@ -183,9 +182,7 @@ export default class RequestWorker {
 
   private parseSummaryBlock(bytes: Buffer, startOffset: number) {
     const data = bytes.slice(startOffset)
-    const p = new Parser()
-      .endianess(this.opts.isBigEndian ? 'big' : 'little')
-      .array('summary', {
+    const p = new Parser().endianess(this.opts.isBigEndian ? 'big' : 'little').array('summary', {
       length: data.byteLength / 64,
       type: new Parser()
         .int32('chromId')
@@ -215,9 +212,7 @@ export default class RequestWorker {
 
   private parseBigBedBlock(bytes: Buffer, startOffset: number) {
     const data = bytes.slice(startOffset)
-    const p = new Parser()
-      .endianess(this.opts.isBigEndian ? 'big' : 'little')
-      .array('items', {
+    const p = new Parser().endianess(this.opts.isBigEndian ? 'big' : 'little').array('items', {
       type: new Parser()
         .uint32('chromId')
         .int32('start')
@@ -284,31 +279,33 @@ export default class RequestWorker {
   }
 
   private async readFeatures() {
+    const { blockType, isCompressed } = this.opts
     const blockGroupsToFetch = groupBlocks(this.blocksToFetch)
-    await Promise.all(blockGroupsToFetch.map(async (blockGroup: any) => {
-      let data = Buffer.alloc(blockGroup.size)
-      await this.data.read(data, 0, blockGroup.size, blockGroup.offset)
-      blockGroup.blocks.forEach((block: any) => {
-        let offset = block.offset - blockGroup.offset
-        data = this.opts.isCompressed ? zlib.inflateSync(data.slice(offset)) : data
-        offset = this.opts.isCompressed ? 0 : offset
+    await Promise.all(
+      blockGroupsToFetch.map(async (blockGroup: any) => {
+        let data = Buffer.alloc(blockGroup.size)
+        await this.bbi.read(data, 0, blockGroup.size, blockGroup.offset)
+        blockGroup.blocks.forEach((block: any) => {
+          let offset = block.offset - blockGroup.offset
+          let resultData = isCompressed ? zlib.inflateSync(data.slice(offset)) : data
+          offset = isCompressed ? 0 : offset
 
-        switch (this.opts.type) {
-          case 'summary':
-            this.observer.next(this.parseSummaryBlock(data, offset))
-            break
-          case 'bigwig':
-            this.observer.next(this.parseBigWigBlock(data, offset))
-            break
-          case 'bigbed':
-            this.observer.next(this.parseBigBedBlock(data, offset))
-            break
-          default:
-            console.warn(`Don't know what to do with ${this.opts.type}`)
-        }
-      })
-    }))
-    console.log('here')
+          switch (blockType) {
+            case 'summary':
+              this.observer.next(this.parseSummaryBlock(resultData, offset))
+              break
+            case 'bigwig':
+              this.observer.next(this.parseBigWigBlock(resultData, offset))
+              break
+            case 'bigbed':
+              this.observer.next(this.parseBigBedBlock(resultData, offset))
+              break
+            default:
+              console.warn(`Don't know what to do with ${blockType}`)
+          }
+        })
+      }),
+    )
     this.observer.complete()
   }
 }
