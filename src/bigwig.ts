@@ -6,6 +6,7 @@ import BlockView from './blockView'
 interface Options {
   basesPerSpan?: number
   scale?: number
+  signal?: AbortSignal
 }
 export default class BigWig extends BBI {
   /**
@@ -27,18 +28,18 @@ export default class BigWig extends BBI {
     let view: BlockView
 
     if (opts.basesPerSpan) {
-      view = await this.getView(1 / opts.basesPerSpan)
+      view = await this.getView(1 / opts.basesPerSpan, opts.signal)
     } else if (opts.scale) {
-      view = await this.getView(opts.scale)
+      view = await this.getView(opts.scale, opts.signal)
     } else {
-      view = await this.getView(1)
+      view = await this.getView(1, opts.signal)
     }
 
     if (!view) {
       throw new Error('unable to get block view for data')
     }
     return new Observable((observer: Observer<Feature[]>) => {
-      view.readWigData(chrName, start, end, observer)
+      view.readWigData(chrName, start, end, observer, opts.signal)
     })
   }
 

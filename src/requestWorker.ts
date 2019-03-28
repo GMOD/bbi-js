@@ -40,6 +40,7 @@ interface Options {
   isBigEndian: boolean
   cirBlockSize: number
   name?: string
+  abortSignal?: AbortSignal
 }
 /**
  * Worker object for reading data from a bigwig or bigbed file.
@@ -96,7 +97,7 @@ export default class RequestWorker {
   private async cirFobStartFetch(offset: any, fr: any, level: number) {
     const length = fr.max() - fr.min()
     const resultBuffer = Buffer.alloc(length)
-    await this.bbi.read(resultBuffer, 0, length, fr.min())
+    await this.bbi.read(resultBuffer, 0, length, fr.min(), this.opts.abortSignal)
     for (let i = 0; i < offset.length; i += 1) {
       if (fr.contains(offset[i])) {
         this.cirFobRecur2(resultBuffer, offset[i] - fr.min(), level)
@@ -279,12 +280,12 @@ export default class RequestWorker {
   }
 
   private async readFeatures() {
-    const { blockType, isCompressed } = this.opts
+    const { blockType, isCompressed, abortSignal } = this.opts
     const blockGroupsToFetch = groupBlocks(this.blocksToFetch)
     await Promise.all(
       blockGroupsToFetch.map(async (blockGroup: any) => {
         let data = Buffer.alloc(blockGroup.size)
-        await this.bbi.read(data, 0, blockGroup.size, blockGroup.offset)
+        await this.bbi.read(data, 0, blockGroup.size, blockGroup.offset, abortSignal)
         blockGroup.blocks.forEach((block: any) => {
           let offset = block.offset - blockGroup.offset
           let resultData = isCompressed ? zlib.inflateSync(data.slice(offset)) : data

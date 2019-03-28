@@ -19,7 +19,7 @@ export default class LocalFile {
     this.fd = fsOpen(this.filename, 'r')
   }
 
-  public async read(buffer: Buffer, offset: number = 0, length: number, position: number): Promise<number> {
+  public async read(buffer: Buffer, offset: number = 0, length: number, position: number, abortSignal?: AbortSignal): Promise<number> {
     let readPosition = position
     if (readPosition === null) {
       readPosition = this.position

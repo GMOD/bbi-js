@@ -40,14 +40,14 @@ export default class BlockView {
   }
 
   // todo:memoize/lru
-  public async readWigData(chrName: string, min: number, max: number, observer: Observer<Feature[]>): Promise<void> {
+  public async readWigData(chrName: string, min: number, max: number, observer: Observer<Feature[]>, abortSignal?: AbortSignal): Promise<void> {
     const { refsByName, bbi, cirTreeOffset, isBigEndian, isCompressed, blockType } = this
     const chr = refsByName[chrName]
     if (chr === undefined) {
       observer.complete()
     }
     const buffer = Buffer.alloc(48)
-    await bbi.read(buffer, 0, 48, cirTreeOffset)
+    await bbi.read(buffer, 0, 48, cirTreeOffset, abortSignal)
     const cirBlockSize = isBigEndian ? buffer.readUInt32BE(4) : buffer.readUInt32LE(4)
 
     const worker = new RequestWorker(bbi, chr, min, max, observer, {
@@ -55,6 +55,7 @@ export default class BlockView {
       isCompressed,
       cirBlockSize,
       blockType,
+      abortSignal
     })
 
     worker.cirFobRecur([cirTreeOffset + 48], 1)

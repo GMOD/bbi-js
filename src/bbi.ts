@@ -2,6 +2,8 @@ import { Parser } from '@gmod/binary-parser'
 import * as Long from 'long'
 import BlockView from './blockView'
 import LocalFile from './localFile'
+import { abortBreakPoint, checkAbortSignal } from './util'
+
 
 const BIG_WIG_MAGIC = -2003829722
 const BIG_BED_MAGIC = -2021002517
@@ -35,9 +37,6 @@ interface ChromTree {
 
 export default abstract class BBIFile {
   private bbi: any
-  private header: Promise<Header>
-  private chroms: Promise<ChromTree>
-  private isBE: Promise<boolean>
   private fileType: string
   protected renameRefSeqs: (a: string) => string
 
@@ -52,23 +51,20 @@ export default abstract class BBIFile {
     } else {
       throw new Error('no file given')
     }
-    this.isBE = this.isBigEndian()
-    this.header = this.getHeader()
-    this.chroms = this.readChromTree()
   }
 
-  public async initData(): Promise<any> {
-    const header = await this.header
-    const isBE = await this.isBE
-    const chroms = await this.chroms
+  public async initData(abortSignal?:AbortSignal): Promise<any> {
+    const header = await this.getHeader(abortSignal)
+    const isBE = await this.isBigEndian(abortSignal)
+    const chroms = await this.readChromTree(abortSignal)
     return { header, chroms, isBE }
   }
 
   // todo: memoize
-  public async getHeader(): Promise<Header> {
-    const ret = await this.getParsers(await this.isBE)
+  public async getHeader(abortSignal?:AbortSignal): Promise<Header> {
+    const ret = await this.getParsers(await this.isBigEndian())
     const buf = Buffer.alloc(2000)
-    await this.bbi.read(buf, 0, 2000, 0)
+    await this.bbi.read(buf, 0, 2000, 0, abortSignal)
     const header = ret.headerParser.parse(buf).result
     this.fileType = header.magic === BIG_BED_MAGIC ? 'bigbed' : 'bigwig'
 
@@ -82,9 +78,9 @@ export default abstract class BBIFile {
     return header
   }
 
-  private async isBigEndian(): Promise<boolean> {
+  private async isBigEndian(abortSignal?:AbortSignal): Promise<boolean> {
     const buf = Buffer.allocUnsafe(4)
-    await this.bbi.read(buf, 0, 4, 0)
+    await this.bbi.read(buf, 0, 4, 0, abortSignal)
     let ret = buf.readInt32LE(0)
     if (ret === BIG_WIG_MAGIC || ret === BIG_BED_MAGIC) {
       return false
@@ -192,9 +188,9 @@ export default abstract class BBIFile {
     }
   }
 
-  private async readChromTree(): Promise<ChromTree> {
-    const header = await this.header
-    const isBE = await this.isBE
+  private async readChromTree(abortSignal?:AbortSignal): Promise<ChromTree> {
+    const header = await this.getHeader()
+    const isBE = await this.isBigEndian()
     const refsByNumber: any = {}
     const refsByName: any = {}
     const { chromTreeOffset } = header
@@ -205,19 +201,20 @@ export default abstract class BBIFile {
     }
 
     const data = Buffer.alloc(unzoomedDataOffset - chromTreeOffset)
-    await this.bbi.read(data, 0, unzoomedDataOffset - chromTreeOffset, chromTreeOffset)
+    await this.bbi.read(data, 0, unzoomedDataOffset - chromTreeOffset, chromTreeOffset, abortSignal)
 
     const p = await this.getParsers(isBE)
     const ret = p.chromTreeParser.parse(data).result
 
     const rootNodeOffset = 32
-    const bptReadNode = (currentOffset: number): void => {
+    const bptReadNode = async (currentOffset: number): Promise<void> => {
       let offset = currentOffset
       if (offset >= data.length) throw new Error('reading beyond end of buffer')
       const isLeafNode = data.readUInt8(offset)
       const cnt = data.readUInt16LE(offset + 2)
       offset += 4
       for (let n = 0; n < cnt; n += 1) {
+        await abortBreakPoint(abortSignal)
         if (isLeafNode) {
           let key = ''
           for (let ki = 0; ki < ret.keySize; ki += 1, offset += 1) {
@@ -240,11 +237,11 @@ export default abstract class BBIFile {
           let childOffset = Long.fromBytes(bytes as number[]).toNumber()
           offset += 8
           childOffset -= chromTreeOffset
-          bptReadNode(childOffset)
+          await bptReadNode(childOffset)
         }
       }
     }
-    bptReadNode(rootNodeOffset)
+    await bptReadNode(rootNodeOffset)
     return {
       refsByName,
       refsByNumber,
@@ -252,8 +249,8 @@ export default abstract class BBIFile {
   }
 
   //todo: memoize
-  protected async getView(scale: number): Promise<BlockView> {
-    const { header, chroms, isBE } = await this.initData()
+  protected async getView(scale: number, abortSignal?:AbortSignal): Promise<BlockView> {
+    const { header, chroms, isBE } = await this.initData(abortSignal)
     const { zoomLevels, fileSize } = header
     const basesPerPx = 1 / scale
     let maxLevel = zoomLevels.length
@@ -278,12 +275,12 @@ export default abstract class BBIFile {
         )
       }
     }
-    return this.getUnzoomedView()
+    return this.getUnzoomedView(abortSignal)
   }
 
   //todo memoize
-  private async getUnzoomedView(): Promise<BlockView> {
-    const { header, chroms, isBE } = await this.initData()
+  private async getUnzoomedView(abortSignal?:AbortSignal): Promise<BlockView> {
+    const { header, chroms, isBE } = await this.initData(abortSignal)
     let cirLen = 4000
     const nzl = header.zoomLevels[0]
     if (nzl) {
