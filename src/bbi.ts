@@ -2,7 +2,7 @@ import { Parser } from '@gmod/binary-parser'
 import * as Long from 'long'
 import BlockView from './blockView'
 import LocalFile from './localFile'
-import { abortBreakPoint, checkAbortSignal } from './util'
+import { abortBreakPoint, checkAbortSignal, AbortError } from './util'
 
 const BIG_WIG_MAGIC = -2003829722
 const BIG_BED_MAGIC = -2021002517
@@ -34,14 +34,47 @@ interface ChromTree {
   refsByNumber: any
 }
 
+
+/*
+ * Takes a function that has one argument, abortSignal, that returns a promise
+ * and it works by retrying the function if a previous attempt to initialize the parse cache was aborted
+ */
+class AbortAwareCache {
+  private cache: Map<(abortSignal:AbortSignal)=>Promise<any>,any> = new Map()
+
+  public abortableMemoize(fn: (abortSignal?: AbortSignal) => Promise<any>) {
+    let cache = this.cache
+    return function abortableMemoizeFn(abortSignal?: AbortSignal) {
+      if (!cache.has(fn)) {
+        const fnReturn = fn(abortSignal)
+        cache.set(fn, fnReturn)
+        fnReturn.catch(() => {
+          if (abortSignal && abortSignal.aborted) cache.delete(fn)
+        })
+        return cache.get(fn)
+      }
+      return cache.get(fn).catch((e:AbortError) => {
+        if (e.code === 'ERR_ABORTED' || e.name === 'AbortError') {
+          return fn(abortSignal)
+        }
+        throw e
+      })
+    }
+  }
+}
+
+
 export default abstract class BBIFile {
   private bbi: any
   private fileType: string
   protected renameRefSeqs: (a: string) => string
+  public parseHeader: (abortSignal?:AbortSignal) => Promise<any>
+  private cache: AbortAwareCache
 
   public constructor(options: Options) {
     const { filehandle, renameRefSeqs, path } = options
     this.renameRefSeqs = renameRefSeqs || ((s: string): string => s)
+    this.cache = new AbortAwareCache()
     this.fileType = ''
     if (filehandle) {
       this.bbi = filehandle
@@ -50,11 +83,13 @@ export default abstract class BBIFile {
     } else {
       throw new Error('no file given')
     }
+    this.parseHeader = this.cache.abortableMemoize(this._parseHeader.bind(this))
   }
 
-  public async initData(abortSignal?: AbortSignal): Promise<any> {
-    const header = await this.getHeader(abortSignal)
+
+  public async _parseHeader(abortSignal?: AbortSignal): Promise<any> {
     const isBE = await this.isBigEndian(abortSignal)
+    const header = await this.getHeader(abortSignal)
     const chroms = await this.readChromTree(abortSignal)
     return { header, chroms, isBE }
   }
@@ -188,8 +223,8 @@ export default abstract class BBIFile {
   }
 
   private async readChromTree(abortSignal?: AbortSignal): Promise<ChromTree> {
-    const header = await this.getHeader()
-    const isBE = await this.isBigEndian()
+    const header = await this.getHeader(abortSignal)
+    const isBE = await this.isBigEndian(abortSignal)
     const refsByNumber: any = {}
     const refsByName: any = {}
     const { chromTreeOffset } = header
@@ -249,7 +284,7 @@ export default abstract class BBIFile {
 
   //todo: memoize
   protected async getView(scale: number, abortSignal?: AbortSignal): Promise<BlockView> {
-    const { header, chroms, isBE } = await this.initData(abortSignal)
+    const { header, chroms, isBE } = await this.parseHeader(abortSignal)
     const { zoomLevels, fileSize } = header
     const basesPerPx = 1 / scale
     let maxLevel = zoomLevels.length
@@ -279,7 +314,7 @@ export default abstract class BBIFile {
 
   //todo memoize
   private async getUnzoomedView(abortSignal?: AbortSignal): Promise<BlockView> {
-    const { header, chroms, isBE } = await this.initData(abortSignal)
+    const { header, chroms, isBE } = await this.parseHeader(abortSignal)
     let cirLen = 4000
     const nzl = header.zoomLevels[0]
     if (nzl) {

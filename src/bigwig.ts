@@ -23,7 +23,7 @@ export default class BigWig extends BBI {
     end: number,
     opts: Options = { scale: 1 },
   ): Promise<Observable<Feature[]>> {
-    await this.initData()
+    await this.parseHeader()
     const chrName = this.renameRefSeqs(refName)
     let view: BlockView
 

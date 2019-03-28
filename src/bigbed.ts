@@ -12,7 +12,7 @@ export default class BigBed extends BBI {
    * @return Promise with an Observable of array of features
    */
   public async getFeatureStream(refName: string, start: number, end: number): Promise<Observable<Feature[]>> {
-    await this.initData()
+    await this.parseHeader()
     const chrName = this.renameRefSeqs(refName)
 
     const view = await this.getView(1)
