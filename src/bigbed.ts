@@ -1,6 +1,6 @@
 import BBI from './bbi'
 import Feature from './feature'
-import { Observable,Observer } from 'rxjs'
+import { Observable, Observer } from 'rxjs'
 
 export default class BigBed extends BBI {
   /**
@@ -20,7 +20,7 @@ export default class BigBed extends BBI {
     if (!view) {
       throw new Error('unable to get block view for data')
     }
-    return new Observable((observer:Observer<Feature[]>) => {
+    return new Observable((observer: Observer<Feature[]>) => {
       view.readWigData(chrName, start, end, observer)
     })
   }

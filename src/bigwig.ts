@@ -1,7 +1,7 @@
 import BBI from './bbi'
 import Feature from './feature'
-import { Observable,Observer } from 'rxjs'
-import { toArray,concatAll } from 'rxjs/operators';
+import { Observable, Observer } from 'rxjs'
+import { toArray, mergeMap } from 'rxjs/operators'
 
 import BlockView from './blockView'
 interface Options {
@@ -38,15 +38,13 @@ export default class BigWig extends BBI {
     if (!view) {
       throw new Error('unable to get block view for data')
     }
-    return new Observable((observer:Observer<Feature[]>) => {
+    return new Observable((observer: Observer<Feature[]>) => {
       view.readWigData(chrName, start, end, observer)
     })
   }
 
-//   public async getFeatures(refName: string, start: number, end: number, opts:Options= {scale: 1}): Promise<Feature[]> {
-//     const observables = await this.getFeatureStream(refName,start,end,opts)
-//     observables.subscribe(x => console.log(x))
-//     return observables.pipe(toArray(),concatAll()).just(1).toPromise()
-
-//   }
+    public async getFeatures(refName: string, start: number, end: number, opts:Options= {scale: 1}): Promise<Feature[]> {
+      const observables = await this.getFeatureStream(refName,start,end,opts)
+      return observables.toPromise()
+    }
 }

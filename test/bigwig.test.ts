@@ -2,12 +2,15 @@ import BigWig from '../src/bigwig'
 import LocalFile from '../src/localFile'
 
 describe('bigwig formats', () => {
-  it('loads bedgraph bigwig file', async () => {
+  it('loads getFeatureStream', async (done) => {
     const ti = new BigWig({
       filehandle: new LocalFile(require.resolve('./data/volvox.bw')),
     })
     const feats1 = await ti.getFeatureStream('ctgA', 0, 100, { scale: 1 })
-    feats1.subscribe(x => console.log(x))
+    feats1.subscribe(x => console.log('a'), y => {
+      console.log('COMPLETE')
+      done()
+    })
     // const feats2 = await ti.getFeatures('ctgA', 0, 100, { scale: 0.01 })
     // const feats3 = await ti.getFeatures('ctgA', 0, 100, { scale: 0.001 })
     // const feats4 = await ti.getFeatures('ctgA', 2000, 2100, { scale: 0.001 })
@@ -15,6 +18,12 @@ describe('bigwig formats', () => {
     // expect(feats2).toMatchSnapshot()
     // expect(feats3).toMatchSnapshot()
     // expect(feats4).toMatchSnapshot()
+  })
+  it('loads getFeatures', async (done) => {
+    const ti = new BigWig({
+      filehandle: new LocalFile(require.resolve('./data/volvox.bw')),
+    })
+    console.log(await ti.getFeatures('ctgA',0,100,{scale:1}))
   })
   // it('loads variable step bigwig', async () => {
   //   const ti = new BigWig({

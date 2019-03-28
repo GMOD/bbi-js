@@ -6,7 +6,8 @@ import Range from './range'
 import LocalFile from './localFile'
 import { groupBlocks } from './util'
 import Feature from './feature'
-import {Observer} from 'rxjs'
+import { Observer } from 'rxjs'
+
 const BIG_WIG_TYPE_GRAPH = 1
 const BIG_WIG_TYPE_VSTEP = 2
 const BIG_WIG_TYPE_FSTEP = 3
@@ -60,7 +61,14 @@ export default class RequestWorker {
   private opts: Options
   private observer: Observer<Feature[]>
 
-  public constructor(data: LocalFile, chrId: number, min: number, max: number, observer: Observer<Feature[]>, opts: Options) {
+  public constructor(
+    data: LocalFile,
+    chrId: number,
+    min: number,
+    max: number,
+    observer: Observer<Feature[]>,
+    opts: Options,
+  ) {
     Object.assign(this, opts)
     this.opts = opts
     this.data = data
@@ -109,7 +117,7 @@ export default class RequestWorker {
 
     /* istanbul ignore next */
     const parser = new Parser()
-      .endianess(this.opts.isBigEndian?'be':'le')
+      .endianess(this.opts.isBigEndian ? 'big' : 'little')
       .uint8('isLeaf')
       .skip(1)
       .uint16('cnt')
@@ -175,7 +183,9 @@ export default class RequestWorker {
 
   private parseSummaryBlock(bytes: Buffer, startOffset: number) {
     const data = bytes.slice(startOffset)
-    const p = new Parser().endianess(this.opts.isBigEndian?'be':'le').array('summary', {
+    const p = new Parser()
+      .endianess(this.opts.isBigEndian ? 'big' : 'little')
+      .array('summary', {
       length: data.byteLength / 64,
       type: new Parser()
         .int32('chromId')
@@ -205,7 +215,9 @@ export default class RequestWorker {
 
   private parseBigBedBlock(bytes: Buffer, startOffset: number) {
     const data = bytes.slice(startOffset)
-    const p = new Parser().endianess(this.opts.isBigEndian?'be':'le').array('items', {
+    const p = new Parser()
+      .endianess(this.opts.isBigEndian ? 'big' : 'little')
+      .array('items', {
       type: new Parser()
         .uint32('chromId')
         .int32('start')
@@ -221,7 +233,7 @@ export default class RequestWorker {
   private parseBigWigBlock(bytes: Buffer, startOffset: number) {
     const data = bytes.slice(startOffset)
     const parser = new Parser()
-      .endianess(this.opts.isBigEndian?'be':'le')
+      .endianess(this.opts.isBigEndian ? 'big' : 'little')
       .skip(4)
       .int32('blockStart')
       .skip(4)
@@ -271,27 +283,32 @@ export default class RequestWorker {
     return f.start < this.max && f.end >= this.min
   }
 
-  private readFeatures() {
+  private async readFeatures() {
     const blockGroupsToFetch = groupBlocks(this.blocksToFetch)
-    blockGroupsToFetch.forEach(async (blockGroup: any) => {
+    await Promise.all(blockGroupsToFetch.map(async (blockGroup: any) => {
       let data = Buffer.alloc(blockGroup.size)
       await this.data.read(data, 0, blockGroup.size, blockGroup.offset)
       blockGroup.blocks.forEach((block: any) => {
-        let of = block.offset - blockGroup.offset
-        const proc = this.opts.isCompressed ? zlib.inflateSync(data.slice(of)) : data
-        const offset = this.opts.isCompressed ? 0 :of
+        let offset = block.offset - blockGroup.offset
+        data = this.opts.isCompressed ? zlib.inflateSync(data.slice(offset)) : data
+        offset = this.opts.isCompressed ? 0 : offset
 
         switch (this.opts.type) {
           case 'summary':
             this.observer.next(this.parseSummaryBlock(data, offset))
+            break
           case 'bigwig':
             this.observer.next(this.parseBigWigBlock(data, offset))
+            break
           case 'bigbed':
             this.observer.next(this.parseBigBedBlock(data, offset))
+            break
           default:
             console.warn(`Don't know what to do with ${this.opts.type}`)
         }
       })
-    })
+    }))
+    console.log('here')
+    this.observer.complete()
   }
 }

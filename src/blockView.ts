@@ -1,5 +1,5 @@
 import RequestWorker from './requestWorker'
-import {Observer} from 'rxjs'
+import { Observer } from 'rxjs'
 import Feature from './feature'
 /**
  * View into a subset of the data in a BigWig file.
@@ -54,7 +54,7 @@ export default class BlockView {
       this.cirBlockSize = buffer.readUInt32LE(4) // TODO little endian?
     })
 
-    const {isBigEndian,isCompressed,cirBlockSize,type} = this
+    const { isBigEndian, isCompressed, cirBlockSize, type } = this
 
     const worker = new RequestWorker(this.bbi, chr, min, max, observer, {
       isBigEndian,
