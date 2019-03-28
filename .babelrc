@@ -1,19 +1,28 @@
 {
-"comments": true,
-  "presets": ["@babel/preset-typescript",["@babel/preset-env", {
-      "targets": {
-        "node": 6,
-        "browsers": [
-          "> 0.5%",
-          "last 2 versions"
-        ]
+  "comments": true,
+  "presets": [
+    "@babel/preset-typescript",
+    [
+      "@babel/preset-env",
+      {
+        "targets": {
+          "node": 6,
+          "browsers": [
+            "> 0.5%",
+            "last 2 versions"
+          ]
+        },
+        "useBuiltIns": "usage"
       }
-    }
-  ]],
+    ]
+  ],
   "plugins": [
-    ["@babel/transform-runtime", {
-      "regenerator": true
-    }],
-		"@babel/proposal-class-properties",
+    [
+      "@babel/transform-runtime",
+      {
+        "regenerator": true
+      }
+    ],
+    "@babel/proposal-class-properties"
   ]
 }
