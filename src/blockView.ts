@@ -40,7 +40,13 @@ export default class BlockView {
   }
 
   // todo:memoize/lru
-  public async readWigData(chrName: string, min: number, max: number, observer: Observer<Feature[]>, abortSignal?: AbortSignal): Promise<void> {
+  public async readWigData(
+    chrName: string,
+    min: number,
+    max: number,
+    observer: Observer<Feature[]>,
+    abortSignal?: AbortSignal,
+  ): Promise<void> {
     const { refsByName, bbi, cirTreeOffset, isBigEndian, isCompressed, blockType } = this
     const chr = refsByName[chrName]
     if (chr === undefined) {
@@ -55,7 +61,7 @@ export default class BlockView {
       isCompressed,
       cirBlockSize,
       blockType,
-      abortSignal
+      abortSignal,
     })
 
     worker.cirFobRecur([cirTreeOffset + 48], 1)

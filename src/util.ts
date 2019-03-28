@@ -1,8 +1,8 @@
 class AbortError extends Error {
   public code: string
-  constructor(message: string) {
-    super(message);
-    this.code = "ERR_ABORTED";
+  public constructor(message: string) {
+    super(message)
+    this.code = 'ERR_ABORTED'
   }
 }
 // sort blocks by file offset and
@@ -43,7 +43,7 @@ export function groupBlocks(blocks: any[]): any[] {
  * @param {AbortSignal} [signal] an AbortSignal, or anything with an `aborted` attribute
  * @returns nothing
  */
-export function checkAbortSignal(signal?:AbortSignal):void {
+export function checkAbortSignal(signal?: AbortSignal): void {
   if (!signal) return
 
   if (signal.aborted) {
@@ -65,9 +65,7 @@ export function checkAbortSignal(signal?:AbortSignal):void {
  * provide a place to break when an abort signal is received.
  * @param {AbortSignal} signal
  */
-export async function abortBreakPoint(signal?:AbortSignal):Promise<void> {
+export async function abortBreakPoint(signal?: AbortSignal): Promise<void> {
   await Promise.resolve()
   checkAbortSignal(signal)
 }
-
-

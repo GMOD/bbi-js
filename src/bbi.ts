@@ -4,7 +4,6 @@ import BlockView from './blockView'
 import LocalFile from './localFile'
 import { abortBreakPoint, checkAbortSignal } from './util'
 
-
 const BIG_WIG_MAGIC = -2003829722
 const BIG_BED_MAGIC = -2021002517
 
@@ -53,7 +52,7 @@ export default abstract class BBIFile {
     }
   }
 
-  public async initData(abortSignal?:AbortSignal): Promise<any> {
+  public async initData(abortSignal?: AbortSignal): Promise<any> {
     const header = await this.getHeader(abortSignal)
     const isBE = await this.isBigEndian(abortSignal)
     const chroms = await this.readChromTree(abortSignal)
@@ -61,7 +60,7 @@ export default abstract class BBIFile {
   }
 
   // todo: memoize
-  public async getHeader(abortSignal?:AbortSignal): Promise<Header> {
+  public async getHeader(abortSignal?: AbortSignal): Promise<Header> {
     const ret = await this.getParsers(await this.isBigEndian())
     const buf = Buffer.alloc(2000)
     await this.bbi.read(buf, 0, 2000, 0, abortSignal)
@@ -78,7 +77,7 @@ export default abstract class BBIFile {
     return header
   }
 
-  private async isBigEndian(abortSignal?:AbortSignal): Promise<boolean> {
+  private async isBigEndian(abortSignal?: AbortSignal): Promise<boolean> {
     const buf = Buffer.allocUnsafe(4)
     await this.bbi.read(buf, 0, 4, 0, abortSignal)
     let ret = buf.readInt32LE(0)
@@ -188,7 +187,7 @@ export default abstract class BBIFile {
     }
   }
 
-  private async readChromTree(abortSignal?:AbortSignal): Promise<ChromTree> {
+  private async readChromTree(abortSignal?: AbortSignal): Promise<ChromTree> {
     const header = await this.getHeader()
     const isBE = await this.isBigEndian()
     const refsByNumber: any = {}
@@ -249,7 +248,7 @@ export default abstract class BBIFile {
   }
 
   //todo: memoize
-  protected async getView(scale: number, abortSignal?:AbortSignal): Promise<BlockView> {
+  protected async getView(scale: number, abortSignal?: AbortSignal): Promise<BlockView> {
     const { header, chroms, isBE } = await this.initData(abortSignal)
     const { zoomLevels, fileSize } = header
     const basesPerPx = 1 / scale
@@ -279,7 +278,7 @@ export default abstract class BBIFile {
   }
 
   //todo memoize
-  private async getUnzoomedView(abortSignal?:AbortSignal): Promise<BlockView> {
+  private async getUnzoomedView(abortSignal?: AbortSignal): Promise<BlockView> {
     const { header, chroms, isBE } = await this.initData(abortSignal)
     let cirLen = 4000
     const nzl = header.zoomLevels[0]
