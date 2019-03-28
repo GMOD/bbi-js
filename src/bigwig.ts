@@ -48,7 +48,17 @@ export default class BigWig extends BBI {
     end: number,
     opts: Options = { scale: 1 },
   ): Promise<Feature[]> {
-    const observables = await this.getFeatureStream(refName, start, end, opts)
-    return observables.toPromise()
+    let features: Feature[][] = []
+    const ob = await this.getFeatureStream(refName, start, end, opts)
+    return new Promise((resolve, reject) => {
+      // prettier-ignore
+      ob.subscribe(
+        feats => features = features.concat(feats),
+        error => reject(error),
+        () => {
+          resolve(features.flat())
+        }
+      )
+    })
   }
 }

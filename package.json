@@ -19,7 +19,7 @@
   "scripts": {
     "test": "jest",
     "coverage": "npm test -- --coverage",
-    "lint": "eslint --ext .ts src",
+    "lint": "eslint --ext .ts src test",
     "clean": "rimraf dist",
     "docs": "typedoc --theme markdown --out docs --readme none src/",
     "prebuild": "npm run clean",

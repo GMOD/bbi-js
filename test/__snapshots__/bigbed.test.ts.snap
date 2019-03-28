@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`bigbed formats loads small bigwig file 1`] = `
+exports[`bigbed formats loads small bigbed file 1`] = `
 Array [
   Object {
     "chromId": 0,
