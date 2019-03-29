@@ -86,15 +86,14 @@ export default abstract class BBIFile {
     this.parseHeader = this.cache.abortableMemoize(this._parseHeader.bind(this))
   }
 
-  public async _parseHeader(abortSignal?: AbortSignal): Promise<any> {
-    const isBE = await this.isBigEndian(abortSignal)
+  private async _parseHeader(abortSignal?: AbortSignal): Promise<any> {
+    const isBigEndian = await this.isBigEndian(abortSignal)
     const header = await this.getHeader(abortSignal)
     const chroms = await this.readChromTree(abortSignal)
-    return { header, chroms, isBE }
+    return { ...header, ...chroms, isBigEndian }
   }
 
-  // todo: memoize
-  public async getHeader(abortSignal?: AbortSignal): Promise<Header> {
+  private async getHeader(abortSignal?: AbortSignal): Promise<Header> {
     const ret = await this.getParsers(await this.isBigEndian())
     const buf = Buffer.alloc(2000)
     await this.bbi.read(buf, 0, 2000, 0, abortSignal)
@@ -283,8 +282,7 @@ export default abstract class BBIFile {
 
   //todo: memoize
   protected async getView(scale: number, abortSignal?: AbortSignal): Promise<BlockView> {
-    const { header, chroms, isBE } = await this.parseHeader(abortSignal)
-    const { zoomLevels, fileSize } = header
+    const { zoomLevels, refsByName, fileSize, isBigEndian, uncompressBufSize } = await this.parseHeader(abortSignal)
     const basesPerPx = 1 / scale
     let maxLevel = zoomLevels.length
     if (!fileSize) {
@@ -299,11 +297,11 @@ export default abstract class BBIFile {
           i < zoomLevels.length - 1 ? zoomLevels[i + 1].dataOffset - zh.indexOffset : fileSize - 4 - zh.indexOffset
         return new BlockView(
           this.bbi,
-          chroms.refsByName,
+          refsByName,
           zh.indexOffset,
           indexLength,
-          isBE,
-          header.uncompressBufSize > 0,
+          isBigEndian,
+          uncompressBufSize > 0,
           'summary',
         )
       }
@@ -313,19 +311,19 @@ export default abstract class BBIFile {
 
   //todo memoize
   private async getUnzoomedView(abortSignal?: AbortSignal): Promise<BlockView> {
-    const { header, chroms, isBE } = await this.parseHeader(abortSignal)
+    const { unzoomedIndexOffset, zoomLevels, refsByName, uncompressBufSize, isBigEndian } = await this.parseHeader(abortSignal)
     let cirLen = 4000
-    const nzl = header.zoomLevels[0]
+    const nzl = zoomLevels[0]
     if (nzl) {
-      cirLen = nzl.dataOffset - header.unzoomedIndexOffset
+      cirLen = nzl.dataOffset - unzoomedIndexOffset
     }
     return new BlockView(
       this.bbi,
-      chroms.refsByName,
-      header.unzoomedIndexOffset,
+      refsByName,
+      unzoomedIndexOffset,
       cirLen,
-      isBE,
-      header.uncompressBufSize > 0,
+      isBigEndian,
+      uncompressBufSize > 0,
       this.fileType,
     )
   }
