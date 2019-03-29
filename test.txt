@@ -1,0 +1,3 @@
+proper caching in bbi-js
+configuration editing in bbi-js
+hooking observable in bbi-js to codebase
