@@ -16,12 +16,4 @@ describe('index formats', () => {
     const indexData = await ti.getHeader()
     expect(indexData).toMatchSnapshot()
   })
-
-  it('loads small bigbed header', async () => {
-    const ti = new BigBed({
-      filehandle: new LocalFile(require.resolve('./data/hg18.bb')),
-    })
-    const id1 = await ti.parseHeader()
-    const id2 = await ti.parseHeader()
-  })
 })

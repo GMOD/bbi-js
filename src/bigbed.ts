@@ -2,6 +2,9 @@ import BBI from './bbi'
 import Feature from './feature'
 import { Observable, Observer } from 'rxjs'
 
+interface Options {
+  signal?: AbortSignal
+}
 export default class BigBed extends BBI {
   /**
    * Gets features from a BigWig file
@@ -11,8 +14,13 @@ export default class BigBed extends BBI {
    * @param end - The end of a region
    * @return Promise with an Observable of array of features
    */
-  public async getFeatureStream(refName: string, start: number, end: number): Promise<Observable<Feature[]>> {
-    await this.parseHeader()
+  public async getFeatureStream(
+    refName: string,
+    start: number,
+    end: number,
+    opts: Options = {},
+  ): Promise<Observable<Feature[]>> {
+    await this.getHeader(opts.signal)
     const chrName = this.renameRefSeqs(refName)
 
     const view = await this.getView(1)
@@ -24,8 +32,8 @@ export default class BigBed extends BBI {
     })
   }
 
-  public async getFeatures(refName: string, start: number, end: number): Promise<Feature[]> {
-    const observables = await this.getFeatureStream(refName, start, end)
+  public async getFeatures(refName: string, start: number, end: number, opts: Options = {}): Promise<Feature[]> {
+    const observables = await this.getFeatureStream(refName, start, end, opts)
     return observables.toPromise()
   }
 }

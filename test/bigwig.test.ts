@@ -138,7 +138,7 @@ describe('bigwig formats', () => {
       filehandle: new LocalFile(require.resolve('./data/volvox.bw')),
     })
     const aborter = new HalfAbortController()
-    const indexDataP = ti.parseHeader(aborter.signal)
+    const indexDataP = ti.getHeader(aborter.signal)
     aborter.abort()
     await expect(indexDataP).rejects.toThrow(/aborted/)
   })
