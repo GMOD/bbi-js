@@ -1,5 +1,7 @@
 import { Parser } from '@gmod/binary-parser'
 import * as Long from 'long'
+import * as LRU from 'lru-cache'
+
 import BlockView from './blockView'
 import LocalFile from './localFile'
 import { abortBreakPoint, checkAbortSignal, AbortError } from './util'
@@ -42,7 +44,7 @@ class AbortAwareCache {
   private cache: Map<(abortSignal: AbortSignal) => Promise<any>, any> = new Map()
 
   public abortableMemoize(fn: (abortSignal?: AbortSignal) => Promise<any>) {
-    let cache = this.cache
+    const { cache } = this
     return function abortableMemoizeFn(abortSignal?: AbortSignal) {
       if (!cache.has(fn)) {
         const fnReturn = fn(abortSignal)
@@ -67,14 +69,15 @@ class AbortAwareCache {
 export default abstract class BBIFile {
   private bbi: any
   private fileType: string
-  private cache: AbortAwareCache
+  private headerCache: AbortAwareCache
+  protected featureCache: LRU<any, any>
   protected renameRefSeqs: (a: string) => string
   public getHeader: (abortSignal?: AbortSignal) => Promise<any>
 
   public constructor(options: Options) {
     const { filehandle, renameRefSeqs, path } = options
     this.renameRefSeqs = renameRefSeqs || ((s: string): string => s)
-    this.cache = new AbortAwareCache()
+    this.headerCache = new AbortAwareCache()
     this.fileType = ''
     if (filehandle) {
       this.bbi = filehandle
@@ -83,7 +86,11 @@ export default abstract class BBIFile {
     } else {
       throw new Error('no file given')
     }
-    this.getHeader = this.cache.abortableMemoize(this._getHeader.bind(this))
+    this.getHeader = this.headerCache.abortableMemoize(this._getHeader.bind(this))
+    this.featureCache = new LRU({
+      max: 5_000_000,
+      length: (val: any, key: any): number => val.length,
+    })
   }
 
   private async _getHeader(abortSignal?: AbortSignal): Promise<any> {
@@ -213,16 +220,24 @@ export default abstract class BBIFile {
         },
       })
 
+    const isLeafNode = new Parser()
+      .endianess(le)
+      .uint8('isLeafNode')
+      .skip(1)
+      .uint16('cnt')
+
     return {
       chromTreeParser,
       totalSummaryParser,
       headerParser,
+      isLeafNode,
     }
   }
 
   private async readChromTree(abortSignal?: AbortSignal): Promise<ChromTree> {
     const header = await this.getMainHeader(abortSignal)
     const isBE = await this.isBigEndian(abortSignal)
+    const le = isBE ? 'big' : 'little'
     const refsByNumber: any = {}
     const refsByName: any = {}
     const { chromTreeOffset } = header
@@ -237,37 +252,41 @@ export default abstract class BBIFile {
 
     const p = await this.getParsers(isBE)
     const ret = p.chromTreeParser.parse(data).result
-
+    const leafNodeParser = new Parser()
+      .endianess(le)
+      .string('key', { stringNull: true, length: ret.keySize })
+      .uint32('refId')
+      .uint32('refSize')
+    const nonleafNodeParser = new Parser()
+      .endianess(le)
+      .skip(ret.keySize)
+      .buffer('childOffset', {
+        length: 8,
+        formatter: function(buf: any) {
+          return Long.fromBytes(buf, true, this.endian === 'le').toNumber()
+        },
+      })
     const rootNodeOffset = 32
     const bptReadNode = async (currentOffset: number): Promise<void> => {
       let offset = currentOffset
       if (offset >= data.length) throw new Error('reading beyond end of buffer')
-      const isLeafNode = data.readUInt8(offset)
-      const cnt = data.readUInt16LE(offset + 2)
-      offset += 4
+      const ret = p.isLeafNode.parse(data.slice(offset))
+      const { isLeafNode, cnt } = ret.result
+      offset += ret.offset
       for (let n = 0; n < cnt; n += 1) {
         await abortBreakPoint(abortSignal)
         if (isLeafNode) {
-          let key = ''
-          for (let ki = 0; ki < ret.keySize; ki += 1, offset += 1) {
-            const charCode = data.readUInt8(offset)
-            if (charCode !== 0) {
-              key += String.fromCharCode(charCode)
-            }
-          }
-          const refId = data.readUInt32LE(offset)
-          const refSize = data.readUInt32LE(offset + 4)
-          offset += 8
-
+          const leafRet = leafNodeParser.parse(data.slice(offset))
+          offset += leafRet.offset
+          const { key, refId, refSize } = leafRet.result
           const refRec = { name: key, id: refId, length: refSize }
           refsByName[this.renameRefSeqs(key)] = refId
           refsByNumber[refId] = refRec
         } else {
           // parse index node
-          offset += ret.keySize
-          const bytes = data.slice(offset, offset + 8) as unknown
-          let childOffset = Long.fromBytes(bytes as number[]).toNumber()
-          offset += 8
+          const nonleafRet = nonleafNodeParser.parse(data.slice(offset))
+          let { childOffset } = nonleafRet.result
+          offset += nonleafRet.offset
           childOffset -= chromTreeOffset
           await bptReadNode(childOffset)
         }
