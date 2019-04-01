@@ -1,3 +1,5 @@
+- Fix some type errors on the range class
+
 ## [1.0.8](https://github.com/GMOD/bbi-js/compare/v1.0.7...v1.0.8) (2019-04-01)
 
 
