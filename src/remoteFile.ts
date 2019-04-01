@@ -1,5 +1,5 @@
-const fetch = require('cross-fetch')
-const BufferCache = require('./bufferCache')
+import fetch from 'cross-fetch'
+import BufferCache from './bufferCache'
 
 export default class RemoteFile {
   private position: number
@@ -7,7 +7,7 @@ export default class RemoteFile {
   private cache: any
   private _stat: any
 
-  constructor(source: string) {
+  public constructor(source: string) {
     this.position = 0
     this.url = source
     this.cache = new BufferCache({
@@ -15,8 +15,8 @@ export default class RemoteFile {
     })
   }
 
-  async _fetch(position: number, length: number): Promise<Buffer> {
-    const headers:any = {}
+  private async _fetch(position: number, length: number): Promise<Buffer> {
+    const headers: any = {}
     if (length < Infinity) {
       headers.range = `bytes=${position}-${position + length}`
     } else if (length === Infinity && position !== 0) {
@@ -28,14 +28,11 @@ export default class RemoteFile {
       redirect: 'follow',
       mode: 'cors',
     })
-    if (
-      (response.status === 200 && position === 0) ||
-      response.status === 206
-    ) {
+    if ((response.status === 200 && position === 0) || response.status === 206) {
       const nodeBuffer = Buffer.from(await response.arrayBuffer())
 
       // try to parse out the size of the remote file
-      const sizeMatch = /\/(\d+)$/.exec(response.headers.get('content-range'))
+      const sizeMatch = /\/(\d+)$/.exec(response.headers.get('content-range') || '')
       if (sizeMatch && sizeMatch[1]) this._stat = { size: parseInt(sizeMatch[1], 10) }
 
       return nodeBuffer
@@ -43,7 +40,7 @@ export default class RemoteFile {
     throw new Error(`HTTP ${response.status} fetching ${this.url}`)
   }
 
-  read(buffer:Buffer, offset:number = 0, length:number = Infinity, position:number = 0): Promise<Buffer> {
+  public read(buffer: Buffer, offset: number = 0, length: number = Infinity, position: number = 0): Promise<Buffer> {
     let readPosition = position
     if (readPosition === null) {
       readPosition = this.position
@@ -52,7 +49,7 @@ export default class RemoteFile {
     return this.cache.get(buffer, offset, length, position)
   }
 
-  async readFile():Promise<Buffer> {
+  public async readFile(): Promise<Buffer> {
     const response = await fetch(this.url, {
       method: 'GET',
       redirect: 'follow',
@@ -61,14 +58,12 @@ export default class RemoteFile {
     return Buffer.from(await response.arrayBuffer())
   }
 
-  async stat(): Promise<any> {
+  public async stat(): Promise<any> {
     if (!this._stat) {
       const buf = Buffer.allocUnsafe(10)
       await this.read(buf, 0, 10, 0)
-      if (!this._stat)
-        throw new Error(`unable to determine size of file at ${this.url}`)
+      if (!this._stat) throw new Error(`unable to determine size of file at ${this.url}`)
     }
     return this._stat
   }
 }
-

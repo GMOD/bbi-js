@@ -45,7 +45,9 @@ interface ChromTree {
 class AbortAwareCache {
   private cache: Map<(abortSignal: AbortSignal) => Promise<any>, any> = new Map()
 
-  public abortableMemoize(fn: (abortSignal?: AbortSignal) => Promise<any>) {
+  public abortableMemoize(
+    fn: (abortSignal?: AbortSignal) => Promise<any>,
+  ): (abortSignal?: AbortSignal) => Promise<any> {
     const { cache } = this
     return function abortableMemoizeFn(abortSignal?: AbortSignal) {
       if (!cache.has(fn)) {
