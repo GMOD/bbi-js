@@ -1,3 +1,7 @@
+## [1.0.7](https://github.com/GMOD/bbi-js/compare/v1.0.6...v1.0.7) (2019-04-01)
+
+
+
 - Added getFeatureStream which returns an Observable from rxjs
 - Added url option to BigWig and BigBed constructors to allow usage of RemoteFile filehandle
 - Added typescript backend for better processing
