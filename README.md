@@ -8,12 +8,25 @@ A parser for bigwig and bigbed file formats
 
 ## Usage
 
+If using locally
 
+    import {BigWig} from '@gmod/bbi'
     const ti = new BigWig({
       path: 'volvox.bw'
     })
     await ti.getHeader()
     const feats = await ti.getFeatures('chr1', 0, 100, { scale: 1 })
+
+
+If using remotely in a compiled webapp
+
+   import {BigWig} from '@gmod/bbi'
+   const ti = new BigWig({
+      url: 'volvox.bw'
+   })
+   await ti.getHeader()
+   const feats = await ti.getFeatures('chr1', 0, 100, { scale: 1 })
+
 
 ## Documentation
 

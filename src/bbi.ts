@@ -4,6 +4,7 @@ import LRU from 'quick-lru'
 
 import BlockView from './blockView'
 import LocalFile from './localFile'
+import RemoteFile from './localFile'
 import { abortBreakPoint, AbortError } from './util'
 
 const BIG_WIG_MAGIC = -2003829722
@@ -12,6 +13,7 @@ const BIG_BED_MAGIC = -2021002517
 interface Options {
   filehandle?: any
   path?: string
+  url?: string
   renameRefSeqs?: (a: string) => string
 }
 
@@ -75,12 +77,14 @@ export default abstract class BBIFile {
   public getHeader: (abortSignal?: AbortSignal) => Promise<any>
 
   public constructor(options: Options) {
-    const { filehandle, renameRefSeqs, path } = options
+    const { filehandle, renameRefSeqs, path, url } = options
     this.renameRefSeqs = renameRefSeqs || ((s: string): string => s)
     this.headerCache = new AbortAwareCache()
     this.fileType = ''
     if (filehandle) {
       this.bbi = filehandle
+    } else if (url) {
+      this.bbi = new RemoteFile(url)
     } else if (path) {
       this.bbi = new LocalFile(path)
     } else {
