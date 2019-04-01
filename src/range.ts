@@ -1,10 +1,12 @@
 /* eslint prefer-rest-params:0, no-nested-ternary:0 */
+
+/**
+ * Adapted from a combination of Range and _Compound in the
+ * Dalliance Genome Explorer, (c) Thomas Down 2006-2010.
+ */
 export default class Range {
-  /**
-   * Adapted from a combination of Range and _Compound in the
-   * Dalliance Genome Explorer, (c) Thomas Down 2006-2010.
-   */
-  private ranges: any
+
+  public ranges: any
   public constructor(arg1: any, arg2?: any) {
     this.ranges = arguments.length === 2 ? [{ min: arg1, max: arg2 }] : 0 in arg1 ? Object.assign({}, arg1) : [arg1]
   }
@@ -42,8 +44,8 @@ export default class Range {
   public union(s1: Range): Range {
     const s0 = this
     const ranges = s0
-      .ranges()
-      .concat(s1.ranges())
+      .ranges
+      .concat(s1.ranges)
       .sort(this.rangeOrder)
     const oranges = []
     let current = ranges[0]
