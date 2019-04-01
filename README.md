@@ -20,12 +20,12 @@ If using locally
 
 If using remotely in a compiled webapp
 
-   import {BigWig} from '@gmod/bbi'
-   const ti = new BigWig({
-      url: 'volvox.bw'
-   })
-   await ti.getHeader()
-   const feats = await ti.getFeatures('chr1', 0, 100, { scale: 1 })
+    import {BigWig} from '@gmod/bbi'
+    const ti = new BigWig({
+       url: 'volvox.bw'
+    })
+    await ti.getHeader()
+    const feats = await ti.getFeatures('chr1', 0, 100, { scale: 1 })
 
 
 ## Documentation
