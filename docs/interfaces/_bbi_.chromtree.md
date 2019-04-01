@@ -23,7 +23,7 @@
 
 **● refsByName**: *`any`*
 
-*Defined in [bbi.ts:32](https://github.com/gmod/bbi-js/blob/e20e58c/src/bbi.ts#L32)*
+*Defined in [bbi.ts:37](https://github.com/gmod/bbi-js/blob/27f8971/src/bbi.ts#L37)*
 
 ___
 <a id="refsbynumber"></a>
@@ -32,7 +32,7 @@ ___
 
 **● refsByNumber**: *`any`*
 
-*Defined in [bbi.ts:33](https://github.com/gmod/bbi-js/blob/e20e58c/src/bbi.ts#L33)*
+*Defined in [bbi.ts:38](https://github.com/gmod/bbi-js/blob/27f8971/src/bbi.ts#L38)*
 
 ___
 

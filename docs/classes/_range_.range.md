@@ -39,7 +39,7 @@
 
 ⊕ **new Range**(arg1: *`any`*, arg2?: *`any`*): [Range](_range_.range.md)
 
-*Defined in [range.ts:7](https://github.com/gmod/bbi-js/blob/e20e58c/src/range.ts#L7)*
+*Defined in [range.ts:7](https://github.com/gmod/bbi-js/blob/27f8971/src/range.ts#L7)*
 
 **Parameters:**
 
@@ -60,7 +60,7 @@ ___
 
 **● ranges**: *`any`*
 
-*Defined in [range.ts:7](https://github.com/gmod/bbi-js/blob/e20e58c/src/range.ts#L7)*
+*Defined in [range.ts:7](https://github.com/gmod/bbi-js/blob/27f8971/src/range.ts#L7)*
 
 Adapted from a combination of Range and \_Compound in the Dalliance Genome Explorer, (c) Thomas Down 2006-2010.
 
@@ -74,7 +74,7 @@ ___
 
 ▸ **contains**(pos: *`number`*): `boolean`
 
-*Defined in [range.ts:20](https://github.com/gmod/bbi-js/blob/e20e58c/src/range.ts#L20)*
+*Defined in [range.ts:20](https://github.com/gmod/bbi-js/blob/27f8971/src/range.ts#L20)*
 
 **Parameters:**
 
@@ -91,7 +91,7 @@ ___
 
 ▸ **coverage**(): `number`
 
-*Defined in [range.ts:105](https://github.com/gmod/bbi-js/blob/e20e58c/src/range.ts#L105)*
+*Defined in [range.ts:105](https://github.com/gmod/bbi-js/blob/27f8971/src/range.ts#L105)*
 
 **Returns:** `number`
 
@@ -102,7 +102,7 @@ ___
 
 ▸ **getRanges**(): [Range](_range_.range.md)[]
 
-*Defined in [range.ts:34](https://github.com/gmod/bbi-js/blob/e20e58c/src/range.ts#L34)*
+*Defined in [range.ts:34](https://github.com/gmod/bbi-js/blob/27f8971/src/range.ts#L34)*
 
 **Returns:** [Range](_range_.range.md)[]
 
@@ -113,7 +113,7 @@ ___
 
 ▸ **intersection**(arg: *[Range](_range_.range.md)*): [Range](_range_.range.md)
 
-*Defined in [range.ts:68](https://github.com/gmod/bbi-js/blob/e20e58c/src/range.ts#L68)*
+*Defined in [range.ts:68](https://github.com/gmod/bbi-js/blob/27f8971/src/range.ts#L68)*
 
 **Parameters:**
 
@@ -130,7 +130,7 @@ ___
 
 ▸ **isContiguous**(): `boolean`
 
-*Defined in [range.ts:30](https://github.com/gmod/bbi-js/blob/e20e58c/src/range.ts#L30)*
+*Defined in [range.ts:30](https://github.com/gmod/bbi-js/blob/27f8971/src/range.ts#L30)*
 
 **Returns:** `boolean`
 
@@ -141,7 +141,7 @@ ___
 
 ▸ **max**(): `number`
 
-*Defined in [range.ts:16](https://github.com/gmod/bbi-js/blob/e20e58c/src/range.ts#L16)*
+*Defined in [range.ts:16](https://github.com/gmod/bbi-js/blob/27f8971/src/range.ts#L16)*
 
 **Returns:** `number`
 
@@ -152,7 +152,7 @@ ___
 
 ▸ **min**(): `number`
 
-*Defined in [range.ts:12](https://github.com/gmod/bbi-js/blob/e20e58c/src/range.ts#L12)*
+*Defined in [range.ts:12](https://github.com/gmod/bbi-js/blob/27f8971/src/range.ts#L12)*
 
 **Returns:** `number`
 
@@ -163,7 +163,7 @@ ___
 
 ▸ **rangeOrder**(tmpa: *[Range](_range_.range.md)*, tmpb: *[Range](_range_.range.md)*): `number`
 
-*Defined in [range.ts:115](https://github.com/gmod/bbi-js/blob/e20e58c/src/range.ts#L115)*
+*Defined in [range.ts:115](https://github.com/gmod/bbi-js/blob/27f8971/src/range.ts#L115)*
 
 **Parameters:**
 
@@ -181,7 +181,7 @@ ___
 
 ▸ **toString**(): `string`
 
-*Defined in [range.ts:38](https://github.com/gmod/bbi-js/blob/e20e58c/src/range.ts#L38)*
+*Defined in [range.ts:38](https://github.com/gmod/bbi-js/blob/27f8971/src/range.ts#L38)*
 
 **Returns:** `string`
 
@@ -192,7 +192,7 @@ ___
 
 ▸ **union**(s1: *[Range](_range_.range.md)*): [Range](_range_.range.md)
 
-*Defined in [range.ts:42](https://github.com/gmod/bbi-js/blob/e20e58c/src/range.ts#L42)*
+*Defined in [range.ts:42](https://github.com/gmod/bbi-js/blob/27f8971/src/range.ts#L42)*
 
 **Parameters:**
 

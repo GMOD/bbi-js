@@ -1,3 +1,6 @@
+- Fix @babel/runtime in deployed package
+- Bugfix to the url argument to the BigWig/BigBed
+
 ## [1.0.7](https://github.com/GMOD/bbi-js/compare/v1.0.6...v1.0.7) (2019-04-01)
 
 

@@ -5,9 +5,6 @@
 
 ### External modules
 
-* ["__tests__/bbi.test"](modules/___tests___bbi_test_.md)
-* ["__tests__/bigbed.test"](modules/___tests___bigbed_test_.md)
-* ["__tests__/bigwig.test"](modules/___tests___bigwig_test_.md)
 * ["bbi"](modules/_bbi_.md)
 * ["bigbed"](modules/_bigbed_.md)
 * ["bigwig"](modules/_bigwig_.md)

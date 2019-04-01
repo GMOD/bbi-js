@@ -10,32 +10,42 @@
 
 ### Properties
 
+* [abortSignal](_requestworker_.options.md#abortsignal)
+* [blockType](_requestworker_.options.md#blocktype)
 * [cirBlockSize](_requestworker_.options.md#cirblocksize)
-* [compressed](_requestworker_.options.md#compressed)
 * [isBigEndian](_requestworker_.options.md#isbigendian)
+* [isCompressed](_requestworker_.options.md#iscompressed)
 * [name](_requestworker_.options.md#name)
-* [type](_requestworker_.options.md#type)
 
 ---
 
 ## Properties
 
+<a id="abortsignal"></a>
+
+### `<Optional>` abortSignal
+
+**● abortSignal**: *`AbortSignal`*
+
+*Defined in [requestWorker.ts:43](https://github.com/gmod/bbi-js/blob/27f8971/src/requestWorker.ts#L43)*
+
+___
+<a id="blocktype"></a>
+
+###  blockType
+
+**● blockType**: *`string`*
+
+*Defined in [requestWorker.ts:38](https://github.com/gmod/bbi-js/blob/27f8971/src/requestWorker.ts#L38)*
+
+___
 <a id="cirblocksize"></a>
 
 ###  cirBlockSize
 
 **● cirBlockSize**: *`number`*
 
-*Defined in [requestWorker.ts:40](https://github.com/gmod/bbi-js/blob/e20e58c/src/requestWorker.ts#L40)*
-
-___
-<a id="compressed"></a>
-
-###  compressed
-
-**● compressed**: *`boolean`*
-
-*Defined in [requestWorker.ts:38](https://github.com/gmod/bbi-js/blob/e20e58c/src/requestWorker.ts#L38)*
+*Defined in [requestWorker.ts:41](https://github.com/gmod/bbi-js/blob/27f8971/src/requestWorker.ts#L41)*
 
 ___
 <a id="isbigendian"></a>
@@ -44,7 +54,16 @@ ___
 
 **● isBigEndian**: *`boolean`*
 
-*Defined in [requestWorker.ts:39](https://github.com/gmod/bbi-js/blob/e20e58c/src/requestWorker.ts#L39)*
+*Defined in [requestWorker.ts:40](https://github.com/gmod/bbi-js/blob/27f8971/src/requestWorker.ts#L40)*
+
+___
+<a id="iscompressed"></a>
+
+###  isCompressed
+
+**● isCompressed**: *`boolean`*
+
+*Defined in [requestWorker.ts:39](https://github.com/gmod/bbi-js/blob/27f8971/src/requestWorker.ts#L39)*
 
 ___
 <a id="name"></a>
@@ -53,16 +72,7 @@ ___
 
 **● name**: *`undefined` \| `string`*
 
-*Defined in [requestWorker.ts:41](https://github.com/gmod/bbi-js/blob/e20e58c/src/requestWorker.ts#L41)*
-
-___
-<a id="type"></a>
-
-###  type
-
-**● type**: *`string`*
-
-*Defined in [requestWorker.ts:37](https://github.com/gmod/bbi-js/blob/e20e58c/src/requestWorker.ts#L37)*
+*Defined in [requestWorker.ts:42](https://github.com/gmod/bbi-js/blob/27f8971/src/requestWorker.ts#L42)*
 
 ___
 

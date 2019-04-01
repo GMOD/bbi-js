@@ -19,19 +19,19 @@
 ### Properties
 
 * [bbi](_bbi_.bbifile.md#bbi)
-* [chroms](_bbi_.bbifile.md#chroms)
-* [header](_bbi_.bbifile.md#header)
-* [isBE](_bbi_.bbifile.md#isbe)
+* [featureCache](_bbi_.bbifile.md#featurecache)
+* [fileType](_bbi_.bbifile.md#filetype)
+* [getHeader](_bbi_.bbifile.md#getheader)
+* [headerCache](_bbi_.bbifile.md#headercache)
 * [renameRefSeqs](_bbi_.bbifile.md#renamerefseqs)
-* [type](_bbi_.bbifile.md#type)
 
 ### Methods
 
-* [getHeader](_bbi_.bbifile.md#getheader)
+* [_getHeader](_bbi_.bbifile.md#_getheader)
+* [getMainHeader](_bbi_.bbifile.md#getmainheader)
 * [getParsers](_bbi_.bbifile.md#getparsers)
 * [getUnzoomedView](_bbi_.bbifile.md#getunzoomedview)
 * [getView](_bbi_.bbifile.md#getview)
-* [initData](_bbi_.bbifile.md#initdata)
 * [isBigEndian](_bbi_.bbifile.md#isbigendian)
 * [readChromTree](_bbi_.bbifile.md#readchromtree)
 
@@ -45,7 +45,7 @@
 
 ⊕ **new BBIFile**(options: *[Options](../interfaces/_bbi_.options.md)*): [BBIFile](_bbi_.bbifile.md)
 
-*Defined in [bbi.ts:42](https://github.com/gmod/bbi-js/blob/e20e58c/src/bbi.ts#L42)*
+*Defined in [bbi.ts:77](https://github.com/gmod/bbi-js/blob/27f8971/src/bbi.ts#L77)*
 
 **Parameters:**
 
@@ -65,43 +65,63 @@ ___
 
 **● bbi**: *`any`*
 
-*Defined in [bbi.ts:37](https://github.com/gmod/bbi-js/blob/e20e58c/src/bbi.ts#L37)*
+*Defined in [bbi.ts:72](https://github.com/gmod/bbi-js/blob/27f8971/src/bbi.ts#L72)*
 
 ___
-<a id="chroms"></a>
+<a id="featurecache"></a>
 
-### `<Private>` chroms
+### `<Protected>` featureCache
 
-**● chroms**: *`Promise`<[ChromTree](../interfaces/_bbi_.chromtree.md)>*
+**● featureCache**: *`LRU`<`any`, `any`>*
 
-*Defined in [bbi.ts:39](https://github.com/gmod/bbi-js/blob/e20e58c/src/bbi.ts#L39)*
-
-___
-<a id="header"></a>
-
-### `<Private>` header
-
-**● header**: *`Promise`<[Header](../interfaces/_bbi_.header.md)>*
-
-*Defined in [bbi.ts:38](https://github.com/gmod/bbi-js/blob/e20e58c/src/bbi.ts#L38)*
+*Defined in [bbi.ts:75](https://github.com/gmod/bbi-js/blob/27f8971/src/bbi.ts#L75)*
 
 ___
-<a id="isbe"></a>
+<a id="filetype"></a>
 
-### `<Private>` isBE
+### `<Private>` fileType
 
-**● isBE**: *`Promise`<`boolean`>*
+**● fileType**: *`string`*
 
-*Defined in [bbi.ts:40](https://github.com/gmod/bbi-js/blob/e20e58c/src/bbi.ts#L40)*
+*Defined in [bbi.ts:73](https://github.com/gmod/bbi-js/blob/27f8971/src/bbi.ts#L73)*
+
+___
+<a id="getheader"></a>
+
+###  getHeader
+
+**● getHeader**: *`function`*
+
+*Defined in [bbi.ts:77](https://github.com/gmod/bbi-js/blob/27f8971/src/bbi.ts#L77)*
+
+#### Type declaration
+▸(abortSignal?: *`AbortSignal`*): `Promise`<`any`>
+
+**Parameters:**
+
+| Name | Type |
+| ------ | ------ |
+| `Optional` abortSignal | `AbortSignal` |
+
+**Returns:** `Promise`<`any`>
+
+___
+<a id="headercache"></a>
+
+### `<Private>` headerCache
+
+**● headerCache**: *[AbortAwareCache](_bbi_.abortawarecache.md)*
+
+*Defined in [bbi.ts:74](https://github.com/gmod/bbi-js/blob/27f8971/src/bbi.ts#L74)*
 
 ___
 <a id="renamerefseqs"></a>
 
-###  renameRefSeqs
+### `<Protected>` renameRefSeqs
 
 **● renameRefSeqs**: *`function`*
 
-*Defined in [bbi.ts:42](https://github.com/gmod/bbi-js/blob/e20e58c/src/bbi.ts#L42)*
+*Defined in [bbi.ts:76](https://github.com/gmod/bbi-js/blob/27f8971/src/bbi.ts#L76)*
 
 #### Type declaration
 ▸(a: *`string`*): `string`
@@ -115,25 +135,39 @@ ___
 **Returns:** `string`
 
 ___
-<a id="type"></a>
-
-### `<Private>` type
-
-**● type**: *`string`*
-
-*Defined in [bbi.ts:41](https://github.com/gmod/bbi-js/blob/e20e58c/src/bbi.ts#L41)*
-
-___
 
 ## Methods
 
-<a id="getheader"></a>
+<a id="_getheader"></a>
 
-###  getHeader
+### `<Private>` _getHeader
 
-▸ **getHeader**(): `Promise`<[Header](../interfaces/_bbi_.header.md)>
+▸ **_getHeader**(abortSignal?: *`AbortSignal`*): `Promise`<`any`>
 
-*Defined in [bbi.ts:68](https://github.com/gmod/bbi-js/blob/e20e58c/src/bbi.ts#L68)*
+*Defined in [bbi.ts:97](https://github.com/gmod/bbi-js/blob/27f8971/src/bbi.ts#L97)*
+
+**Parameters:**
+
+| Name | Type |
+| ------ | ------ |
+| `Optional` abortSignal | `AbortSignal` |
+
+**Returns:** `Promise`<`any`>
+
+___
+<a id="getmainheader"></a>
+
+### `<Private>` getMainHeader
+
+▸ **getMainHeader**(abortSignal?: *`AbortSignal`*): `Promise`<[Header](../interfaces/_bbi_.header.md)>
+
+*Defined in [bbi.ts:104](https://github.com/gmod/bbi-js/blob/27f8971/src/bbi.ts#L104)*
+
+**Parameters:**
+
+| Name | Type |
+| ------ | ------ |
+| `Optional` abortSignal | `AbortSignal` |
 
 **Returns:** `Promise`<[Header](../interfaces/_bbi_.header.md)>
 
@@ -144,7 +178,7 @@ ___
 
 ▸ **getParsers**(isBE: *`boolean`*): `any`
 
-*Defined in [bbi.ts:99](https://github.com/gmod/bbi-js/blob/e20e58c/src/bbi.ts#L99)*
+*Defined in [bbi.ts:135](https://github.com/gmod/bbi-js/blob/27f8971/src/bbi.ts#L135)*
 
 **Parameters:**
 
@@ -159,9 +193,15 @@ ___
 
 ### `<Private>` getUnzoomedView
 
-▸ **getUnzoomedView**(): `Promise`<[BlockView](_blockview_.blockview.md)>
+▸ **getUnzoomedView**(abortSignal?: *`AbortSignal`*): `Promise`<[BlockView](_blockview_.blockview.md)>
 
-*Defined in [bbi.ts:286](https://github.com/gmod/bbi-js/blob/e20e58c/src/bbi.ts#L286)*
+*Defined in [bbi.ts:336](https://github.com/gmod/bbi-js/blob/27f8971/src/bbi.ts#L336)*
+
+**Parameters:**
+
+| Name | Type |
+| ------ | ------ |
+| `Optional` abortSignal | `AbortSignal` |
 
 **Returns:** `Promise`<[BlockView](_blockview_.blockview.md)>
 
@@ -170,37 +210,33 @@ ___
 
 ### `<Protected>` getView
 
-▸ **getView**(scale: *`number`*): `Promise`<[BlockView](_blockview_.blockview.md)>
+▸ **getView**(scale: *`number`*, abortSignal?: *`AbortSignal`*): `Promise`<[BlockView](_blockview_.blockview.md)>
 
-*Defined in [bbi.ts:255](https://github.com/gmod/bbi-js/blob/e20e58c/src/bbi.ts#L255)*
+*Defined in [bbi.ts:305](https://github.com/gmod/bbi-js/blob/27f8971/src/bbi.ts#L305)*
 
 **Parameters:**
 
 | Name | Type |
 | ------ | ------ |
 | scale | `number` |
+| `Optional` abortSignal | `AbortSignal` |
 
 **Returns:** `Promise`<[BlockView](_blockview_.blockview.md)>
-
-___
-<a id="initdata"></a>
-
-###  initData
-
-▸ **initData**(): `Promise`<`any`>
-
-*Defined in [bbi.ts:60](https://github.com/gmod/bbi-js/blob/e20e58c/src/bbi.ts#L60)*
-
-**Returns:** `Promise`<`any`>
 
 ___
 <a id="isbigendian"></a>
 
 ### `<Private>` isBigEndian
 
-▸ **isBigEndian**(): `Promise`<`boolean`>
+▸ **isBigEndian**(abortSignal?: *`AbortSignal`*): `Promise`<`boolean`>
 
-*Defined in [bbi.ts:85](https://github.com/gmod/bbi-js/blob/e20e58c/src/bbi.ts#L85)*
+*Defined in [bbi.ts:121](https://github.com/gmod/bbi-js/blob/27f8971/src/bbi.ts#L121)*
+
+**Parameters:**
+
+| Name | Type |
+| ------ | ------ |
+| `Optional` abortSignal | `AbortSignal` |
 
 **Returns:** `Promise`<`boolean`>
 
@@ -209,9 +245,15 @@ ___
 
 ### `<Private>` readChromTree
 
-▸ **readChromTree**(): `Promise`<[ChromTree](../interfaces/_bbi_.chromtree.md)>
+▸ **readChromTree**(abortSignal?: *`AbortSignal`*): `Promise`<[ChromTree](../interfaces/_bbi_.chromtree.md)>
 
-*Defined in [bbi.ts:195](https://github.com/gmod/bbi-js/blob/e20e58c/src/bbi.ts#L195)*
+*Defined in [bbi.ts:239](https://github.com/gmod/bbi-js/blob/27f8971/src/bbi.ts#L239)*
+
+**Parameters:**
+
+| Name | Type |
+| ------ | ------ |
+| `Optional` abortSignal | `AbortSignal` |
 
 **Returns:** `Promise`<[ChromTree](../interfaces/_bbi_.chromtree.md)>
 

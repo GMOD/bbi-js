@@ -5,6 +5,7 @@ class RemoteFile {
   constructor(source) {
     this.position = 0
     this.url = source
+    console.log('source',source)
     this.cache = new BufferCache({
       fetch: (start, length) => this._fetch(start, length),
     })

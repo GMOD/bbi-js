@@ -20,18 +20,14 @@ Adapted by Robert Buels from bigwig.js in the Dalliance Genome Explorer by Thoma
 
 ### Properties
 
+* [bbi](_requestworker_.requestworker.md#bbi)
 * [blocksToFetch](_requestworker_.requestworker.md#blockstofetch)
 * [chrId](_requestworker_.requestworker.md#chrid)
-* [cirBlockSize](_requestworker_.requestworker.md#cirblocksize)
-* [compressed](_requestworker_.requestworker.md#compressed)
-* [data](_requestworker_.requestworker.md#data)
-* [isBigEndian](_requestworker_.requestworker.md#isbigendian)
-* [le](_requestworker_.requestworker.md#le)
 * [max](_requestworker_.requestworker.md#max)
 * [min](_requestworker_.requestworker.md#min)
+* [observer](_requestworker_.requestworker.md#observer)
+* [opts](_requestworker_.requestworker.md#opts)
 * [outstanding](_requestworker_.requestworker.md#outstanding)
-* [source](_requestworker_.requestworker.md#source)
-* [type](_requestworker_.requestworker.md#type)
 * [window](_requestworker_.requestworker.md#window)
 
 ### Methods
@@ -53,18 +49,19 @@ Adapted by Robert Buels from bigwig.js in the Dalliance Genome Explorer by Thoma
 
 ###  constructor
 
-⊕ **new RequestWorker**(data: *[LocalFile](_localfile_.localfile.md)*, chrId: *`number`*, min: *`number`*, max: *`number`*, opts: *[Options](../interfaces/_requestworker_.options.md)*): [RequestWorker](_requestworker_.requestworker.md)
+⊕ **new RequestWorker**(bbi: *[LocalFile](_localfile_.localfile.md)*, chrId: *`number`*, min: *`number`*, max: *`number`*, observer: *`Observer`<[Feature](../interfaces/_feature_.feature.md)[]>*, opts: *[Options](../interfaces/_requestworker_.options.md)*): [RequestWorker](_requestworker_.requestworker.md)
 
-*Defined in [requestWorker.ts:65](https://github.com/gmod/bbi-js/blob/e20e58c/src/requestWorker.ts#L65)*
+*Defined in [requestWorker.ts:63](https://github.com/gmod/bbi-js/blob/27f8971/src/requestWorker.ts#L63)*
 
 **Parameters:**
 
 | Name | Type |
 | ------ | ------ |
-| data | [LocalFile](_localfile_.localfile.md) |
+| bbi | [LocalFile](_localfile_.localfile.md) |
 | chrId | `number` |
 | min | `number` |
 | max | `number` |
+| observer | `Observer`<[Feature](../interfaces/_feature_.feature.md)[]> |
 | opts | [Options](../interfaces/_requestworker_.options.md) |
 
 **Returns:** [RequestWorker](_requestworker_.requestworker.md)
@@ -73,13 +70,22 @@ ___
 
 ## Properties
 
+<a id="bbi"></a>
+
+### `<Private>` bbi
+
+**● bbi**: *[LocalFile](_localfile_.localfile.md)*
+
+*Defined in [requestWorker.ts:61](https://github.com/gmod/bbi-js/blob/27f8971/src/requestWorker.ts#L61)*
+
+___
 <a id="blockstofetch"></a>
 
 ### `<Private>` blocksToFetch
 
 **● blocksToFetch**: *`any`[]*
 
-*Defined in [requestWorker.ts:56](https://github.com/gmod/bbi-js/blob/e20e58c/src/requestWorker.ts#L56)*
+*Defined in [requestWorker.ts:56](https://github.com/gmod/bbi-js/blob/27f8971/src/requestWorker.ts#L56)*
 
 ___
 <a id="chrid"></a>
@@ -88,52 +94,7 @@ ___
 
 **● chrId**: *`number`*
 
-*Defined in [requestWorker.ts:58](https://github.com/gmod/bbi-js/blob/e20e58c/src/requestWorker.ts#L58)*
-
-___
-<a id="cirblocksize"></a>
-
-### `<Private>` cirBlockSize
-
-**● cirBlockSize**: *`number`*
-
-*Defined in [requestWorker.ts:62](https://github.com/gmod/bbi-js/blob/e20e58c/src/requestWorker.ts#L62)*
-
-___
-<a id="compressed"></a>
-
-### `<Private>` compressed
-
-**● compressed**: *`boolean`*
-
-*Defined in [requestWorker.ts:64](https://github.com/gmod/bbi-js/blob/e20e58c/src/requestWorker.ts#L64)*
-
-___
-<a id="data"></a>
-
-### `<Private>` data
-
-**● data**: *[LocalFile](_localfile_.localfile.md)*
-
-*Defined in [requestWorker.ts:61](https://github.com/gmod/bbi-js/blob/e20e58c/src/requestWorker.ts#L61)*
-
-___
-<a id="isbigendian"></a>
-
-### `<Private>` isBigEndian
-
-**● isBigEndian**: *`boolean`*
-
-*Defined in [requestWorker.ts:65](https://github.com/gmod/bbi-js/blob/e20e58c/src/requestWorker.ts#L65)*
-
-___
-<a id="le"></a>
-
-### `<Private>` le
-
-**● le**: *`string`*
-
-*Defined in [requestWorker.ts:55](https://github.com/gmod/bbi-js/blob/e20e58c/src/requestWorker.ts#L55)*
+*Defined in [requestWorker.ts:58](https://github.com/gmod/bbi-js/blob/27f8971/src/requestWorker.ts#L58)*
 
 ___
 <a id="max"></a>
@@ -142,7 +103,7 @@ ___
 
 **● max**: *`number`*
 
-*Defined in [requestWorker.ts:60](https://github.com/gmod/bbi-js/blob/e20e58c/src/requestWorker.ts#L60)*
+*Defined in [requestWorker.ts:60](https://github.com/gmod/bbi-js/blob/27f8971/src/requestWorker.ts#L60)*
 
 ___
 <a id="min"></a>
@@ -151,7 +112,25 @@ ___
 
 **● min**: *`number`*
 
-*Defined in [requestWorker.ts:59](https://github.com/gmod/bbi-js/blob/e20e58c/src/requestWorker.ts#L59)*
+*Defined in [requestWorker.ts:59](https://github.com/gmod/bbi-js/blob/27f8971/src/requestWorker.ts#L59)*
+
+___
+<a id="observer"></a>
+
+### `<Private>` observer
+
+**● observer**: *`Observer`<[Feature](../interfaces/_feature_.feature.md)[]>*
+
+*Defined in [requestWorker.ts:63](https://github.com/gmod/bbi-js/blob/27f8971/src/requestWorker.ts#L63)*
+
+___
+<a id="opts"></a>
+
+### `<Private>` opts
+
+**● opts**: *[Options](../interfaces/_requestworker_.options.md)*
+
+*Defined in [requestWorker.ts:62](https://github.com/gmod/bbi-js/blob/27f8971/src/requestWorker.ts#L62)*
 
 ___
 <a id="outstanding"></a>
@@ -160,25 +139,7 @@ ___
 
 **● outstanding**: *`number`*
 
-*Defined in [requestWorker.ts:57](https://github.com/gmod/bbi-js/blob/e20e58c/src/requestWorker.ts#L57)*
-
-___
-<a id="source"></a>
-
-### `<Private>` source
-
-**● source**: *`string` \| `undefined`*
-
-*Defined in [requestWorker.ts:54](https://github.com/gmod/bbi-js/blob/e20e58c/src/requestWorker.ts#L54)*
-
-___
-<a id="type"></a>
-
-### `<Private>` type
-
-**● type**: *`string`*
-
-*Defined in [requestWorker.ts:63](https://github.com/gmod/bbi-js/blob/e20e58c/src/requestWorker.ts#L63)*
+*Defined in [requestWorker.ts:57](https://github.com/gmod/bbi-js/blob/27f8971/src/requestWorker.ts#L57)*
 
 ___
 <a id="window"></a>
@@ -187,7 +148,7 @@ ___
 
 **● window**: *`any`*
 
-*Defined in [requestWorker.ts:53](https://github.com/gmod/bbi-js/blob/e20e58c/src/requestWorker.ts#L53)*
+*Defined in [requestWorker.ts:55](https://github.com/gmod/bbi-js/blob/27f8971/src/requestWorker.ts#L55)*
 
 ___
 
@@ -197,9 +158,9 @@ ___
 
 ###  cirFobRecur
 
-▸ **cirFobRecur**(offset: *`any`*, level: *`number`*): `Promise`<[Feature](../interfaces/_feature_.feature.md)[]>[]
+▸ **cirFobRecur**(offset: *`any`*, level: *`number`*): `void`
 
-*Defined in [requestWorker.ts:84](https://github.com/gmod/bbi-js/blob/e20e58c/src/requestWorker.ts#L84)*
+*Defined in [requestWorker.ts:85](https://github.com/gmod/bbi-js/blob/27f8971/src/requestWorker.ts#L85)*
 
 **Parameters:**
 
@@ -208,16 +169,16 @@ ___
 | offset | `any` |
 | level | `number` |
 
-**Returns:** `Promise`<[Feature](../interfaces/_feature_.feature.md)[]>[]
+**Returns:** `void`
 
 ___
 <a id="cirfobrecur2"></a>
 
 ### `<Private>` cirFobRecur2
 
-▸ **cirFobRecur2**(cirBlockData: *`Buffer`*, offset: *`number`*, level: *`number`*): `null` \| `Promise`<[Feature](../interfaces/_feature_.feature.md)[]>[]
+▸ **cirFobRecur2**(cirBlockData: *`Buffer`*, offset: *`number`*, level: *`number`*): `void`
 
-*Defined in [requestWorker.ts:117](https://github.com/gmod/bbi-js/blob/e20e58c/src/requestWorker.ts#L117)*
+*Defined in [requestWorker.ts:115](https://github.com/gmod/bbi-js/blob/27f8971/src/requestWorker.ts#L115)*
 
 **Parameters:**
 
@@ -227,16 +188,16 @@ ___
 | offset | `number` |
 | level | `number` |
 
-**Returns:** `null` \| `Promise`<[Feature](../interfaces/_feature_.feature.md)[]>[]
+**Returns:** `void`
 
 ___
 <a id="cirfobstartfetch"></a>
 
 ### `<Private>` cirFobStartFetch
 
-▸ **cirFobStartFetch**(offset: *`any`*, fr: *`any`*, level: *`number`*): `Promise`<[Feature](../interfaces/_feature_.feature.md)[]>
+▸ **cirFobStartFetch**(offset: *`any`*, fr: *`any`*, level: *`number`*): `Promise`<`void`>
 
-*Defined in [requestWorker.ts:97](https://github.com/gmod/bbi-js/blob/e20e58c/src/requestWorker.ts#L97)*
+*Defined in [requestWorker.ts:97](https://github.com/gmod/bbi-js/blob/27f8971/src/requestWorker.ts#L97)*
 
 **Parameters:**
 
@@ -246,7 +207,7 @@ ___
 | fr | `any` |
 | level | `number` |
 
-**Returns:** `Promise`<[Feature](../interfaces/_feature_.feature.md)[]>
+**Returns:** `Promise`<`void`>
 
 ___
 <a id="coordfilter"></a>
@@ -255,7 +216,7 @@ ___
 
 ▸ **coordFilter**(f: *[Feature](../interfaces/_feature_.feature.md)*): `boolean`
 
-*Defined in [requestWorker.ts:280](https://github.com/gmod/bbi-js/blob/e20e58c/src/requestWorker.ts#L280)*
+*Defined in [requestWorker.ts:277](https://github.com/gmod/bbi-js/blob/27f8971/src/requestWorker.ts#L277)*
 
 **Parameters:**
 
@@ -270,9 +231,9 @@ ___
 
 ### `<Private>` parseBigBedBlock
 
-▸ **parseBigBedBlock**(bytes: *`Buffer`*, startOffset: *`number`*): `any`
+▸ **parseBigBedBlock**(bytes: *`Buffer`*, startOffset: *`number`*): [Feature](../interfaces/_feature_.feature.md)[]
 
-*Defined in [requestWorker.ts:216](https://github.com/gmod/bbi-js/blob/e20e58c/src/requestWorker.ts#L216)*
+*Defined in [requestWorker.ts:213](https://github.com/gmod/bbi-js/blob/27f8971/src/requestWorker.ts#L213)*
 
 **Parameters:**
 
@@ -281,16 +242,16 @@ ___
 | bytes | `Buffer` |
 | startOffset | `number` |
 
-**Returns:** `any`
+**Returns:** [Feature](../interfaces/_feature_.feature.md)[]
 
 ___
 <a id="parsebigwigblock"></a>
 
 ### `<Private>` parseBigWigBlock
 
-▸ **parseBigWigBlock**(bytes: *`Buffer`*, startOffset: *`number`*): `any`
+▸ **parseBigWigBlock**(bytes: *`Buffer`*, startOffset: *`number`*): [Feature](../interfaces/_feature_.feature.md)[]
 
-*Defined in [requestWorker.ts:231](https://github.com/gmod/bbi-js/blob/e20e58c/src/requestWorker.ts#L231)*
+*Defined in [requestWorker.ts:228](https://github.com/gmod/bbi-js/blob/27f8971/src/requestWorker.ts#L228)*
 
 **Parameters:**
 
@@ -299,16 +260,16 @@ ___
 | bytes | `Buffer` |
 | startOffset | `number` |
 
-**Returns:** `any`
+**Returns:** [Feature](../interfaces/_feature_.feature.md)[]
 
 ___
 <a id="parsesummaryblock"></a>
 
 ### `<Private>` parseSummaryBlock
 
-▸ **parseSummaryBlock**(bytes: *`Buffer`*, startOffset: *`number`*): `any`
+▸ **parseSummaryBlock**(bytes: *`Buffer`*, startOffset: *`number`*): [Feature](../interfaces/_feature_.feature.md)[]
 
-*Defined in [requestWorker.ts:186](https://github.com/gmod/bbi-js/blob/e20e58c/src/requestWorker.ts#L186)*
+*Defined in [requestWorker.ts:183](https://github.com/gmod/bbi-js/blob/27f8971/src/requestWorker.ts#L183)*
 
 **Parameters:**
 
@@ -317,18 +278,18 @@ ___
 | bytes | `Buffer` |
 | startOffset | `number` |
 
-**Returns:** `any`
+**Returns:** [Feature](../interfaces/_feature_.feature.md)[]
 
 ___
 <a id="readfeatures"></a>
 
 ### `<Private>` readFeatures
 
-▸ **readFeatures**(): `Promise`<[Feature](../interfaces/_feature_.feature.md)[]>
+▸ **readFeatures**(): `Promise`<`void`>
 
-*Defined in [requestWorker.ts:284](https://github.com/gmod/bbi-js/blob/e20e58c/src/requestWorker.ts#L284)*
+*Defined in [requestWorker.ts:281](https://github.com/gmod/bbi-js/blob/27f8971/src/requestWorker.ts#L281)*
 
-**Returns:** `Promise`<[Feature](../interfaces/_feature_.feature.md)[]>
+**Returns:** `Promise`<`void`>
 
 ___
 

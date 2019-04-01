@@ -30,7 +30,7 @@
 
 **● endBase**: *`number`*
 
-*Defined in [requestWorker.ts:18](https://github.com/gmod/bbi-js/blob/e20e58c/src/requestWorker.ts#L18)*
+*Defined in [requestWorker.ts:19](https://github.com/gmod/bbi-js/blob/27f8971/src/requestWorker.ts#L19)*
 
 ___
 <a id="endchrom"></a>
@@ -39,7 +39,7 @@ ___
 
 **● endChrom**: *`number`*
 
-*Defined in [requestWorker.ts:16](https://github.com/gmod/bbi-js/blob/e20e58c/src/requestWorker.ts#L16)*
+*Defined in [requestWorker.ts:17](https://github.com/gmod/bbi-js/blob/27f8971/src/requestWorker.ts#L17)*
 
 ___
 <a id="maxval"></a>
@@ -48,7 +48,7 @@ ___
 
 **● maxVal**: *`number`*
 
-*Defined in [requestWorker.ts:21](https://github.com/gmod/bbi-js/blob/e20e58c/src/requestWorker.ts#L21)*
+*Defined in [requestWorker.ts:22](https://github.com/gmod/bbi-js/blob/27f8971/src/requestWorker.ts#L22)*
 
 ___
 <a id="minval"></a>
@@ -57,7 +57,7 @@ ___
 
 **● minVal**: *`number`*
 
-*Defined in [requestWorker.ts:20](https://github.com/gmod/bbi-js/blob/e20e58c/src/requestWorker.ts#L20)*
+*Defined in [requestWorker.ts:21](https://github.com/gmod/bbi-js/blob/27f8971/src/requestWorker.ts#L21)*
 
 ___
 <a id="startbase"></a>
@@ -66,7 +66,7 @@ ___
 
 **● startBase**: *`number`*
 
-*Defined in [requestWorker.ts:17](https://github.com/gmod/bbi-js/blob/e20e58c/src/requestWorker.ts#L17)*
+*Defined in [requestWorker.ts:18](https://github.com/gmod/bbi-js/blob/27f8971/src/requestWorker.ts#L18)*
 
 ___
 <a id="startchrom"></a>
@@ -75,7 +75,7 @@ ___
 
 **● startChrom**: *`number`*
 
-*Defined in [requestWorker.ts:15](https://github.com/gmod/bbi-js/blob/e20e58c/src/requestWorker.ts#L15)*
+*Defined in [requestWorker.ts:16](https://github.com/gmod/bbi-js/blob/27f8971/src/requestWorker.ts#L16)*
 
 ___
 <a id="sumdata"></a>
@@ -84,7 +84,7 @@ ___
 
 **● sumData**: *`number`*
 
-*Defined in [requestWorker.ts:22](https://github.com/gmod/bbi-js/blob/e20e58c/src/requestWorker.ts#L22)*
+*Defined in [requestWorker.ts:23](https://github.com/gmod/bbi-js/blob/27f8971/src/requestWorker.ts#L23)*
 
 ___
 <a id="sumsqdata"></a>
@@ -93,7 +93,7 @@ ___
 
 **● sumSqData**: *`number`*
 
-*Defined in [requestWorker.ts:23](https://github.com/gmod/bbi-js/blob/e20e58c/src/requestWorker.ts#L23)*
+*Defined in [requestWorker.ts:24](https://github.com/gmod/bbi-js/blob/27f8971/src/requestWorker.ts#L24)*
 
 ___
 <a id="validcnt"></a>
@@ -102,7 +102,7 @@ ___
 
 **● validCnt**: *`number`*
 
-*Defined in [requestWorker.ts:19](https://github.com/gmod/bbi-js/blob/e20e58c/src/requestWorker.ts#L19)*
+*Defined in [requestWorker.ts:20](https://github.com/gmod/bbi-js/blob/27f8971/src/requestWorker.ts#L20)*
 
 ___
 

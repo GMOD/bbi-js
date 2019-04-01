@@ -21,13 +21,13 @@ Adapted by Robert Buels and Colin Diesh from bigwig.js in the Dalliance Genome E
 ### Properties
 
 * [bbi](_blockview_.blockview.md#bbi)
-* [cirBlockSize](_blockview_.blockview.md#cirblocksize)
+* [blockType](_blockview_.blockview.md#blocktype)
 * [cirTreeLength](_blockview_.blockview.md#cirtreelength)
 * [cirTreeOffset](_blockview_.blockview.md#cirtreeoffset)
+* [featureCache](_blockview_.blockview.md#featurecache)
 * [isBigEndian](_blockview_.blockview.md#isbigendian)
 * [isCompressed](_blockview_.blockview.md#iscompressed)
 * [refsByName](_blockview_.blockview.md#refsbyname)
-* [type](_blockview_.blockview.md#type)
 
 ### Methods
 
@@ -41,9 +41,9 @@ Adapted by Robert Buels and Colin Diesh from bigwig.js in the Dalliance Genome E
 
 ###  constructor
 
-⊕ **new BlockView**(bbi: *`any`*, refsByName: *`any`*, cirTreeOffset: *`number`*, cirTreeLength: *`number`*, isBigEndian: *`boolean`*, isSummary: *`boolean`*, isCompressed: *`boolean`*, type: *`string`*): [BlockView](_blockview_.blockview.md)
+⊕ **new BlockView**(bbi: *`any`*, refsByName: *`any`*, cirTreeOffset: *`number`*, cirTreeLength: *`number`*, isBigEndian: *`boolean`*, isCompressed: *`boolean`*, blockType: *`string`*, featureCache: *`LRU`<`any`, `any`>*): [BlockView](_blockview_.blockview.md)
 
-*Defined in [blockView.ts:18](https://github.com/gmod/bbi-js/blob/e20e58c/src/blockView.ts#L18)*
+*Defined in [blockView.ts:21](https://github.com/gmod/bbi-js/blob/27f8971/src/blockView.ts#L21)*
 
 **Parameters:**
 
@@ -54,9 +54,9 @@ Adapted by Robert Buels and Colin Diesh from bigwig.js in the Dalliance Genome E
 | cirTreeOffset | `number` |
 | cirTreeLength | `number` |
 | isBigEndian | `boolean` |
-| isSummary | `boolean` |
 | isCompressed | `boolean` |
-| type | `string` |
+| blockType | `string` |
+| featureCache | `LRU`<`any`, `any`> |
 
 **Returns:** [BlockView](_blockview_.blockview.md)
 
@@ -70,16 +70,16 @@ ___
 
 **● bbi**: *`any`*
 
-*Defined in [blockView.ts:14](https://github.com/gmod/bbi-js/blob/e20e58c/src/blockView.ts#L14)*
+*Defined in [blockView.ts:16](https://github.com/gmod/bbi-js/blob/27f8971/src/blockView.ts#L16)*
 
 ___
-<a id="cirblocksize"></a>
+<a id="blocktype"></a>
 
-### `<Private>` cirBlockSize
+### `<Private>` blockType
 
-**● cirBlockSize**: *`number`*
+**● blockType**: *`string`*
 
-*Defined in [blockView.ts:13](https://github.com/gmod/bbi-js/blob/e20e58c/src/blockView.ts#L13)*
+*Defined in [blockView.ts:20](https://github.com/gmod/bbi-js/blob/27f8971/src/blockView.ts#L20)*
 
 ___
 <a id="cirtreelength"></a>
@@ -88,7 +88,7 @@ ___
 
 **● cirTreeLength**: *`number`*
 
-*Defined in [blockView.ts:12](https://github.com/gmod/bbi-js/blob/e20e58c/src/blockView.ts#L12)*
+*Defined in [blockView.ts:15](https://github.com/gmod/bbi-js/blob/27f8971/src/blockView.ts#L15)*
 
 ___
 <a id="cirtreeoffset"></a>
@@ -97,7 +97,16 @@ ___
 
 **● cirTreeOffset**: *`number`*
 
-*Defined in [blockView.ts:11](https://github.com/gmod/bbi-js/blob/e20e58c/src/blockView.ts#L11)*
+*Defined in [blockView.ts:14](https://github.com/gmod/bbi-js/blob/27f8971/src/blockView.ts#L14)*
+
+___
+<a id="featurecache"></a>
+
+### `<Private>` featureCache
+
+**● featureCache**: *`LRU`<`any`, `any`>*
+
+*Defined in [blockView.ts:21](https://github.com/gmod/bbi-js/blob/27f8971/src/blockView.ts#L21)*
 
 ___
 <a id="isbigendian"></a>
@@ -106,7 +115,7 @@ ___
 
 **● isBigEndian**: *`boolean`*
 
-*Defined in [blockView.ts:16](https://github.com/gmod/bbi-js/blob/e20e58c/src/blockView.ts#L16)*
+*Defined in [blockView.ts:18](https://github.com/gmod/bbi-js/blob/27f8971/src/blockView.ts#L18)*
 
 ___
 <a id="iscompressed"></a>
@@ -115,7 +124,7 @@ ___
 
 **● isCompressed**: *`boolean`*
 
-*Defined in [blockView.ts:15](https://github.com/gmod/bbi-js/blob/e20e58c/src/blockView.ts#L15)*
+*Defined in [blockView.ts:17](https://github.com/gmod/bbi-js/blob/27f8971/src/blockView.ts#L17)*
 
 ___
 <a id="refsbyname"></a>
@@ -124,16 +133,7 @@ ___
 
 **● refsByName**: *`any`*
 
-*Defined in [blockView.ts:17](https://github.com/gmod/bbi-js/blob/e20e58c/src/blockView.ts#L17)*
-
-___
-<a id="type"></a>
-
-### `<Private>` type
-
-**● type**: *`string`*
-
-*Defined in [blockView.ts:18](https://github.com/gmod/bbi-js/blob/e20e58c/src/blockView.ts#L18)*
+*Defined in [blockView.ts:19](https://github.com/gmod/bbi-js/blob/27f8971/src/blockView.ts#L19)*
 
 ___
 
@@ -143,9 +143,9 @@ ___
 
 ###  readWigData
 
-▸ **readWigData**(chrName: *`string`*, min: *`number`*, max: *`number`*): `Promise`<`any`>
+▸ **readWigData**(chrName: *`string`*, min: *`number`*, max: *`number`*, observer: *`Observer`<[Feature](../interfaces/_feature_.feature.md)[]>*, abortSignal?: *`AbortSignal`*): `Promise`<`void`>
 
-*Defined in [blockView.ts:44](https://github.com/gmod/bbi-js/blob/e20e58c/src/blockView.ts#L44)*
+*Defined in [blockView.ts:47](https://github.com/gmod/bbi-js/blob/27f8971/src/blockView.ts#L47)*
 
 **Parameters:**
 
@@ -154,8 +154,10 @@ ___
 | chrName | `string` |
 | min | `number` |
 | max | `number` |
+| observer | `Observer`<[Feature](../interfaces/_feature_.feature.md)[]> |
+| `Optional` abortSignal | `AbortSignal` |
 
-**Returns:** `Promise`<`any`>
+**Returns:** `Promise`<`void`>
 
 ___
 

@@ -16,14 +16,15 @@
 
 ### Properties
 
+* [featureCache](_bigbed_.bigbed.md#featurecache)
+* [getHeader](_bigbed_.bigbed.md#getheader)
 * [renameRefSeqs](_bigbed_.bigbed.md#renamerefseqs)
 
 ### Methods
 
+* [getFeatureStream](_bigbed_.bigbed.md#getfeaturestream)
 * [getFeatures](_bigbed_.bigbed.md#getfeatures)
-* [getHeader](_bigbed_.bigbed.md#getheader)
 * [getView](_bigbed_.bigbed.md#getview)
-* [initData](_bigbed_.bigbed.md#initdata)
 
 ---
 
@@ -37,7 +38,7 @@
 
 *Inherited from [BBIFile](_bbi_.bbifile.md).[constructor](_bbi_.bbifile.md#constructor)*
 
-*Defined in [bbi.ts:42](https://github.com/gmod/bbi-js/blob/e20e58c/src/bbi.ts#L42)*
+*Defined in [bbi.ts:77](https://github.com/gmod/bbi-js/blob/27f8971/src/bbi.ts#L77)*
 
 **Parameters:**
 
@@ -51,15 +52,48 @@ ___
 
 ## Properties
 
+<a id="featurecache"></a>
+
+### `<Protected>` featureCache
+
+**● featureCache**: *`LRU`<`any`, `any`>*
+
+*Inherited from [BBIFile](_bbi_.bbifile.md).[featureCache](_bbi_.bbifile.md#featurecache)*
+
+*Defined in [bbi.ts:75](https://github.com/gmod/bbi-js/blob/27f8971/src/bbi.ts#L75)*
+
+___
+<a id="getheader"></a>
+
+###  getHeader
+
+**● getHeader**: *`function`*
+
+*Inherited from [BBIFile](_bbi_.bbifile.md).[getHeader](_bbi_.bbifile.md#getheader)*
+
+*Defined in [bbi.ts:77](https://github.com/gmod/bbi-js/blob/27f8971/src/bbi.ts#L77)*
+
+#### Type declaration
+▸(abortSignal?: *`AbortSignal`*): `Promise`<`any`>
+
+**Parameters:**
+
+| Name | Type |
+| ------ | ------ |
+| `Optional` abortSignal | `AbortSignal` |
+
+**Returns:** `Promise`<`any`>
+
+___
 <a id="renamerefseqs"></a>
 
-###  renameRefSeqs
+### `<Protected>` renameRefSeqs
 
 **● renameRefSeqs**: *`function`*
 
 *Inherited from [BBIFile](_bbi_.bbifile.md).[renameRefSeqs](_bbi_.bbifile.md#renamerefseqs)*
 
-*Defined in [bbi.ts:42](https://github.com/gmod/bbi-js/blob/e20e58c/src/bbi.ts#L42)*
+*Defined in [bbi.ts:76](https://github.com/gmod/bbi-js/blob/27f8971/src/bbi.ts#L76)*
 
 #### Type declaration
 ▸(a: *`string`*): `string`
@@ -76,71 +110,67 @@ ___
 
 ## Methods
 
-<a id="getfeatures"></a>
+<a id="getfeaturestream"></a>
 
-###  getFeatures
+###  getFeatureStream
 
-▸ **getFeatures**(refName: *`string`*, start: *`number`*, end: *`number`*): `Promise`<[Feature](../interfaces/_feature_.feature.md)[]>
+▸ **getFeatureStream**(refName: *`string`*, start: *`number`*, end: *`number`*, opts?: *[Options](../interfaces/_bigbed_.options.md)*): `Promise`<`Observable`<[Feature](../interfaces/_feature_.feature.md)[]>>
 
-*Defined in [bigbed.ts:14](https://github.com/gmod/bbi-js/blob/e20e58c/src/bigbed.ts#L14)*
+*Defined in [bigbed.ts:17](https://github.com/gmod/bbi-js/blob/27f8971/src/bigbed.ts#L17)*
 
 Gets features from a BigWig file
 
 **Parameters:**
 
-| Name | Type | Description |
-| ------ | ------ | ------ |
-| refName | `string` |  The chromosome name |
-| start | `number` |  The start of a region |
-| end | `number` |  The end of a region |
+| Name | Type | Default value | Description |
+| ------ | ------ | ------ | ------ |
+| refName | `string` | - |  The chromosome name |
+| start | `number` | - |  The start of a region |
+| end | `number` | - |  The end of a region |
+| `Default value` opts | [Options](../interfaces/_bigbed_.options.md) |  {} |
 
-**Returns:** `Promise`<[Feature](../interfaces/_feature_.feature.md)[]>
-array of features
+**Returns:** `Promise`<`Observable`<[Feature](../interfaces/_feature_.feature.md)[]>>
+Promise with an Observable of array of features
 
 ___
-<a id="getheader"></a>
+<a id="getfeatures"></a>
 
-###  getHeader
+###  getFeatures
 
-▸ **getHeader**(): `Promise`<[Header](../interfaces/_bbi_.header.md)>
+▸ **getFeatures**(refName: *`string`*, start: *`number`*, end: *`number`*, opts?: *[Options](../interfaces/_bigbed_.options.md)*): `Promise`<[Feature](../interfaces/_feature_.feature.md)[]>
 
-*Inherited from [BBIFile](_bbi_.bbifile.md).[getHeader](_bbi_.bbifile.md#getheader)*
+*Defined in [bigbed.ts:35](https://github.com/gmod/bbi-js/blob/27f8971/src/bigbed.ts#L35)*
 
-*Defined in [bbi.ts:68](https://github.com/gmod/bbi-js/blob/e20e58c/src/bbi.ts#L68)*
+**Parameters:**
 
-**Returns:** `Promise`<[Header](../interfaces/_bbi_.header.md)>
+| Name | Type | Default value |
+| ------ | ------ | ------ |
+| refName | `string` | - |
+| start | `number` | - |
+| end | `number` | - |
+| `Default value` opts | [Options](../interfaces/_bigbed_.options.md) |  {} |
+
+**Returns:** `Promise`<[Feature](../interfaces/_feature_.feature.md)[]>
 
 ___
 <a id="getview"></a>
 
 ### `<Protected>` getView
 
-▸ **getView**(scale: *`number`*): `Promise`<[BlockView](_blockview_.blockview.md)>
+▸ **getView**(scale: *`number`*, abortSignal?: *`AbortSignal`*): `Promise`<[BlockView](_blockview_.blockview.md)>
 
 *Inherited from [BBIFile](_bbi_.bbifile.md).[getView](_bbi_.bbifile.md#getview)*
 
-*Defined in [bbi.ts:255](https://github.com/gmod/bbi-js/blob/e20e58c/src/bbi.ts#L255)*
+*Defined in [bbi.ts:305](https://github.com/gmod/bbi-js/blob/27f8971/src/bbi.ts#L305)*
 
 **Parameters:**
 
 | Name | Type |
 | ------ | ------ |
 | scale | `number` |
+| `Optional` abortSignal | `AbortSignal` |
 
 **Returns:** `Promise`<[BlockView](_blockview_.blockview.md)>
-
-___
-<a id="initdata"></a>
-
-###  initData
-
-▸ **initData**(): `Promise`<`any`>
-
-*Inherited from [BBIFile](_bbi_.bbifile.md).[initData](_bbi_.bbifile.md#initdata)*
-
-*Defined in [bbi.ts:60](https://github.com/gmod/bbi-js/blob/e20e58c/src/bbi.ts#L60)*
-
-**Returns:** `Promise`<`any`>
 
 ___
 

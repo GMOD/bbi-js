@@ -34,7 +34,7 @@
 
 ⊕ **new LocalFile**(source: *`string`*): [LocalFile](_localfile_.localfile.md)
 
-*Defined in [localFile.ts:15](https://github.com/gmod/bbi-js/blob/e20e58c/src/localFile.ts#L15)*
+*Defined in [localFile.ts:15](https://github.com/gmod/bbi-js/blob/27f8971/src/localFile.ts#L15)*
 
 **Parameters:**
 
@@ -54,7 +54,7 @@ ___
 
 **● fd**: *`any`*
 
-*Defined in [localFile.ts:13](https://github.com/gmod/bbi-js/blob/e20e58c/src/localFile.ts#L13)*
+*Defined in [localFile.ts:13](https://github.com/gmod/bbi-js/blob/27f8971/src/localFile.ts#L13)*
 
 ___
 <a id="filename"></a>
@@ -63,7 +63,7 @@ ___
 
 **● filename**: *`string`*
 
-*Defined in [localFile.ts:15](https://github.com/gmod/bbi-js/blob/e20e58c/src/localFile.ts#L15)*
+*Defined in [localFile.ts:15](https://github.com/gmod/bbi-js/blob/27f8971/src/localFile.ts#L15)*
 
 ___
 <a id="position"></a>
@@ -72,7 +72,7 @@ ___
 
 **● position**: *`number`*
 
-*Defined in [localFile.ts:14](https://github.com/gmod/bbi-js/blob/e20e58c/src/localFile.ts#L14)*
+*Defined in [localFile.ts:14](https://github.com/gmod/bbi-js/blob/27f8971/src/localFile.ts#L14)*
 
 ___
 
@@ -82,9 +82,9 @@ ___
 
 ###  read
 
-▸ **read**(buffer: *`Buffer`*, offset?: *`number`*, length: *`number`*, position: *`number`*): `Promise`<`number`>
+▸ **read**(buffer: *`Buffer`*, offset?: *`number`*, length: *`number`*, position: *`number`*, abortSignal?: *`AbortSignal`*): `Promise`<`number`>
 
-*Defined in [localFile.ts:22](https://github.com/gmod/bbi-js/blob/e20e58c/src/localFile.ts#L22)*
+*Defined in [localFile.ts:22](https://github.com/gmod/bbi-js/blob/27f8971/src/localFile.ts#L22)*
 
 **Parameters:**
 
@@ -94,6 +94,7 @@ ___
 | `Default value` offset | `number` | 0 |
 | length | `number` | - |
 | position | `number` | - |
+| `Optional` abortSignal | `AbortSignal` | - |
 
 **Returns:** `Promise`<`number`>
 
@@ -104,7 +105,7 @@ ___
 
 ▸ **readFile**(): `Promise`<`Buffer`>
 
-*Defined in [localFile.ts:33](https://github.com/gmod/bbi-js/blob/e20e58c/src/localFile.ts#L33)*
+*Defined in [localFile.ts:39](https://github.com/gmod/bbi-js/blob/27f8971/src/localFile.ts#L39)*
 
 **Returns:** `Promise`<`Buffer`>
 
@@ -115,7 +116,7 @@ ___
 
 ▸ **stat**(): `Promise`<`any`>
 
-*Defined in [localFile.ts:37](https://github.com/gmod/bbi-js/blob/e20e58c/src/localFile.ts#L37)*
+*Defined in [localFile.ts:43](https://github.com/gmod/bbi-js/blob/27f8971/src/localFile.ts#L43)*
 
 **Returns:** `Promise`<`any`>
 

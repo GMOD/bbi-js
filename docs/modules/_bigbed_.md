@@ -8,5 +8,9 @@
 
 * [BigBed](../classes/_bigbed_.bigbed.md)
 
+### Interfaces
+
+* [Options](../interfaces/_bigbed_.options.md)
+
 ---
 

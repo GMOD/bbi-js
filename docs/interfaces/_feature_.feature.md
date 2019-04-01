@@ -27,7 +27,7 @@
 
 **● end**: *`number`*
 
-*Defined in [feature.ts:3](https://github.com/gmod/bbi-js/blob/e20e58c/src/feature.ts#L3)*
+*Defined in [feature.ts:3](https://github.com/gmod/bbi-js/blob/27f8971/src/feature.ts#L3)*
 
 ___
 <a id="maxscore"></a>
@@ -36,7 +36,7 @@ ___
 
 **● maxScore**: *`undefined` \| `number`*
 
-*Defined in [feature.ts:6](https://github.com/gmod/bbi-js/blob/e20e58c/src/feature.ts#L6)*
+*Defined in [feature.ts:6](https://github.com/gmod/bbi-js/blob/27f8971/src/feature.ts#L6)*
 
 ___
 <a id="minscore"></a>
@@ -45,7 +45,7 @@ ___
 
 **● minScore**: *`undefined` \| `number`*
 
-*Defined in [feature.ts:5](https://github.com/gmod/bbi-js/blob/e20e58c/src/feature.ts#L5)*
+*Defined in [feature.ts:5](https://github.com/gmod/bbi-js/blob/27f8971/src/feature.ts#L5)*
 
 ___
 <a id="score"></a>
@@ -54,7 +54,7 @@ ___
 
 **● score**: *`number`*
 
-*Defined in [feature.ts:4](https://github.com/gmod/bbi-js/blob/e20e58c/src/feature.ts#L4)*
+*Defined in [feature.ts:4](https://github.com/gmod/bbi-js/blob/27f8971/src/feature.ts#L4)*
 
 ___
 <a id="start"></a>
@@ -63,7 +63,7 @@ ___
 
 **● start**: *`number`*
 
-*Defined in [feature.ts:2](https://github.com/gmod/bbi-js/blob/e20e58c/src/feature.ts#L2)*
+*Defined in [feature.ts:2](https://github.com/gmod/bbi-js/blob/27f8971/src/feature.ts#L2)*
 
 ___
 <a id="summary"></a>
@@ -72,7 +72,7 @@ ___
 
 **● summary**: *`undefined` \| `false` \| `true`*
 
-*Defined in [feature.ts:7](https://github.com/gmod/bbi-js/blob/e20e58c/src/feature.ts#L7)*
+*Defined in [feature.ts:7](https://github.com/gmod/bbi-js/blob/27f8971/src/feature.ts#L7)*
 
 ___
 

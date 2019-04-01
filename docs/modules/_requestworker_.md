@@ -30,7 +30,7 @@
 
 **● BIG_WIG_TYPE_FSTEP**: *`3`* = 3
 
-*Defined in [requestWorker.ts:12](https://github.com/gmod/bbi-js/blob/e20e58c/src/requestWorker.ts#L12)*
+*Defined in [requestWorker.ts:13](https://github.com/gmod/bbi-js/blob/27f8971/src/requestWorker.ts#L13)*
 
 ___
 <a id="big_wig_type_graph"></a>
@@ -39,7 +39,7 @@ ___
 
 **● BIG_WIG_TYPE_GRAPH**: *`1`* = 1
 
-*Defined in [requestWorker.ts:10](https://github.com/gmod/bbi-js/blob/e20e58c/src/requestWorker.ts#L10)*
+*Defined in [requestWorker.ts:11](https://github.com/gmod/bbi-js/blob/27f8971/src/requestWorker.ts#L11)*
 
 ___
 <a id="big_wig_type_vstep"></a>
@@ -48,7 +48,7 @@ ___
 
 **● BIG_WIG_TYPE_VSTEP**: *`2`* = 2
 
-*Defined in [requestWorker.ts:11](https://github.com/gmod/bbi-js/blob/e20e58c/src/requestWorker.ts#L11)*
+*Defined in [requestWorker.ts:12](https://github.com/gmod/bbi-js/blob/27f8971/src/requestWorker.ts#L12)*
 
 ___
 

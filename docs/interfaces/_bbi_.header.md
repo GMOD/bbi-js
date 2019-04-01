@@ -29,7 +29,7 @@
 
 **● autoSql**: *`string`*
 
-*Defined in [bbi.ts:21](https://github.com/gmod/bbi-js/blob/e20e58c/src/bbi.ts#L21)*
+*Defined in [bbi.ts:26](https://github.com/gmod/bbi-js/blob/27f8971/src/bbi.ts#L26)*
 
 ___
 <a id="chromtreeoffset"></a>
@@ -38,7 +38,7 @@ ___
 
 **● chromTreeOffset**: *`number`*
 
-*Defined in [bbi.ts:27](https://github.com/gmod/bbi-js/blob/e20e58c/src/bbi.ts#L27)*
+*Defined in [bbi.ts:32](https://github.com/gmod/bbi-js/blob/27f8971/src/bbi.ts#L32)*
 
 ___
 <a id="filesize"></a>
@@ -47,7 +47,7 @@ ___
 
 **● fileSize**: *`number`*
 
-*Defined in [bbi.ts:28](https://github.com/gmod/bbi-js/blob/e20e58c/src/bbi.ts#L28)*
+*Defined in [bbi.ts:33](https://github.com/gmod/bbi-js/blob/27f8971/src/bbi.ts#L33)*
 
 ___
 <a id="totalsummary"></a>
@@ -56,7 +56,7 @@ ___
 
 **● totalSummary**: *[Statistics](_bbi_.statistics.md)*
 
-*Defined in [bbi.ts:22](https://github.com/gmod/bbi-js/blob/e20e58c/src/bbi.ts#L22)*
+*Defined in [bbi.ts:27](https://github.com/gmod/bbi-js/blob/27f8971/src/bbi.ts#L27)*
 
 ___
 <a id="uncompressbufsize"></a>
@@ -65,7 +65,7 @@ ___
 
 **● uncompressBufSize**: *`number`*
 
-*Defined in [bbi.ts:26](https://github.com/gmod/bbi-js/blob/e20e58c/src/bbi.ts#L26)*
+*Defined in [bbi.ts:31](https://github.com/gmod/bbi-js/blob/27f8971/src/bbi.ts#L31)*
 
 ___
 <a id="unzoomeddataoffset"></a>
@@ -74,7 +74,7 @@ ___
 
 **● unzoomedDataOffset**: *`number`*
 
-*Defined in [bbi.ts:25](https://github.com/gmod/bbi-js/blob/e20e58c/src/bbi.ts#L25)*
+*Defined in [bbi.ts:30](https://github.com/gmod/bbi-js/blob/27f8971/src/bbi.ts#L30)*
 
 ___
 <a id="unzoomedindexoffset"></a>
@@ -83,7 +83,7 @@ ___
 
 **● unzoomedIndexOffset**: *`number`*
 
-*Defined in [bbi.ts:24](https://github.com/gmod/bbi-js/blob/e20e58c/src/bbi.ts#L24)*
+*Defined in [bbi.ts:29](https://github.com/gmod/bbi-js/blob/27f8971/src/bbi.ts#L29)*
 
 ___
 <a id="zoomlevels"></a>
@@ -92,7 +92,7 @@ ___
 
 **● zoomLevels**: *`any`*
 
-*Defined in [bbi.ts:23](https://github.com/gmod/bbi-js/blob/e20e58c/src/bbi.ts#L23)*
+*Defined in [bbi.ts:28](https://github.com/gmod/bbi-js/blob/27f8971/src/bbi.ts#L28)*
 
 ___
 

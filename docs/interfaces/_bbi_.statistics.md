@@ -24,7 +24,7 @@
 
 **● basesCovered**: *`number`*
 
-*Defined in [bbi.ts:17](https://github.com/gmod/bbi-js/blob/e20e58c/src/bbi.ts#L17)*
+*Defined in [bbi.ts:22](https://github.com/gmod/bbi-js/blob/27f8971/src/bbi.ts#L22)*
 
 ___
 <a id="scoresum"></a>
@@ -33,7 +33,7 @@ ___
 
 **● scoreSum**: *`number`*
 
-*Defined in [bbi.ts:16](https://github.com/gmod/bbi-js/blob/e20e58c/src/bbi.ts#L16)*
+*Defined in [bbi.ts:21](https://github.com/gmod/bbi-js/blob/27f8971/src/bbi.ts#L21)*
 
 ___
 <a id="scoresumsquares"></a>
@@ -42,7 +42,7 @@ ___
 
 **● scoreSumSquares**: *`number`*
 
-*Defined in [bbi.ts:18](https://github.com/gmod/bbi-js/blob/e20e58c/src/bbi.ts#L18)*
+*Defined in [bbi.ts:23](https://github.com/gmod/bbi-js/blob/27f8971/src/bbi.ts#L23)*
 
 ___
 

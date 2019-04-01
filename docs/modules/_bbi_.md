@@ -6,6 +6,7 @@
 
 ### Classes
 
+* [AbortAwareCache](../classes/_bbi_.abortawarecache.md)
 * [BBIFile](../classes/_bbi_.bbifile.md)
 
 ### Interfaces
@@ -30,7 +31,7 @@
 
 **● BIG_BED_MAGIC**: *`-2021002517`* =  -2021002517
 
-*Defined in [bbi.ts:7](https://github.com/gmod/bbi-js/blob/e20e58c/src/bbi.ts#L7)*
+*Defined in [bbi.ts:11](https://github.com/gmod/bbi-js/blob/27f8971/src/bbi.ts#L11)*
 
 ___
 <a id="big_wig_magic"></a>
@@ -39,7 +40,7 @@ ___
 
 **● BIG_WIG_MAGIC**: *`-2003829722`* =  -2003829722
 
-*Defined in [bbi.ts:6](https://github.com/gmod/bbi-js/blob/e20e58c/src/bbi.ts#L6)*
+*Defined in [bbi.ts:10](https://github.com/gmod/bbi-js/blob/27f8971/src/bbi.ts#L10)*
 
 ___
 
