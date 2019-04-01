@@ -1,18 +1,22 @@
 const fetch = require('cross-fetch')
 const BufferCache = require('./bufferCache')
 
-class RemoteFile {
-  constructor(source) {
+export default class RemoteFile {
+  private position: number
+  private url: string
+  private cache: any
+  private _stat: any
+
+  constructor(source: string) {
     this.position = 0
     this.url = source
-    console.log('source',source)
     this.cache = new BufferCache({
-      fetch: (start, length) => this._fetch(start, length),
+      fetch: (start: number, length: number): Promise<Buffer> => this._fetch(start, length),
     })
   }
 
-  async _fetch(position, length) {
-    const headers = {}
+  async _fetch(position: number, length: number): Promise<Buffer> {
+    const headers:any = {}
     if (length < Infinity) {
       headers.range = `bytes=${position}-${position + length}`
     } else if (length === Infinity && position !== 0) {
@@ -32,14 +36,14 @@ class RemoteFile {
 
       // try to parse out the size of the remote file
       const sizeMatch = /\/(\d+)$/.exec(response.headers.get('content-range'))
-      if (sizeMatch[1]) this._stat = { size: parseInt(sizeMatch[1], 10) }
+      if (sizeMatch && sizeMatch[1]) this._stat = { size: parseInt(sizeMatch[1], 10) }
 
       return nodeBuffer
     }
     throw new Error(`HTTP ${response.status} fetching ${this.url}`)
   }
 
-  read(buffer, offset = 0, length = Infinity, position = 0) {
+  read(buffer:Buffer, offset:number = 0, length:number = Infinity, position:number = 0): Promise<Buffer> {
     let readPosition = position
     if (readPosition === null) {
       readPosition = this.position
@@ -48,7 +52,7 @@ class RemoteFile {
     return this.cache.get(buffer, offset, length, position)
   }
 
-  async readFile() {
+  async readFile():Promise<Buffer> {
     const response = await fetch(this.url, {
       method: 'GET',
       redirect: 'follow',
@@ -57,7 +61,7 @@ class RemoteFile {
     return Buffer.from(await response.arrayBuffer())
   }
 
-  async stat() {
+  async stat(): Promise<any> {
     if (!this._stat) {
       const buf = Buffer.allocUnsafe(10)
       await this.read(buf, 0, 10, 0)
@@ -68,4 +72,3 @@ class RemoteFile {
   }
 }
 
-module.exports = RemoteFile

@@ -4,7 +4,7 @@ import LRU from 'quick-lru'
 
 import BlockView from './blockView'
 import LocalFile from './localFile'
-const RemoteFile = require('./remoteFile')
+import RemoteFile from './remoteFile'
 import { abortBreakPoint, AbortError } from './util'
 
 const BIG_WIG_MAGIC = -2003829722
