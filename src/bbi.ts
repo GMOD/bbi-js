@@ -252,7 +252,7 @@ export default abstract class BBIFile {
     const ret = p.chromTreeParser.parse(data).result
     const leafNodeParser = new Parser()
       .endianess(le)
-      .string('key', { stringNull: true, length: ret.keySize })
+      .string('key', { stripNull: true, length: ret.keySize })
       .uint32('refId')
       .uint32('refSize')
     const nonleafNodeParser = new Parser()
