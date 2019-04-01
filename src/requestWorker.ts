@@ -82,7 +82,7 @@ export default class RequestWorker {
     this.max = max
   }
 
-  public cirFobRecur(offset: any, level: number) {
+  public cirFobRecur(offset: any, level: number): void {
     this.outstanding += offset.length
 
     const maxCirBlockSpan = 4 + this.opts.cirBlockSize * 32 // Upper bound on size, based on a completely full leaf node.
@@ -94,7 +94,7 @@ export default class RequestWorker {
     spans.getRanges().map((fr: Range) => this.cirFobStartFetch(offset, fr, level))
   }
 
-  private async cirFobStartFetch(offset: any, fr: any, level: number) {
+  private async cirFobStartFetch(offset: any, fr: any, level: number): Promise<void> {
     const length = fr.max() - fr.min()
     const resultBuffer = Buffer.alloc(length)
     await this.bbi.read(resultBuffer, 0, length, fr.min(), this.opts.abortSignal)
@@ -112,7 +112,7 @@ export default class RequestWorker {
     }
   }
 
-  private cirFobRecur2(cirBlockData: Buffer, offset: number, level: number) {
+  private cirFobRecur2(cirBlockData: Buffer, offset: number, level: number): void {
     const data = cirBlockData.slice(offset)
 
     /* istanbul ignore next */
@@ -175,13 +175,12 @@ export default class RequestWorker {
     if (p.recurOffsets) {
       const recurOffsets = p.recurOffsets.filter(m).map((l: any): any => l.blockOffset)
       if (recurOffsets.length > 0) {
-        return this.cirFobRecur(recurOffsets, level + 1)
+        this.cirFobRecur(recurOffsets, level + 1)
       }
     }
-    return null
   }
 
-  private parseSummaryBlock(bytes: Buffer, startOffset: number) {
+  private parseSummaryBlock(bytes: Buffer, startOffset: number): Feature[] {
     const data = bytes.slice(startOffset)
     const p = new Parser().endianess(this.opts.isBigEndian ? 'big' : 'little').array('summary', {
       length: data.byteLength / 64,
@@ -211,7 +210,7 @@ export default class RequestWorker {
       .filter((f: Feature): boolean => this.coordFilter(f))
   }
 
-  private parseBigBedBlock(bytes: Buffer, startOffset: number) {
+  private parseBigBedBlock(bytes: Buffer, startOffset: number): Feature[] {
     const data = bytes.slice(startOffset)
     const p = new Parser().endianess(this.opts.isBigEndian ? 'big' : 'little').array('items', {
       type: new Parser()
@@ -226,7 +225,7 @@ export default class RequestWorker {
     return p.parse(data).result.items.filter((f: any) => this.coordFilter(f))
   }
 
-  private parseBigWigBlock(bytes: Buffer, startOffset: number) {
+  private parseBigWigBlock(bytes: Buffer, startOffset: number): Feature[] {
     const data = bytes.slice(startOffset)
     const parser = new Parser()
       .endianess(this.opts.isBigEndian ? 'big' : 'little')
@@ -279,7 +278,7 @@ export default class RequestWorker {
     return f.start < this.max && f.end >= this.min
   }
 
-  private async readFeatures() {
+  private async readFeatures(): Promise<void> {
     const { blockType, isCompressed, abortSignal } = this.opts
     const blockGroupsToFetch = groupBlocks(this.blocksToFetch)
     await Promise.all(

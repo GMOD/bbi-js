@@ -1,10 +1,10 @@
 import { Parser } from '@gmod/binary-parser'
 import * as Long from 'long'
-import * as LRU from 'lru-cache'
+import LRU from 'quick-lru'
 
 import BlockView from './blockView'
 import LocalFile from './localFile'
-import { abortBreakPoint, checkAbortSignal, AbortError } from './util'
+import { abortBreakPoint, AbortError } from './util'
 
 const BIG_WIG_MAGIC = -2003829722
 const BIG_BED_MAGIC = -2021002517
@@ -87,10 +87,7 @@ export default abstract class BBIFile {
       throw new Error('no file given')
     }
     this.getHeader = this.headerCache.abortableMemoize(this._getHeader.bind(this))
-    this.featureCache = new LRU({
-      max: 5_000_000,
-      length: (val: any, key: any): number => val.length,
-    })
+    this.featureCache = new LRU({ maxSize: 500 })
   }
 
   private async _getHeader(abortSignal?: AbortSignal): Promise<any> {
@@ -234,6 +231,7 @@ export default abstract class BBIFile {
     }
   }
 
+  // todo: add progress if long running
   private async readChromTree(abortSignal?: AbortSignal): Promise<ChromTree> {
     const header = await this.getMainHeader(abortSignal)
     const isBE = await this.isBigEndian(abortSignal)
@@ -302,6 +300,7 @@ export default abstract class BBIFile {
   //todo: memoize
   protected async getView(scale: number, abortSignal?: AbortSignal): Promise<BlockView> {
     const { zoomLevels, refsByName, fileSize, isBigEndian, uncompressBufSize } = await this.getHeader(abortSignal)
+    const { bbi, featureCache } = this
     const basesPerPx = 1 / scale
     let maxLevel = zoomLevels.length
     if (!fileSize) {
@@ -315,13 +314,14 @@ export default abstract class BBIFile {
         const indexLength =
           i < zoomLevels.length - 1 ? zoomLevels[i + 1].dataOffset - zh.indexOffset : fileSize - 4 - zh.indexOffset
         return new BlockView(
-          this.bbi,
+          bbi,
           refsByName,
           zh.indexOffset,
           indexLength,
           isBigEndian,
           uncompressBufSize > 0,
           'summary',
+          featureCache,
         )
       }
     }
@@ -333,19 +333,21 @@ export default abstract class BBIFile {
     const { unzoomedIndexOffset, zoomLevels, refsByName, uncompressBufSize, isBigEndian } = await this.getHeader(
       abortSignal,
     )
+    const { bbi, fileType, featureCache } = this
     let cirLen = 4000
     const nzl = zoomLevels[0]
     if (nzl) {
       cirLen = nzl.dataOffset - unzoomedIndexOffset
     }
     return new BlockView(
-      this.bbi,
+      bbi,
       refsByName,
       unzoomedIndexOffset,
       cirLen,
       isBigEndian,
       uncompressBufSize > 0,
-      this.fileType,
+      fileType,
+      featureCache,
     )
   }
 }

@@ -7,7 +7,7 @@ class HalfAbortController {
     this.signal = { aborted: false }
   }
 
-  public abort() {
+  public abort(): void {
     this.signal.aborted = true
   }
 }
