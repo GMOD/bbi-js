@@ -18,14 +18,43 @@ If using locally
     const feats = await ti.getFeatures('chr1', 0, 100, { scale: 1 })
 
 
-If using remotely in a compiled webapp
+## Documentation
 
-    import {BigWig} from '@gmod/bbi'
-    const ti = new BigWig({
-       url: 'volvox.bw'
-    })
-    await ti.getHeader()
-    const feats = await ti.getFeatures('chr1', 0, 100, { scale: 1 })
+### BigWig/BigBed constructors
+
+Accepts an object containing either
+
+a) path - uses the LocalFile class in this repo
+b) url - uses the RemoteFile class in this repo
+c) filehandle - accepts some custom file handle class that you provide
+
+
+### BigWig
+
+#### getFeatures(refName, start, end, opts)
+
+opts.scale - 1 is the maximum zoom level, fractional values indicate a accessing multiple zoom levels based on pixelsPerBp
+opts.signal - an AbortSignal to halt processing
+opts.basesPerScale - inverse of opts.scale
+
+returns a promise to an array of features
+
+#### getFeatureStream(refName, start, end, opts)
+
+Same as obove but returns an RxJS observable stream
+
+### BigBed
+
+#### getFeatures(refName, start, end, opts)
+
+opts.signal - an AbortSignal to halt processing
+
+returns a promise to an array of features
+
+#### note about BigBed file processing
+
+The BigBed line contents can be parsed by @gmod/bed, it is not integrated with this module by default
+
 
 
 ## Documentation
