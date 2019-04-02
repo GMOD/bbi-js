@@ -260,11 +260,11 @@ export default class RequestWorker {
     const results = parser.parse(data).result
     let items = results.items
     if (results.blockType === BIG_WIG_TYPE_FSTEP) {
-      const { itemStep: step } = results
+      const { itemStep: step, itemSpan: span } = results
       items = items.map((s: any, i: number) => ({
         ...s,
         start: i * step,
-        end: i * step + step,
+        end: i * step + span,
       }))
     } else if (results.blockType === BIG_WIG_TYPE_VSTEP) {
       for (let i = 0; i < items.length - 1; i += 1) {
