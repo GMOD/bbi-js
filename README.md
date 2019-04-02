@@ -53,9 +53,31 @@ returns a promise to an array of features
 
 #### note about BigBed file processing
 
-The BigBed line contents can be parsed by @gmod/bed, it is not integrated with this module by default
+The BigBed line contents can be parsed by @gmod/bed, it is not integrated with this module by default but for example
 
+```js
+    import {BigBed} from '@gmod/bed'
+    import BED from '@gmod/bed'
 
+    const ti = new BigBed({
+      filehandle: new LocalFile(require.resolve('./data/hg18.bb')),
+    })
+    const {autoSql} = await ti.getHeader()
+    const feats = await ti.getFeatures('chr7', 0, 100000)
+    const parser = new BED({autoSql})
+    const lines = feats.map(f => parser.parseBedText('chr7', f.start, f.end, f.rest))
+    // outputs
+      { refID: 'chr7',
+        start: 65159,
+        end: 65220,
+        chrom: 'uc003sim.1',
+        chrom_start: 0,
+        chrom_end: '-',
+        name: '65159',
+        score: 65159,
+        strand: 0,
+        thick_end: 'DQ600587' },
+```
 
 ## Documentation
 
