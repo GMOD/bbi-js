@@ -1,3 +1,7 @@
+## [1.0.9](https://github.com/GMOD/bbi-js/compare/v1.0.8...v1.0.9) (2019-04-05)
+
+
+
 - Added caching of networking requests (thanks @rbuels for the abortable-promise-cache module!)
 - Fix some type errors on the range class
 - Correct using span on fixed size wiggle types
