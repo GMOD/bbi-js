@@ -1,3 +1,4 @@
+- Added caching of networking requests (thanks @rbuels for the abortable-promise-cache module!)
 - Fix some type errors on the range class
 - Correct using span on fixed size wiggle types
 
