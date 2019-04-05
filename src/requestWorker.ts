@@ -5,8 +5,9 @@ import * as zlib from 'zlib'
 import Range from './range'
 import LocalFile from './localFile'
 import { groupBlocks } from './util'
-import Feature from './feature'
 import { Observer } from 'rxjs'
+import AbortablePromiseCache from 'abortable-promise-cache'
+import QuickLRU from 'quick-lru'
 
 const BIG_WIG_TYPE_GRAPH = 1
 const BIG_WIG_TYPE_VSTEP = 2
@@ -22,6 +23,10 @@ interface DataBlock {
   maxVal: number
   sumData: number
   sumSqData: number
+}
+interface ReadData {
+  offset: number
+  length: number
 }
 
 interface SummaryBlock {
@@ -61,6 +66,7 @@ export default class RequestWorker {
   private bbi: LocalFile
   private opts: Options
   private observer: Observer<Feature[]>
+  private featureCache: any
 
   public constructor(
     bbi: LocalFile,
@@ -80,6 +86,17 @@ export default class RequestWorker {
     this.chrId = chrId
     this.min = min
     this.max = max
+
+    this.featureCache = new AbortablePromiseCache({
+      cache: new QuickLRU({ maxSize: 1000 }),
+
+      async fill(requestData: ReadData, abortSignal: AbortSignal) {
+        const { length, offset } = requestData
+        const resultBuffer = Buffer.alloc(length)
+        await bbi.read(resultBuffer, 0, length, offset, abortSignal)
+        return resultBuffer
+      },
+    })
   }
 
   public cirFobRecur(offset: any, level: number): void {
@@ -94,13 +111,13 @@ export default class RequestWorker {
     spans.getRanges().map((fr: Range) => this.cirFobStartFetch(offset, fr, level))
   }
 
-  private async cirFobStartFetch(offset: any, fr: any, level: number): Promise<void> {
+  private async cirFobStartFetch(off: any, fr: any, level: number): Promise<void> {
     const length = fr.max() - fr.min()
-    const resultBuffer = Buffer.alloc(length)
-    await this.bbi.read(resultBuffer, 0, length, fr.min(), this.opts.abortSignal)
-    for (let i = 0; i < offset.length; i += 1) {
-      if (fr.contains(offset[i])) {
-        this.cirFobRecur2(resultBuffer, offset[i] - fr.min(), level)
+    const offset = fr.min()
+    const resultBuffer = await this.featureCache.get(length + '_' + offset, { length, offset }, this.opts.abortSignal)
+    for (let i = 0; i < off.length; i += 1) {
+      if (fr.contains(off[i])) {
+        this.cirFobRecur2(resultBuffer, off[i] - offset, level)
         this.outstanding -= 1
         if (this.outstanding === 0) {
           this.readFeatures()
@@ -170,7 +187,7 @@ export default class RequestWorker {
     if (p.blocksToFetch) {
       this.blocksToFetch = p.blocksToFetch
         .filter(m)
-        .map((l: any): any => ({ offset: l.blockOffset, size: l.blockSize }))
+        .map((l: any): any => ({ offset: l.blockOffset, length: l.blockSize }))
     }
     if (p.recurOffsets) {
       const recurOffsets = p.recurOffsets.filter(m).map((l: any): any => l.blockOffset)
@@ -283,8 +300,8 @@ export default class RequestWorker {
     const blockGroupsToFetch = groupBlocks(this.blocksToFetch)
     await Promise.all(
       blockGroupsToFetch.map(async (blockGroup: any) => {
-        let data = Buffer.alloc(blockGroup.size)
-        await this.bbi.read(data, 0, blockGroup.size, blockGroup.offset, abortSignal)
+        const { length, offset } = blockGroup
+        const data = await this.featureCache.get(length + '_' + offset, blockGroup, abortSignal)
         blockGroup.blocks.forEach((block: any) => {
           let offset = block.offset - blockGroup.offset
           let resultData = isCompressed ? zlib.inflateSync(data.slice(offset)) : data

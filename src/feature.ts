@@ -1,4 +1,4 @@
-export default interface Feature {
+declare interface Feature {
   start: number
   end: number
   score: number

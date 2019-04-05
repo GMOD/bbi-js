@@ -1,7 +1,5 @@
 import RequestWorker from './requestWorker'
 import { Observer } from 'rxjs'
-import LRU from 'quick-lru'
-import Feature from './feature'
 /**
  * View into a subset of the data in a BigWig file.
  *
@@ -18,7 +16,8 @@ export default class BlockView {
   private isBigEndian: boolean
   private refsByName: any
   private blockType: string
-  private featureCache: LRU<any, any>
+  private cirTreeBuffer: Buffer
+  private cirTreePromise?: Promise<void>
 
   public constructor(
     bbi: any,
@@ -28,7 +27,6 @@ export default class BlockView {
     isBigEndian: boolean,
     isCompressed: boolean,
     blockType: string,
-    featureCache: LRU<any, any>,
   ) {
     if (!(cirTreeOffset >= 0)) throw new Error('invalid cirTreeOffset!')
     if (!(cirTreeLength > 0)) throw new Error('invalid cirTreeLength!')
@@ -40,7 +38,7 @@ export default class BlockView {
     this.isBigEndian = isBigEndian
     this.bbi = bbi
     this.blockType = blockType
-    this.featureCache = featureCache
+    this.cirTreeBuffer = Buffer.alloc(48)
   }
 
   // todo:memoize/lru
@@ -52,19 +50,16 @@ export default class BlockView {
     abortSignal?: AbortSignal,
   ): Promise<void> {
     const { refsByName, bbi, cirTreeOffset, isBigEndian, isCompressed, blockType } = this
-    if (this.featureCache.has({ chrName, min, max })) {
-      const chunks = this.featureCache.get({ chrName, min, max })
-      chunks.replay((x: any): any => observer.next(x))
-      return
-    } else {
-      this.featureCache.set({ chrName, min, max }, observer)
-    }
     const chr = refsByName[chrName]
     if (chr === undefined) {
       observer.complete()
     }
-    const buffer = Buffer.alloc(48)
-    await bbi.read(buffer, 0, 48, cirTreeOffset, abortSignal)
+    if (this.cirTreePromise) {
+      await this.cirTreePromise
+    } else {
+      this.cirTreePromise = await bbi.read(this.cirTreeBuffer, 0, 48, cirTreeOffset, abortSignal)
+    }
+    const buffer = this.cirTreeBuffer
     const cirBlockSize = isBigEndian ? buffer.readUInt32BE(4) : buffer.readUInt32LE(4)
 
     const worker = new RequestWorker(bbi, chr, min, max, observer, {

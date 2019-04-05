@@ -15,18 +15,18 @@ export function groupBlocks(blocks: any[]): any[] {
   let lastBlockEnd
   for (let i = 0; i < blocks.length; i += 1) {
     if (lastBlock && blocks[i].offset - lastBlockEnd <= 2000) {
-      lastBlock.size += blocks[i].size - lastBlockEnd + blocks[i].offset
+      lastBlock.length += blocks[i].length - lastBlockEnd + blocks[i].offset
       lastBlock.blocks.push(blocks[i])
     } else {
       blockGroups.push(
         (lastBlock = {
           blocks: [blocks[i]],
-          size: blocks[i].size,
+          length: blocks[i].length,
           offset: blocks[i].offset,
         }),
       )
     }
-    lastBlockEnd = lastBlock.offset + lastBlock.size
+    lastBlockEnd = lastBlock.offset + lastBlock.length
   }
 
   return blockGroups

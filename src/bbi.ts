@@ -1,7 +1,5 @@
 import { Parser } from '@gmod/binary-parser'
 import * as Long from 'long'
-import LRU from 'quick-lru'
-
 import BlockView from './blockView'
 import LocalFile from './localFile'
 import RemoteFile from './remoteFile'
@@ -74,7 +72,6 @@ export default abstract class BBIFile {
   private bbi: any
   private fileType: string
   private headerCache: AbortAwareCache
-  protected featureCache: LRU<any, any>
   protected renameRefSeqs: (a: string) => string
   public getHeader: (abortSignal?: AbortSignal) => Promise<any>
 
@@ -93,7 +90,6 @@ export default abstract class BBIFile {
       throw new Error('no file given')
     }
     this.getHeader = this.headerCache.abortableMemoize(this._getHeader.bind(this))
-    this.featureCache = new LRU({ maxSize: 500 })
   }
 
   private async _getHeader(abortSignal?: AbortSignal): Promise<any> {
@@ -306,7 +302,7 @@ export default abstract class BBIFile {
   //todo: memoize
   protected async getView(scale: number, abortSignal?: AbortSignal): Promise<BlockView> {
     const { zoomLevels, refsByName, fileSize, isBigEndian, uncompressBufSize } = await this.getHeader(abortSignal)
-    const { bbi, featureCache } = this
+    const { bbi } = this
     const basesPerPx = 1 / scale
     let maxLevel = zoomLevels.length
     if (!fileSize) {
@@ -327,7 +323,6 @@ export default abstract class BBIFile {
           isBigEndian,
           uncompressBufSize > 0,
           'summary',
-          featureCache,
         )
       }
     }
@@ -339,21 +334,12 @@ export default abstract class BBIFile {
     const { unzoomedIndexOffset, zoomLevels, refsByName, uncompressBufSize, isBigEndian } = await this.getHeader(
       abortSignal,
     )
-    const { bbi, fileType, featureCache } = this
+    const { bbi, fileType } = this
     let cirLen = 4000
     const nzl = zoomLevels[0]
     if (nzl) {
       cirLen = nzl.dataOffset - unzoomedIndexOffset
     }
-    return new BlockView(
-      bbi,
-      refsByName,
-      unzoomedIndexOffset,
-      cirLen,
-      isBigEndian,
-      uncompressBufSize > 0,
-      fileType,
-      featureCache,
-    )
+    return new BlockView(bbi, refsByName, unzoomedIndexOffset, cirLen, isBigEndian, uncompressBufSize > 0, fileType)
   }
 }

@@ -1,5 +1,4 @@
 import BBI from './bbi'
-import Feature from './feature'
 import { Observable, Observer } from 'rxjs'
 
 interface Options {
