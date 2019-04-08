@@ -1280,10 +1280,10 @@
     pegjs "^0.10.0"
     snake-case "^2.1.0"
 
-"@gmod/binary-parser@^1.3.3":
-  version "1.3.3"
-  resolved "https://registry.yarnpkg.com/@gmod/binary-parser/-/binary-parser-1.3.3.tgz#a29b69e19afcce8fff632cf0325c7c24d4544792"
-  integrity sha512-+NZOfXj9Ajd6Yr2GW7I4mH+2uEjoBQALznDRoPiMyYZek3s0r8mHB30L9SS0OjzdINx2hM+zXf1uRD/b8Nv8PA==
+"@gmod/binary-parser@^1.3.4":
+  version "1.3.4"
+  resolved "https://registry.yarnpkg.com/@gmod/binary-parser/-/binary-parser-1.3.4.tgz#4d08c1ec191d44232d1ec8d9b47bfdb6b3ac81a0"
+  integrity sha512-dF03pk5zRriJqu5vqbOIzz29IbwpLD9CTzheTehhagSkw968pWl1oH9bC97MD4tV+52u1CRCd3Jz8C56GrdMBg==
   dependencies:
     long "^4.0.0"
 
