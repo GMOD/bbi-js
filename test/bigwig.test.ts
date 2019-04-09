@@ -30,8 +30,11 @@ describe('bigwig formats', () => {
     const ti = new BigWig({
       filehandle: new LocalFile(require.resolve('./data/variable_step.bw')),
     })
-    const feats1 = await ti.getFeatures('chr1', 0, 52, { scale: 1 })
+    const feats1 = await ti.getFeatures('chr1', 0, 51, { scale: 1 })
+    const feats2 = await ti.getFeatures('chr1', 0, 52, { scale: 1 })
     expect(feats1).toMatchSnapshot()
+    expect(feats1[feats1.length - 1].start).toEqual(47)
+    expect(feats2[feats2.length - 1].start).toEqual(51)
   })
   it('loads fixedstep bigwig', async () => {
     const ti = new BigWig({

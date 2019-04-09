@@ -992,52 +992,52 @@ Array [
 exports[`bigwig formats loads variable step bigwig 1`] = `
 Array [
   Object {
-    "end": 14,
+    "end": 12,
     "score": 0.7819849848747253,
     "start": 11,
   },
   Object {
-    "end": 18,
+    "end": 16,
     "score": 0.8109930157661438,
     "start": 15,
   },
   Object {
-    "end": 22,
+    "end": 20,
     "score": 0.7696009874343872,
     "start": 19,
   },
   Object {
-    "end": 26,
+    "end": 24,
     "score": 0.733830988407135,
     "start": 23,
   },
   Object {
-    "end": 30,
+    "end": 28,
     "score": 0.7320680022239685,
     "start": 27,
   },
   Object {
-    "end": 34,
+    "end": 32,
     "score": 0.5884150266647339,
     "start": 31,
   },
   Object {
-    "end": 38,
+    "end": 36,
     "score": 0.5306519865989685,
     "start": 35,
   },
   Object {
-    "end": 42,
+    "end": 40,
     "score": 0.36328500509262085,
     "start": 39,
   },
   Object {
-    "end": 46,
+    "end": 44,
     "score": 0.1721539944410324,
     "start": 43,
   },
   Object {
-    "end": 50,
+    "end": 48,
     "score": 0.06392999738454819,
     "start": 47,
   },

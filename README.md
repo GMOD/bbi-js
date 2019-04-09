@@ -24,30 +24,48 @@ If using locally
 
 Accepts an object containing either
 
-a) path - uses the LocalFile class in this repo
-b) url - uses the RemoteFile class in this repo
-c) filehandle - accepts some custom file handle class that you provide
+* path - uses the LocalFile class in this repo
+* url - uses the RemoteFile class in this repo
+* filehandle - accepts some custom file handle class that you provide
 
 
 ### BigWig
 
 #### getFeatures(refName, start, end, opts)
 
-opts.scale - 1 is the maximum zoom level, fractional values indicate a accessing multiple zoom levels based on pixelsPerBp
-opts.signal - an AbortSignal to halt processing
-opts.basesPerScale - inverse of opts.scale
+* refName - a name of a chromosome in the file
+* start - a 0-based half open start coordinate
+* end - a 0-based half open end coordinate
+* opts.scale - 1 is the maximum zoom level, fractional values indicate a accessing multiple zoom levels based on pixelsPerBp
+* opts.signal - an AbortSignal to halt processing
+* opts.basesPerScale - inverse of opts.scale
 
-returns a promise to an array of features
+Returns a promise to an array of features.
+
+Example:
+
+    const feats = await bigwig.getFeatures('chr1', 0, 100)
+    // returns array of features with start, end, score
+    // coordinates on returned data are are 0-based half open
+    // no conversion to 1-based as in wig is done)
+    // note refseq is not returned on the object, it is clearly chr1 from the query though
+    
 
 #### getFeatureStream(refName, start, end, opts)
 
-Same as obove but returns an RxJS observable stream
+Same getFeatures but returns an RxJS observable stream, useful for very large queries
+
+    const observer = await bigwig.getFeatureStream('chr1', 0, 100)
+    observer.subscribe(chunk => { /* chunk contains array of features with start, end, score */ }, errorCallback, finishCallback)
 
 ### BigBed
 
 #### getFeatures(refName, start, end, opts)
 
-opts.signal - an AbortSignal to halt processing
+* refName - a name of a chromosome in the file
+* start - a 0-based half open start coordinate
+* end - a 0-based half open end coordinate
+* opts.signal - an AbortSignal to halt processing
 
 returns a promise to an array of features
 
@@ -68,7 +86,7 @@ The BigBed line contents can be parsed by @gmod/bed, it is not integrated with t
     const lines = feats.map(f => parser.parseBedText('chr7', f.start, f.end, f.rest, 3))
 ```
 
-Example output
+Example output, coordinates are 0-based half open as in BED
 
 ```
         { refID: 'chr7',
@@ -82,7 +100,6 @@ Example output
           reserved: '255,0,0',
           sp_id: 'AL137655' } ]
 ```
-
 
 ## Documentation
 

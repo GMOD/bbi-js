@@ -278,15 +278,17 @@ export default class RequestWorker {
     let items = results.items
     if (results.blockType === BIG_WIG_TYPE_FSTEP) {
       const { itemStep: step, itemSpan: span } = results
-      items = items.map((s: any, i: number) => ({
-        ...s,
-        start: i * step,
-        end: i * step + span,
+      items = items.map((feature: any, index: number) => ({
+        ...feature,
+        start: index * step,
+        end: index * step + span,
       }))
     } else if (results.blockType === BIG_WIG_TYPE_VSTEP) {
-      for (let i = 0; i < items.length - 1; i += 1) {
-        items[i].end = items[i + 1].start - 1
-      }
+      const { itemStep: step, itemSpan: span } = results
+      items = items.map((feature: any) => ({
+        ...feature,
+        end: feature.start + span,
+      }))
     }
     return items.filter((f: any) => this.coordFilter(f))
   }

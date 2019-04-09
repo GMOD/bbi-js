@@ -1,3 +1,6 @@
+- Fix misinterpretation of variable step wig files in this module (the span is not variable in variable step files, only the step, use bedGraphToBigWig for variable span)
+- Improved docs
+
 ## [1.0.9](https://github.com/GMOD/bbi-js/compare/v1.0.8...v1.0.9) (2019-04-05)
 
 
