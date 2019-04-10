@@ -7,6 +7,10 @@ interface Options {
   scale?: number
   signal?: AbortSignal
 }
+
+function flatten<T>(items: T[][]): T[] {
+  return items.reduce((prev, next) => prev.concat(next), [])
+}
 export default class BigWig extends BBI {
   /**
    * Gets features from a BigWig file
@@ -56,7 +60,7 @@ export default class BigWig extends BBI {
         feats => features = features.concat(feats),
         error => reject(error),
         () => {
-          resolve(features.flat())
+          resolve(flatten(features))
         }
       )
     })

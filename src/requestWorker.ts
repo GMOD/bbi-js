@@ -284,7 +284,7 @@ export default class RequestWorker {
         end: index * step + span,
       }))
     } else if (results.blockType === BIG_WIG_TYPE_VSTEP) {
-      const { itemStep: step, itemSpan: span } = results
+      const { itemSpan: span } = results
       items = items.map((feature: any) => ({
         ...feature,
         end: feature.start + span,
