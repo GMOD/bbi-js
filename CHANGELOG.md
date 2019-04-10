@@ -1,3 +1,7 @@
+## [1.0.11](https://github.com/GMOD/bbi-js/compare/v1.0.10...v1.0.11) (2019-04-10)
+
+
+
 - Removed polyfill of Array.prototype.flat which modifies global scope
 
 ## [1.0.10](https://github.com/GMOD/bbi-js/compare/v1.0.9...v1.0.10) (2019-04-09)
