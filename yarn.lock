@@ -3244,17 +3244,6 @@ file-entry-cache@^5.0.1:
   dependencies:
     flat-cache "^2.0.1"
 
-filehandle@^1.0.1:
-  version "1.0.1"
-  resolved "https://registry.yarnpkg.com/filehandle/-/filehandle-1.0.1.tgz#9473ff275482f4e903c2b531483865570c157f80"
-  integrity sha512-VlSGbbzjUCAbzxoxPTG87HDQ1krXjHetyPBRRhpjLMfpe5D3aG4bXM7gZtqU/OnA0lm/qkSOg4hN4Frix4NheA==
-  dependencies:
-    "@babel/runtime" "^7.4.3"
-    abortable-promise-cache "^1.0.1"
-    cross-fetch "^3.0.2"
-    es6-promisify "^6.0.1"
-    quick-lru "^4.0.0"
-
 fileset@^2.0.3:
   version "2.0.3"
   resolved "https://registry.yarnpkg.com/fileset/-/fileset-2.0.3.tgz#8e7548a96d3cc2327ee5e674168723a333bba2a0"
@@ -3415,6 +3404,17 @@ gauge@~2.7.3:
     string-width "^1.0.1"
     strip-ansi "^3.0.1"
     wide-align "^1.1.0"
+
+generic-filehandle@^1.0.2:
+  version "1.0.2"
+  resolved "https://registry.yarnpkg.com/generic-filehandle/-/generic-filehandle-1.0.2.tgz#833d373a431fb8ccaf1c5cab8ea76852c33bfbf7"
+  integrity sha512-F0gTVPcl9fM0v+LQjVKIvyr/na0DYceE+VOP1S/HTsFvbTQIGOo1STREAC6ep+GCj0+U7TeHVDIbcNmHmqYX1w==
+  dependencies:
+    "@babel/runtime" "^7.4.3"
+    abortable-promise-cache "^1.0.1"
+    cross-fetch "^3.0.2"
+    es6-promisify "^6.0.1"
+    quick-lru "^4.0.0"
 
 get-caller-file@^1.0.1:
   version "1.0.3"

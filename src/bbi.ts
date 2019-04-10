@@ -1,6 +1,6 @@
 import { Parser } from '@gmod/binary-parser'
 import * as Long from 'long'
-import { LocalFile, RemoteFile } from 'filehandle'
+import { LocalFile, RemoteFile } from 'generic-filehandle'
 import BlockView from './blockView'
 import { abortBreakPoint, AbortError } from './util'
 
