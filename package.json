@@ -60,7 +60,6 @@
     "@typescript-eslint/eslint-plugin": "^1.5.0",
     "@typescript-eslint/parser": "^1.5.0",
     "babel-eslint": "^10.0.1",
-    "babel-loader": "^8.0.5",
     "babel-preset-typescript": "^7.0.0-alpha.19",
     "documentation": "^9.3.1",
     "eslint": "^5.15.3",
