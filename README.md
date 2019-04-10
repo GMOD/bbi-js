@@ -24,9 +24,9 @@ If using locally
 
 Accepts an object containing either
 
-* path - uses the LocalFile class in this repo
-* url - uses the RemoteFile class in this repo
-* filehandle - accepts some custom file handle class that you provide
+* path - path to a local file, uses 
+* url - path to a url
+* filehandle - a filehandle instance that you can implement as a custom class yourself. path and url are based on https://www.npmjs.com/package/filehandle
 
 
 ### BigWig

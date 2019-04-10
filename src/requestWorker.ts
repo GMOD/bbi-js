@@ -3,7 +3,7 @@ import { Parser } from '@gmod/binary-parser'
 import * as Long from 'long'
 import * as zlib from 'zlib'
 import Range from './range'
-import LocalFile from './localFile'
+import LocalFile from 'filehandle'
 import { groupBlocks } from './util'
 import { Observer } from 'rxjs'
 import AbortablePromiseCache from 'abortable-promise-cache'
@@ -63,19 +63,12 @@ export default class RequestWorker {
   private chrId: number
   private min: number
   private max: number
-  private bbi: LocalFile
+  private bbi: any
   private opts: Options
   private observer: Observer<Feature[]>
   private featureCache: any
 
-  public constructor(
-    bbi: LocalFile,
-    chrId: number,
-    min: number,
-    max: number,
-    observer: Observer<Feature[]>,
-    opts: Options,
-  ) {
+  public constructor(bbi: any, chrId: number, min: number, max: number, observer: Observer<Feature[]>, opts: Options) {
     this.opts = opts
     this.bbi = bbi
     this.observer = observer

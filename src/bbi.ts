@@ -1,8 +1,7 @@
 import { Parser } from '@gmod/binary-parser'
 import * as Long from 'long'
+import { LocalFile, RemoteFile } from 'filehandle'
 import BlockView from './blockView'
-import LocalFile from './localFile'
-import RemoteFile from './remoteFile'
 import { abortBreakPoint, AbortError } from './util'
 
 const BIG_WIG_MAGIC = -2003829722

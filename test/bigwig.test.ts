@@ -1,5 +1,4 @@
 import BigWig from '../src/bigwig'
-import LocalFile from '../src/localFile'
 
 class HalfAbortController {
   public signal: any
@@ -15,7 +14,7 @@ class HalfAbortController {
 describe('bigwig formats', () => {
   it('loads bedgraph bigwig file', async () => {
     const ti = new BigWig({
-      filehandle: new LocalFile(require.resolve('./data/volvox.bw')),
+      path: require.resolve('./data/volvox.bw'),
     })
     const feats1 = await ti.getFeatures('ctgA', 0, 100, { scale: 1 })
     const feats2 = await ti.getFeatures('ctgA', 0, 100, { scale: 0.01 })
@@ -28,7 +27,7 @@ describe('bigwig formats', () => {
   })
   it('loads variable step bigwig', async () => {
     const ti = new BigWig({
-      filehandle: new LocalFile(require.resolve('./data/variable_step.bw')),
+      path: require.resolve('./data/variable_step.bw'),
     })
     const feats1 = await ti.getFeatures('chr1', 0, 51, { scale: 1 })
     const feats2 = await ti.getFeatures('chr1', 0, 52, { scale: 1 })
@@ -38,7 +37,7 @@ describe('bigwig formats', () => {
   })
   it('loads fixedstep bigwig', async () => {
     const ti = new BigWig({
-      filehandle: new LocalFile(require.resolve('./data/volvox_microarray.bw')),
+      path: require.resolve('./data/volvox_microarray.bw'),
     })
     const feats1 = await ti.getFeatures('ctgA', 0, 1000, { scale: 1 })
     const feats2 = await ti.getFeatures('ctgA', 0, 1000, { scale: 0.01 })
@@ -52,7 +51,7 @@ describe('bigwig formats', () => {
 
   it('inside file deeply', async () => {
     const ti = new BigWig({
-      filehandle: new LocalFile(require.resolve('./data/volvox.bw')),
+      path: require.resolve('./data/volvox.bw'),
     })
     const feats5 = await ti.getFeatures('ctgA', 20000, 21000)
     expect(feats5.slice(10, 20)).toMatchSnapshot()
@@ -60,7 +59,7 @@ describe('bigwig formats', () => {
 
   it('missing data', async () => {
     const ti = new BigWig({
-      filehandle: new LocalFile(require.resolve('./data/volvox.bw')),
+      path: require.resolve('./data/volvox.bw'),
     })
     const feats = await ti.getFeatures('ctgA', 4200, 5600)
     expect(feats.length).toEqual(1401)
@@ -70,7 +69,7 @@ describe('bigwig formats', () => {
 
   it('loads a larger bigwig file at different scales', async () => {
     const ti = new BigWig({
-      filehandle: new LocalFile(require.resolve('./data/cow.bw')),
+      path: require.resolve('./data/cow.bw'),
     })
     const feats1 = await ti.getFeatures('GK000001.2', 2000000, 2100000, {
       scale: 1,
@@ -92,7 +91,7 @@ describe('bigwig formats', () => {
 
   it('performs regularization', async () => {
     const ti = new BigWig({
-      filehandle: new LocalFile(require.resolve('./data/volvox.bw')),
+      path: require.resolve('./data/volvox.bw'),
       renameRefSeqs: ref => ref.replace('contig', 'ctg'),
     })
     const feats = await ti.getFeatures('contigA', 4200, 5600)
@@ -101,7 +100,7 @@ describe('bigwig formats', () => {
 
   it('matches bigWigToBedGraph', async () => {
     const ti = new BigWig({
-      filehandle: new LocalFile(require.resolve('./data/cow.bw')),
+      path: require.resolve('./data/cow.bw'),
     })
     const feats = await ti.getFeatures('GK000001.2', 1000000, 1001000)
 
@@ -130,7 +129,7 @@ describe('bigwig formats', () => {
 
   it('test memoize', async () => {
     const ti = new BigWig({
-      filehandle: new LocalFile(require.resolve('./data/cow.bw')),
+      path: require.resolve('./data/cow.bw'),
     })
     await ti.getHeader()
     await ti.getHeader()
@@ -138,7 +137,7 @@ describe('bigwig formats', () => {
 
   it('abort loading a bigwig file', async () => {
     const ti = new BigWig({
-      filehandle: new LocalFile(require.resolve('./data/volvox.bw')),
+      path: require.resolve('./data/volvox.bw'),
     })
     const aborter = new HalfAbortController()
     const indexDataP = ti.getHeader(aborter.signal)
