@@ -130,7 +130,6 @@ export default abstract class BBIFile {
 
   private getParsers(isBE: boolean): any {
     const le = isBE ? 'big' : 'little'
-    /* istanbul ignore next */
     const headerParser = new Parser()
       .endianess(le)
       .int32('magic')
@@ -154,7 +153,6 @@ export default abstract class BBIFile {
           .uint64('indexOffset'),
       })
 
-    /* istanbul ignore next */
     const totalSummaryParser = new Parser()
       .endianess(le)
       .uint64('basesCovered')
@@ -163,7 +161,6 @@ export default abstract class BBIFile {
       .double('scoreSum')
       .double('scoreSumSquares')
 
-    /* istanbul ignore next */
     const chromTreeParser = new Parser()
       .endianess(le)
       .uint32('magic')
