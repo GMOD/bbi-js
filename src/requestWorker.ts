@@ -1,6 +1,5 @@
 /* eslint no-bitwise: ["error", { "allow": ["|"] }] */
 import { Parser } from '@gmod/binary-parser'
-import * as Long from 'long'
 import * as zlib from 'zlib'
 import Range from './range'
 import LocalFile from 'generic-filehandle'
@@ -141,18 +140,8 @@ export default class RequestWorker {
               .uint32('startBase')
               .uint32('endChrom')
               .uint32('endBase')
-              .buffer('blockOffset', {
-                length: 8,
-                formatter: function(buf: any): number {
-                  return Long.fromBytes(buf, true, this.endian === 'le').toNumber()
-                },
-              })
-              .buffer('blockSize', {
-                length: 8,
-                formatter: function(buf: any): number {
-                  return Long.fromBytes(buf, true, this.endian === 'le').toNumber()
-                },
-              }),
+              .uint64('blockOffset')
+              .uint64('blockSize'),
           }),
           0: new Parser().array('recurOffsets', {
             length: 'cnt',
@@ -161,12 +150,7 @@ export default class RequestWorker {
               .uint32('startBase')
               .uint32('endChrom')
               .uint32('endBase')
-              .buffer('blockOffset', {
-                length: 8,
-                formatter: function(buf: any): number {
-                  return Long.fromBytes(buf, true, this.endian === 'le').toNumber()
-                },
-              }),
+              .uint64('blockOffset'),
           }),
         },
       })

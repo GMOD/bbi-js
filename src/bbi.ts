@@ -1,5 +1,4 @@
 import { Parser } from '@gmod/binary-parser'
-import * as Long from 'long'
 import { LocalFile, RemoteFile } from 'generic-filehandle'
 import BlockView from './blockView'
 import { abortBreakPoint, AbortError } from './util'
@@ -137,38 +136,13 @@ export default abstract class BBIFile {
       .int32('magic')
       .uint16('version')
       .uint16('numZoomLevels')
-      .buffer('chromTreeOffset', {
-        length: 8,
-        formatter: function(buf: any): number {
-          return Long.fromBytes(buf, true, this.endian === 'le').toNumber()
-        },
-      })
-      .buffer('unzoomedDataOffset', {
-        length: 8,
-        formatter: function(buf: any): number {
-          return Long.fromBytes(buf, true, this.endian === 'le').toNumber()
-        },
-      })
-      .buffer('unzoomedIndexOffset', {
-        length: 8,
-        formatter: function(buf: any): number {
-          return Long.fromBytes(buf, true, this.endian === 'le').toNumber()
-        },
-      })
+      .uint64('chromTreeOffset')
+      .uint64('unzoomedDataOffset')
+      .uint64('unzoomedIndexOffset')
       .uint16('fieldCount')
       .uint16('definedFieldCount')
-      .buffer('asOffset', {
-        length: 8,
-        formatter: function(buf: any): number {
-          return Long.fromBytes(buf, true, this.endian === 'le').toNumber()
-        },
-      })
-      .buffer('totalSummaryOffset', {
-        length: 8,
-        formatter: function(buf: any): number {
-          return Long.fromBytes(buf, true, this.endian === 'le').toNumber()
-        },
-      })
+      .uint64('asOffset')
+      .uint64('totalSummaryOffset')
       .uint32('uncompressBufSize')
       .skip(8) // reserved
       .array('zoomLevels', {
@@ -176,29 +150,14 @@ export default abstract class BBIFile {
         type: new Parser()
           .uint32('reductionLevel')
           .uint32('reserved')
-          .buffer('dataOffset', {
-            length: 8,
-            formatter: function(buf: any): number {
-              return Long.fromBytes(buf, true, this.endian === 'le').toNumber()
-            },
-          })
-          .buffer('indexOffset', {
-            length: 8,
-            formatter: function(buf: any): number {
-              return Long.fromBytes(buf, true, this.endian === 'le').toNumber()
-            },
-          }),
+          .uint64('dataOffset')
+          .uint64('indexOffset'),
       })
 
     /* istanbul ignore next */
     const totalSummaryParser = new Parser()
       .endianess(le)
-      .buffer('basesCovered', {
-        length: 8,
-        formatter: function(buf: any): number {
-          return Long.fromBytes(buf, true, this.endian === 'le').toNumber()
-        },
-      })
+      .uint64('basesCovered')
       .double('scoreMin')
       .double('scoreMax')
       .double('scoreSum')
@@ -211,12 +170,7 @@ export default abstract class BBIFile {
       .uint32('blockSize')
       .uint32('keySize')
       .uint32('valSize')
-      .buffer('itemCount', {
-        length: 8,
-        formatter: function(buf: any): number {
-          return Long.fromBytes(buf, true, this.endian === 'le').toNumber()
-        },
-      })
+      .uint64('itemCount')
 
     const isLeafNode = new Parser()
       .endianess(le)
@@ -259,12 +213,7 @@ export default abstract class BBIFile {
     const nonleafNodeParser = new Parser()
       .endianess(le)
       .skip(ret.keySize)
-      .buffer('childOffset', {
-        length: 8,
-        formatter: function(buf: any) {
-          return Long.fromBytes(buf, true, this.endian === 'le').toNumber()
-        },
-      })
+      .uint64('childOffset')
     const rootNodeOffset = 32
     const bptReadNode = async (currentOffset: number): Promise<void> => {
       let offset = currentOffset
