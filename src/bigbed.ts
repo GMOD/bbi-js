@@ -1,9 +1,7 @@
 import BBI from './bbi'
 import { Observable, Observer } from 'rxjs'
+import { flatten } from './util'
 
-interface Options {
-  signal?: AbortSignal
-}
 export default class BigBed extends BBI {
   /**
    * Gets features from a BigWig file
@@ -31,8 +29,23 @@ export default class BigBed extends BBI {
     })
   }
 
-  public async getFeatures(refName: string, start: number, end: number, opts: Options = {}): Promise<Feature[]> {
-    const observables = await this.getFeatureStream(refName, start, end, opts)
-    return observables.toPromise()
+  public async getFeatures(
+    refName: string,
+    start: number,
+    end: number,
+    opts: Options = { scale: 1 },
+  ): Promise<Feature[]> {
+    let features: Feature[][] = []
+    const ob = await this.getFeatureStream(refName, start, end, opts)
+    return new Promise((resolve, reject) => {
+      // prettier-ignore
+      ob.subscribe(
+        feats => features = features.concat(feats),
+        error => reject(error),
+        () => {
+          resolve(flatten(features))
+        }
+      )
+    })
   }
 }

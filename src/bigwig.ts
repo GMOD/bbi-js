@@ -1,16 +1,8 @@
 import BBI from './bbi'
 import { Observable, Observer } from 'rxjs'
-
+import { flatten } from './util'
 import BlockView from './blockView'
-interface Options {
-  basesPerSpan?: number
-  scale?: number
-  signal?: AbortSignal
-}
 
-function flatten<T>(items: T[][]): T[] {
-  return items.reduce((prev, next) => prev.concat(next), [])
-}
 export default class BigWig extends BBI {
   /**
    * Gets features from a BigWig file
