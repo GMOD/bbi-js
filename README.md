@@ -24,9 +24,9 @@ If using locally
 
 Accepts an object containing either
 
-* path - path to a local file 
+* path - path to a local file
 * url - path to a url
-* filehandle - a filehandle instance that you can implement as a custom class yourself. path and url are based on https://www.npmjs.com/package/filehandle but by implementing a class containing the Filehandle interface specified therein, you can pass it to this module
+* filehandle - a filehandle instance that you can implement as a custom class yourself. path and url are based on https://www.npmjs.com/package/generic-filehandle but by implementing a class containing the Filehandle interface specified therein, you can pass it to this module
 
 
 ### BigWig
@@ -36,9 +36,10 @@ Accepts an object containing either
 * refName - a name of a chromosome in the file
 * start - a 0-based half open start coordinate
 * end - a 0-based half open end coordinate
-* opts.scale - 1 is the maximum zoom level, fractional values indicate accessing different zoom levels based on pixelsPerBp
-* opts.signal - an AbortSignal to halt processing
-* opts.basesPerScale - optional, specified in bpPerPx 
+* opts.scale - indicates zoom level to use, specified as pixels per basepair, e.g. being zoomed out, you might have 100bp per pixel so opts.scale would be 1/100. the zoom level that is returned is the one which has reductionLevel<=2/opts.scale (reductionLevel is a property of the zoom level structure in the bigwig file data)
+* opts.basesPerScale - optional, just the inverse of opts.scale. one of opts.scale or opts.basesPerScale can be specified, otherwise the most granular zoom level is used
+* opts.signal - optional, an AbortSignal to halt processing
+
 
 Returns a promise to an array of features.
 
@@ -65,15 +66,15 @@ Same getFeatures but returns an RxJS observable stream, useful for very large qu
 * refName - a name of a chromosome in the file
 * start - a 0-based half open start coordinate
 * end - a 0-based half open end coordinate
-* opts.signal - an AbortSignal to halt processing
+* opts.signal - optional, an AbortSignal to halt processing
 
 returns a promise to an array of features. no concept of zoom levels is used with bigwig data
 
-### getFeatureStream(refName, start, end, opts)
+#### getFeatureStream(refName, start, end, opts)
 
-Same as above, but like the bigwig getFeatureForStream
+Similar to BigWig, returns an RxJS observable for a observable stream
 
-#### note about BigBed file processing
+#### how to parse BigBed results
 
 The BigBed line contents are returned as a raw text line e.g. {start: 0, end:100, rest: "ENST00000456328.2\t1000\t..."} where "rest" contains tab delimited text for the fields from 4 and on in the BED format.  The rest line can be parsed by the @gmod/bed module, which is not by integrated with this module, but can be combined with it as follows
 
