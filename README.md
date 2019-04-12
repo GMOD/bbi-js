@@ -80,7 +80,7 @@ The BigBed line contents are returned as a raw text line e.g. {start: 0, end:100
 
 
 ```js
-    import {BigBed} from '@gmod/bed'
+    import {BigBed} from '@gmod/bbi'
     import BED from '@gmod/bed'
 
     const ti = new BigBed({
