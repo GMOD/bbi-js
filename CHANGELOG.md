@@ -1,3 +1,6 @@
+- Fix returning bigbed objects on empty regions
+
+
 ## [1.0.11](https://github.com/GMOD/bbi-js/compare/v1.0.10...v1.0.11) (2019-04-10)
 
 
