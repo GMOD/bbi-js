@@ -89,10 +89,11 @@ The BigBed line contents are returned as a raw text line e.g. {start: 0, end:100
     const {autoSql} = await ti.getHeader()
     const feats = await ti.getFeatures('chr7', 0, 100000)
     const parser = new BED({autoSql})
-    const lines = feats.map(f => parser.parseBedText('chr7', f.start, f.end, f.rest, { offset: 3, uniqueId: f.uniqueId }))
-    // note: offset 3 indicates skipping first 3 columns of the autoSql since these are provided by BigBed
-    // uniqueId is supplied by bbi-js based on the bigbed file offsets to help  distinguish exact duplicate features
-    
+    const lines = feats.map(f => {
+        const { start, end, rest, uniqueId } = f
+        return parser.parseBedText(`chr7\t${start}\t${end}\t${rest}, { uniqueId })\
+    })
+    // the features returned by this module include {uniqueId, start, end, rest} and we reconstitute this for @gmod/bed
 ```
 
 Example output, coordinates are 0-based half open as in BED

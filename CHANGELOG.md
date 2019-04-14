@@ -1,3 +1,7 @@
+## [1.0.13](https://github.com/GMOD/bbi-js/compare/v1.0.12...v1.0.13) (2019-04-14)
+
+
+
 - Added uniqueId to objects returned from BigBed to avoid issue with duplicates
 
 ## [1.0.12](https://github.com/GMOD/bbi-js/compare/v1.0.11...v1.0.12) (2019-04-12)
