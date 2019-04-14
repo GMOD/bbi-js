@@ -6,4 +6,5 @@ declare interface Feature {
   minScore?: number // for summary line
   maxScore?: number // for summary line
   summary?: boolean // is summary line
+  uniqueId?: string // for bigbed contains uniqueId calculated from file offset
 }

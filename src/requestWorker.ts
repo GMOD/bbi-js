@@ -2,7 +2,6 @@
 import { Parser } from '@gmod/binary-parser'
 import * as zlib from 'zlib'
 import Range from './range'
-import LocalFile from 'generic-filehandle'
 import { groupBlocks } from './util'
 import { Observer } from 'rxjs'
 import AbortablePromiseCache from 'abortable-promise-cache'
@@ -30,11 +29,11 @@ interface ReadData {
 
 interface SummaryBlock {
   chromId: number
-  startBase: number
-  endBase: number
+  start: number
+  end: number
   validCnt: number
-  minVal: number
-  maxVal: number
+  minScore: number
+  maxScore: number
   sumData: number
   sumSqData: number
 }
@@ -179,11 +178,11 @@ export default class RequestWorker {
       length: data.byteLength / 64,
       type: new Parser()
         .int32('chromId')
-        .int32('startBase')
-        .int32('endBase')
+        .int32('start')
+        .int32('end')
         .int32('validCnt')
-        .float('minVal')
-        .float('maxVal')
+        .float('minScore')
+        .float('maxScore')
         .float('sumData')
         .float('sumSqData'),
     })
@@ -192,30 +191,36 @@ export default class RequestWorker {
       .result.summary.filter((elt: SummaryBlock): boolean => elt.chromId === this.chrId)
       .map(
         (elt: SummaryBlock): Feature => ({
-          start: elt.startBase,
-          end: elt.endBase,
-          score: elt.sumData / elt.validCnt || 1,
-          maxScore: elt.maxVal,
-          minScore: elt.minVal,
+          start: elt.start,
+          end: elt.end,
+          maxScore: elt.maxScore,
+          minScore: elt.minScore,
+          score: elt.sumData / (elt.validCnt || 1),
           summary: true,
         }),
       )
       .filter((f: Feature): boolean => this.coordFilter(f))
   }
 
-  private parseBigBedBlock(bytes: Buffer, startOffset: number): Feature[] {
-    const data = bytes.slice(startOffset)
-    const p = new Parser().endianess(this.opts.isBigEndian ? 'big' : 'little').array('items', {
-      type: new Parser()
-        .uint32('chromId')
-        .int32('start')
-        .int32('end')
-        .string('rest', {
-          zeroTerminated: true,
-        }),
-      readUntil: 'eof',
-    })
-    return p.parse(data).result.items.filter((f: any) => this.coordFilter(f))
+  private parseBigBedBlock(data: Buffer, startOffset: number): Feature[] {
+    const features = []
+    const p = new Parser()
+      .endianess(this.opts.isBigEndian ? 'big' : 'little')
+      .uint32('chromId')
+      .int32('start')
+      .int32('end')
+      .string('rest', {
+        zeroTerminated: true,
+      })
+    let currOffset = startOffset
+    while (currOffset < data.byteLength) {
+      const res = p.parse(data.slice(currOffset))
+      res.result.uniqueId = `bb-${startOffset + currOffset}`
+      features.push(res.result)
+      currOffset += res.offset
+    }
+
+    return features.filter((f: any) => this.coordFilter(f))
   }
 
   private parseBigWigBlock(bytes: Buffer, startOffset: number): Feature[] {
