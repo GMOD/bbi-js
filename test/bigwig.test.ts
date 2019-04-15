@@ -131,8 +131,9 @@ describe('bigwig formats', () => {
     const ti = new BigWig({
       path: require.resolve('./data/cow.bw'),
     })
-    await ti.getHeader()
-    await ti.getHeader()
+    const ret = await ti.getHeader()
+    ret.iWasMemoized = true
+    expect((await ti.getHeader()).iWasMemoized).toEqual(true)
   })
 
   it('abort loading a bigwig file', async () => {
