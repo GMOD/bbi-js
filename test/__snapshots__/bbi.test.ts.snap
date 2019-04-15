@@ -171,3 +171,97 @@ Object {
   ],
 }
 `;
+
+exports[`index formats uses filehandle argument 1`] = `
+Object {
+  "asOffset": 304,
+  "autoSql": "table hg18KGchr7
+\\"UCSC Genes for chr7 with color plus GeneSymbol and SwissProtID\\"
+(
+string  chrom;		\\"Reference sequence chromosome or scaffold\\"
+uint    chromStart;	\\"Start position of feature on chromosome\\"
+uint    chromEnd;	\\"End position of feature on chromosome\\"
+string  name;		\\"Name of gene\\"
+uint    score;		\\"Score\\"
+char[1] strand;		\\"+ or - for strand\\"
+uint    thickStart;	\\"Coding region start\\"
+uint    thickEnd;	\\"Coding region end\\"
+uint  	reserved;	\\"Green on + strand, Red on - strand\\"
+string  geneSymbol;	\\"Gene Symbol\\"
+string  spID;		\\"SWISS-PROT protein Accession number\\"
+)
+",
+  "chromTreeOffset": 1027,
+  "definedFieldCount": 9,
+  "fieldCount": 11,
+  "isBigEndian": false,
+  "magic": -2021002517,
+  "numZoomLevels": 7,
+  "refsByName": Object {
+    "chr7": 0,
+  },
+  "refsByNumber": Object {
+    "0": Object {
+      "id": 0,
+      "length": 158821424,
+      "name": "chr7",
+    },
+  },
+  "totalSummary": Object {
+    "basesCovered": 76490855,
+    "scoreMax": 36,
+    "scoreMin": 1,
+    "scoreSum": 220873875,
+    "scoreSumSquares": 1041293115,
+  },
+  "totalSummaryOffset": 883,
+  "uncompressBufSize": 34859,
+  "unzoomedDataOffset": 1075,
+  "unzoomedIndexOffset": 70408,
+  "version": 4,
+  "zoomLevels": Array [
+    Object {
+      "dataOffset": 76660,
+      "indexOffset": 97731,
+      "reductionLevel": 63500,
+      "reserved": 0,
+    },
+    Object {
+      "dataOffset": 103951,
+      "indexOffset": 113070,
+      "reductionLevel": 254000,
+      "reserved": 0,
+    },
+    Object {
+      "dataOffset": 119274,
+      "indexOffset": 122263,
+      "reductionLevel": 1016000,
+      "reserved": 0,
+    },
+    Object {
+      "dataOffset": 128467,
+      "indexOffset": 129423,
+      "reductionLevel": 4064000,
+      "reserved": 0,
+    },
+    Object {
+      "dataOffset": 135627,
+      "indexOffset": 135906,
+      "reductionLevel": 16256000,
+      "reserved": 0,
+    },
+    Object {
+      "dataOffset": 142110,
+      "indexOffset": 142204,
+      "reductionLevel": 65024000,
+      "reserved": 0,
+    },
+    Object {
+      "dataOffset": 148408,
+      "indexOffset": 148452,
+      "reductionLevel": 260096000,
+      "reserved": 0,
+    },
+  ],
+}
+`;

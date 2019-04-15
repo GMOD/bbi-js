@@ -73,7 +73,7 @@ export default abstract class BBIFile {
   protected renameRefSeqs: (a: string) => string
   public getHeader: (abortSignal?: AbortSignal) => Promise<any>
 
-  public constructor(options: Options) {
+  public constructor(options: Options = {}) {
     const { filehandle, renameRefSeqs, path, url } = options
     this.renameRefSeqs = renameRefSeqs || ((s: string): string => s)
     this.headerCache = new AbortAwareCache()
