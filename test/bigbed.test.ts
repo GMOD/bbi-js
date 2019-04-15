@@ -10,7 +10,8 @@ describe('bigbed formats', () => {
     const feats = await ti.getFeatures('chr7', 0, 100000)
     const parser = new BED({ autoSql })
     const lines = feats.map(feat => {
-      return parser.parseBedText('chr7', feat.start, feat.end, feat.rest, { uniqueId: feat.uniqueId, offset: 3 })
+      const { start, end, rest, uniqueId } = feat
+      return parser.parseLine(`chr7\t${start}\t${end}\t${rest}`, { uniqueId })
     })
     expect(lines.slice(0, 5)).toMatchSnapshot()
   })

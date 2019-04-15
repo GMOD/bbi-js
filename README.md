@@ -50,14 +50,20 @@ Example:
     // coordinates on returned data are are 0-based half open
     // no conversion to 1-based as in wig is done)
     // note refseq is not returned on the object, it is clearly chr1 from the query though
-    
+
 
 #### getFeatureStream(refName, start, end, opts)
 
-Same getFeatures but returns an RxJS observable stream, useful for very large queries
+Same as getFeatures but returns an RxJS observable stream, useful for very large queries
 
     const observer = await bigwig.getFeatureStream('chr1', 0, 100)
-    observer.subscribe(chunk => { /* chunk contains array of features with start, end, score */ }, errorCallback, finishCallback)
+    observer.subscribe(chunk => {
+       /* chunk contains array of features with start, end, score */
+    }, error => {
+       /* process error */
+    }, () => {
+       /* completed */
+    })
 
 ### BigBed
 
@@ -91,24 +97,37 @@ The BigBed line contents are returned as a raw text line e.g. {start: 0, end:100
     const parser = new BED({autoSql})
     const lines = feats.map(f => {
         const { start, end, rest, uniqueId } = f
-        return parser.parseBedText(`chr7\t${start}\t${end}\t${rest}, { uniqueId })\
+        return parser.parseLine(`chr7\t${start}\t${end}\t${rest}, { uniqueId })\
     })
-    // the features returned by this module include {uniqueId, start, end, rest} and we reconstitute this for @gmod/bed
+    // @gmod/bbi returns features with {uniqueId, start, end, rest}
+    // we reconstitute this as a line for @gmod/bed with a template string
+    // note: the uniqueId is based on file offsets and helps to deduplicate exact feature copies if they exist
 ```
 
-Example output, coordinates are 0-based half open as in BED
+Features before parsing with @gmod/bed:
 
 ```
-        { refID: 'chr7',
-          start: 75460,
-          end: 116489,
-          name: 'uc003sin.1',
-          score: 0,
-          strand: -1,
-          thick_start: 75460,
-          thick_end: 75460,
-          reserved: '255,0,0',
-          sp_id: 'AL137655' } ]
+      { chromId: 0,
+        start: 64068,
+        end: 64107,
+        rest: 'uc003sil.1\t0\t-\t64068\t64068\t255,0,0\t.\tDQ584609',
+        uniqueId: 'bb-171' }
+```
+
+Features after parsing with @gmod/bed:
+
+```
+      { uniqueId: 'bb-0',
+        chrom: 'chr7',
+        chromStart: 54028,
+        chromEnd: 73584,
+        name: 'uc003sii.2',
+        score: 0,
+        strand: -1,
+        thickStart: 54028,
+        thickEnd: 54028,
+        reserved: '255,0,0',
+        spID: 'AL137655' }
 ```
 
 ## Documentation
