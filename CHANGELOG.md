@@ -1,3 +1,7 @@
+## [1.0.14](https://github.com/GMOD/bbi-js/compare/v1.0.12...v1.0.14) (2019-04-17)
+
+
+
 - Improve documentation for integration with @gmod/bed@2
 - Fix some cases where abortSignal was passed incorrectly to filehandle
 
