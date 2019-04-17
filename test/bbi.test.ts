@@ -1,5 +1,6 @@
 import { BigBed, BigWig } from '../src/index'
 import { LocalFile } from 'generic-filehandle'
+import 'cross-fetch/polyfill'
 
 describe('index formats', () => {
   it('loads small bigwig header', async () => {

@@ -1,4 +1,5 @@
 - Improve documentation for integration with @gmod/bed@2
+- Fix some cases where abortSignal was passed incorrectly to filehandle
 
 ## [1.0.13](https://github.com/GMOD/bbi-js/compare/v1.0.12...v1.0.13) (2019-04-14)
 
