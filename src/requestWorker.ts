@@ -84,7 +84,7 @@ export default class RequestWorker {
       async fill(requestData: ReadData, abortSignal: AbortSignal) {
         const { length, offset } = requestData
         const resultBuffer = Buffer.alloc(length)
-        await bbi.read(resultBuffer, 0, length, offset, abortSignal)
+        await bbi.read(resultBuffer, 0, length, offset, { signal: abortSignal })
         return resultBuffer
       },
     })

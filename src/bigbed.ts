@@ -25,7 +25,7 @@ export default class BigBed extends BBI {
       throw new Error('unable to get block view for data')
     }
     return new Observable((observer: Observer<Feature[]>) => {
-      view.readWigData(chrName, start, end, observer)
+      view.readWigData(chrName, start, end, observer, opts.signal)
     })
   }
 

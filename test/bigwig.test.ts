@@ -144,5 +144,7 @@ describe('bigwig formats', () => {
     const indexDataP = ti.getHeader(aborter.signal)
     aborter.abort()
     await expect(indexDataP).rejects.toThrow(/aborted/)
+    const header = await ti.getHeader()
+    expect(header.isBigEndian).toEqual(false)
   })
 })

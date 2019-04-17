@@ -1,5 +1,6 @@
 import { Parser } from '@gmod/binary-parser'
 import { LocalFile, RemoteFile } from 'generic-filehandle'
+import { GenericFilehandle } from 'generic-filehandle'
 import BlockView from './blockView'
 import { abortBreakPoint, AbortError } from './util'
 
@@ -7,7 +8,7 @@ const BIG_WIG_MAGIC = -2003829722
 const BIG_BED_MAGIC = -2021002517
 
 interface Options {
-  filehandle?: any
+  filehandle?: GenericFilehandle
   path?: string
   url?: string
   renameRefSeqs?: (a: string) => string
@@ -67,7 +68,7 @@ class AbortAwareCache {
 }
 
 export default abstract class BBIFile {
-  private bbi: any
+  private bbi: GenericFilehandle
   private fileType: string
   private headerCache: AbortAwareCache
   protected renameRefSeqs: (a: string) => string
@@ -100,7 +101,7 @@ export default abstract class BBIFile {
   private async getMainHeader(abortSignal?: AbortSignal): Promise<Header> {
     const ret = await this.getParsers(await this.isBigEndian())
     const buf = Buffer.alloc(2000)
-    await this.bbi.read(buf, 0, 2000, 0, abortSignal)
+    await this.bbi.read(buf, 0, 2000, 0, { signal: abortSignal })
     const header = ret.headerParser.parse(buf).result
     this.fileType = header.magic === BIG_BED_MAGIC ? 'bigbed' : 'bigwig'
 
@@ -116,7 +117,7 @@ export default abstract class BBIFile {
 
   private async isBigEndian(abortSignal?: AbortSignal): Promise<boolean> {
     const buf = Buffer.allocUnsafe(4)
-    await this.bbi.read(buf, 0, 4, 0, abortSignal)
+    await this.bbi.read(buf, 0, 4, 0, { signal: abortSignal })
     let ret = buf.readInt32LE(0)
     if (ret === BIG_WIG_MAGIC || ret === BIG_BED_MAGIC) {
       return false
@@ -198,7 +199,7 @@ export default abstract class BBIFile {
     }
 
     const data = Buffer.alloc(unzoomedDataOffset - chromTreeOffset)
-    await this.bbi.read(data, 0, unzoomedDataOffset - chromTreeOffset, chromTreeOffset, abortSignal)
+    await this.bbi.read(data, 0, unzoomedDataOffset - chromTreeOffset, chromTreeOffset, { signal: abortSignal })
 
     const p = await this.getParsers(isBE)
     const ret = p.chromTreeParser.parse(data).result

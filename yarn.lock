@@ -2485,14 +2485,6 @@ cross-fetch@^3.0.1:
     node-fetch "2.3.0"
     whatwg-fetch "3.0.0"
 
-cross-fetch@^3.0.2:
-  version "3.0.2"
-  resolved "https://registry.yarnpkg.com/cross-fetch/-/cross-fetch-3.0.2.tgz#b7136491967031949c7f86b15903aef4fa3f1768"
-  integrity sha512-a4Z0EJ5Nck6QtMy9ZqloLfpvu2uMV3sBfMCR+CgSBCZc6z5KR4bfEiD3dkepH8iZgJMXQpTqf8FjMmvu/GMFkg==
-  dependencies:
-    node-fetch "2.3.0"
-    whatwg-fetch "3.0.0"
-
 cross-spawn@^6.0.0, cross-spawn@^6.0.5:
   version "6.0.5"
   resolved "https://registry.yarnpkg.com/cross-spawn/-/cross-spawn-6.0.5.tgz#4a5ec7c64dfae22c3a14124dbacdee846d80cbc4"
@@ -3244,6 +3236,11 @@ file-entry-cache@^5.0.1:
   dependencies:
     flat-cache "^2.0.1"
 
+file-uri-to-path@^1.0.0:
+  version "1.0.0"
+  resolved "https://registry.yarnpkg.com/file-uri-to-path/-/file-uri-to-path-1.0.0.tgz#553a7b8446ff6f684359c445f1e37a05dacc33dd"
+  integrity sha512-0Zt+s3L7Vf1biwWZ29aARiVYLx7iMGnEUl9x33fbB/j3jR81u/O2LbqK+Bm1CDSNDKVtJ/YjwY7TUd5SkeLQLw==
+
 fileset@^2.0.3:
   version "2.0.3"
   resolved "https://registry.yarnpkg.com/fileset/-/fileset-2.0.3.tgz#8e7548a96d3cc2327ee5e674168723a333bba2a0"
@@ -3405,16 +3402,14 @@ gauge@~2.7.3:
     strip-ansi "^3.0.1"
     wide-align "^1.1.0"
 
-generic-filehandle@^1.0.2:
-  version "1.0.2"
-  resolved "https://registry.yarnpkg.com/generic-filehandle/-/generic-filehandle-1.0.2.tgz#833d373a431fb8ccaf1c5cab8ea76852c33bfbf7"
-  integrity sha512-F0gTVPcl9fM0v+LQjVKIvyr/na0DYceE+VOP1S/HTsFvbTQIGOo1STREAC6ep+GCj0+U7TeHVDIbcNmHmqYX1w==
+generic-filehandle@^1.0.8:
+  version "1.0.8"
+  resolved "https://registry.yarnpkg.com/generic-filehandle/-/generic-filehandle-1.0.8.tgz#7cdb026884a237cec28a44fdbd1bd6eb0b5b408c"
+  integrity sha512-JlccwYLF2V+C7gbZB7/kXRP+t2KXVWI5GTjAB0NtMVx7AiOQ/5Sn/BfOjitQ/cM7QxjvBDdExlY0QrZHRTxg+g==
   dependencies:
     "@babel/runtime" "^7.4.3"
-    abortable-promise-cache "^1.0.1"
-    cross-fetch "^3.0.2"
     es6-promisify "^6.0.1"
-    quick-lru "^4.0.0"
+    file-uri-to-path "^1.0.0"
 
 get-caller-file@^1.0.1:
   version "1.0.3"
@@ -5987,11 +5982,6 @@ quick-lru@^3.0.0:
   version "3.0.0"
   resolved "https://registry.yarnpkg.com/quick-lru/-/quick-lru-3.0.0.tgz#2f96145481567e5bc442c6c4a66e86158405c696"
   integrity sha512-WLzHLB/msD8Q/5jNh4LviurG896aIEJRS1M3gHz91nSmaXn8q+/q4yOQvNMIETl9f5pAu3igqexB62ARWOUoOg==
-
-quick-lru@^4.0.0:
-  version "4.0.0"
-  resolved "https://registry.yarnpkg.com/quick-lru/-/quick-lru-4.0.0.tgz#a44d44010a776d787af65b1226566dd1ae7b9649"
-  integrity sha512-5cS39FEMrySKt/8c66v10HrmoexP2iYOsJBhtbVrlAr6Cbuc6khFMN8CHJG87c+QsdxBABivfVscgk20I/rPDw==
 
 raw-body@~1.1.0:
   version "1.1.7"

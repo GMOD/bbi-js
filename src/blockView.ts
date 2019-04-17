@@ -57,7 +57,7 @@ export default class BlockView {
     if (this.cirTreePromise) {
       await this.cirTreePromise
     } else {
-      this.cirTreePromise = await bbi.read(this.cirTreeBuffer, 0, 48, cirTreeOffset, abortSignal)
+      this.cirTreePromise = await bbi.read(this.cirTreeBuffer, 0, 48, cirTreeOffset, { signal: abortSignal })
     }
     const buffer = this.cirTreeBuffer
     const cirBlockSize = isBigEndian ? buffer.readUInt32BE(4) : buffer.readUInt32LE(4)
