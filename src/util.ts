@@ -69,7 +69,3 @@ export async function abortBreakPoint(signal?: AbortSignal): Promise<void> {
   await Promise.resolve()
   checkAbortSignal(signal)
 }
-
-export function flatten<T>(items: T[][]): T[] {
-  return items.reduce((prev, next) => prev.concat(next), [])
-}

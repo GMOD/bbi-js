@@ -1,3 +1,5 @@
+- Make important performance improvement for BigWig data
+
 ## [1.0.14](https://github.com/GMOD/bbi-js/compare/v1.0.12...v1.0.14) (2019-04-17)
 
 

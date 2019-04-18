@@ -1,6 +1,5 @@
 import BBI from './bbi'
 import { Observable, Observer } from 'rxjs'
-import { flatten } from './util'
 
 export default class BigBed extends BBI {
   /**
@@ -35,7 +34,7 @@ export default class BigBed extends BBI {
     end: number,
     opts: Options = { scale: 1 },
   ): Promise<Feature[]> {
-    let features: Feature[][] = []
+    let features: Feature[] = []
     const ob = await this.getFeatureStream(refName, start, end, opts)
     return new Promise((resolve, reject) => {
       // prettier-ignore
@@ -43,7 +42,7 @@ export default class BigBed extends BBI {
         feats => features = features.concat(feats),
         error => reject(error),
         () => {
-          resolve(flatten(features))
+          resolve(features)
         }
       )
     })

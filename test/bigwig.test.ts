@@ -147,4 +147,13 @@ describe('bigwig formats', () => {
     const header = await ti.getHeader()
     expect(header.isBigEndian).toEqual(false)
   })
+
+  it('test a slow loading getfeatures', async () => {
+    const ti = new BigWig({
+      path: require.resolve('./data/volvox.bw'),
+    })
+    const indexDataP = ti.getHeader()
+    const feats = await ti.getFeatures('ctgA', 10000, 40000)
+    expect(feats.length).toEqual(30001)
+  })
 })
