@@ -10,12 +10,14 @@ A parser for bigwig and bigbed file formats
 
 If using locally
 
-    import {BigWig} from '@gmod/bbi'
+    const {BigWig} = require('@gmod/bbi');
     const ti = new BigWig({
       path: 'volvox.bw'
-    })
-    await ti.getHeader()
-    const feats = await ti.getFeatures('chr1', 0, 100, { scale: 1 })
+    });
+    (async () => {
+      await ti.getHeader();
+      const feats = await ti.getFeatures('chr1', 0, 100, { scale: 1 });
+    })();
 
 
 ## Documentation
@@ -41,7 +43,7 @@ Accepts an object containing either
 * opts.signal - optional, an AbortSignal to halt processing
 
 
-Returns a promise to an array of features.
+Returns a promise to an array of features. If an incorrect refName or no features are found the result is an empty array.
 
 Example:
 
