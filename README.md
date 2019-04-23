@@ -38,8 +38,8 @@ Accepts an object containing either
 * refName - a name of a chromosome in the file
 * start - a 0-based half open start coordinate
 * end - a 0-based half open end coordinate
-* opts.scale - indicates zoom level to use, specified as pixels per basepair, e.g. being zoomed out, you might have 100bp per pixel so opts.scale would be 1/100. the zoom level that is returned is the one which has reductionLevel<=2/opts.scale (reductionLevel is a property of the zoom level structure in the bigwig file data)
-* opts.basesPerScale - optional, just the inverse of opts.scale. one of opts.scale or opts.basesPerScale can be specified, otherwise the most granular zoom level is used
+* opts.scale - indicates zoom level to use, specified as pxPerBp, e.g. being zoomed out, you might have 100bp per pixel so opts.scale would be 1/100. the zoom level that is returned is the one which has reductionLevel<=2/opts.scale (reductionLevel is a property of the zoom level structure in the bigwig file data)
+* opts.basesPerScale - optional, inverse of opts.scale e.g. bpPerPx
 * opts.signal - optional, an AbortSignal to halt processing
 
 
@@ -52,6 +52,19 @@ Example:
     // coordinates on returned data are are 0-based half open
     // no conversion to 1-based as in wig is done)
     // note refseq is not returned on the object, it is clearly chr1 from the query though
+
+
+### Understanding scale and reductionLevel
+
+Here is what the reductionLevel structure looks like in a file. The zoomLevel that is chosen is the first reductionLevel<2*opts.basesPerScale (or reductionLevel<2/opts.scale) when scanning backwards through this list
+
+      [ { reductionLevel: 40, ... },
+        { reductionLevel: 160, ... },
+        { reductionLevel: 640, ... },
+        { reductionLevel: 2560, ... },
+        { reductionLevel: 10240, ... },
+        { reductionLevel: 40960, ... },
+        { reductionLevel: 163840, ... } ]
 
 
 #### getFeatureStream(refName, start, end, opts)

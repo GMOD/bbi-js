@@ -83,6 +83,12 @@ describe('bigwig formats', () => {
     const feats4 = await ti.getFeatures('GK000001.2', 2000000, 2100000, {
       scale: 0.001,
     })
+    const feats5 = await ti.getFeatures('GK000001.2', 2000000, 2100000, {
+      scale: 0.00001,
+    })
+    const f4max = Math.max(...feats4.map(s => s.score))
+    const f5max = Math.max(...feats5.map(s => s.maxScore))
+    expect(feats5).toMatchSnapshot() // summary block
     expect(feats1.slice(10, 20)).toMatchSnapshot()
     expect(feats2.slice(10, 20)).toMatchSnapshot()
     expect(feats3.slice(10, 20)).toMatchSnapshot()

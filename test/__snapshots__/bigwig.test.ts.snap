@@ -58,54 +58,20 @@ Array [
 exports[`bigwig formats loads a larger bigwig file at different scales 1`] = `
 Array [
   Object {
-    "end": 2073477,
-    "score": 0,
-    "start": 2069069,
+    "end": 2068352,
+    "maxScore": 1,
+    "minScore": 0,
+    "score": 0.004236222847948511,
+    "start": 1988800,
+    "summary": true,
   },
   Object {
-    "end": 2073485,
-    "score": 1,
-    "start": 2073477,
-  },
-  Object {
-    "end": 2073564,
-    "score": 2,
-    "start": 2073485,
-  },
-  Object {
-    "end": 2076947,
-    "score": 0,
-    "start": 2073564,
-  },
-  Object {
-    "end": 2076956,
-    "score": 1,
-    "start": 2076947,
-  },
-  Object {
-    "end": 2077030,
-    "score": 2,
-    "start": 2076956,
-  },
-  Object {
-    "end": 2077034,
-    "score": 1,
-    "start": 2077030,
-  },
-  Object {
-    "end": 2077775,
-    "score": 0,
-    "start": 2077034,
-  },
-  Object {
-    "end": 2077844,
-    "score": 1,
-    "start": 2077775,
-  },
-  Object {
-    "end": 2080490,
-    "score": 0,
-    "start": 2077844,
+    "end": 2147904,
+    "maxScore": 9,
+    "minScore": 0,
+    "score": 0.12218423169750603,
+    "start": 2068352,
+    "summary": true,
   },
 ]
 `;
@@ -221,6 +187,61 @@ Array [
 `;
 
 exports[`bigwig formats loads a larger bigwig file at different scales 4`] = `
+Array [
+  Object {
+    "end": 2073477,
+    "score": 0,
+    "start": 2069069,
+  },
+  Object {
+    "end": 2073485,
+    "score": 1,
+    "start": 2073477,
+  },
+  Object {
+    "end": 2073564,
+    "score": 2,
+    "start": 2073485,
+  },
+  Object {
+    "end": 2076947,
+    "score": 0,
+    "start": 2073564,
+  },
+  Object {
+    "end": 2076956,
+    "score": 1,
+    "start": 2076947,
+  },
+  Object {
+    "end": 2077030,
+    "score": 2,
+    "start": 2076956,
+  },
+  Object {
+    "end": 2077034,
+    "score": 1,
+    "start": 2077030,
+  },
+  Object {
+    "end": 2077775,
+    "score": 0,
+    "start": 2077034,
+  },
+  Object {
+    "end": 2077844,
+    "score": 1,
+    "start": 2077775,
+  },
+  Object {
+    "end": 2080490,
+    "score": 0,
+    "start": 2077844,
+  },
+]
+`;
+
+exports[`bigwig formats loads a larger bigwig file at different scales 5`] = `
 Array [
   Object {
     "end": 2073477,
