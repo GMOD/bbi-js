@@ -88,6 +88,7 @@ describe('bigwig formats', () => {
     })
     const f4max = Math.max(...feats4.map(s => s.score))
     const f5max = Math.max(...feats5.map(s => s.maxScore))
+    expect(f4max).toEqual(f5max)
     expect(feats5).toMatchSnapshot() // summary block
     expect(feats1.slice(10, 20)).toMatchSnapshot()
     expect(feats2.slice(10, 20)).toMatchSnapshot()
