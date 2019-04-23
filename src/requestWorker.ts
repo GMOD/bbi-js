@@ -46,8 +46,6 @@ interface Options {
   abortSignal?: AbortSignal
 }
 
-
-
 /**
  * Worker object for reading data from a bigwig or bigbed file.
  * Manages the state necessary for traversing the index trees and
@@ -68,6 +66,10 @@ export default class RequestWorker {
   private opts: Options
   private observer: Observer<Feature[]>
   private featureCache: any
+  private leafParser: any
+  private bigWigParser: any
+  private bigBedParser: any
+  private summaryParser: any
 
   public constructor(bbi: any, chrId: number, min: number, max: number, observer: Observer<Feature[]>, opts: Options) {
     this.opts = opts
@@ -80,6 +82,7 @@ export default class RequestWorker {
     this.chrId = chrId
     this.min = min
     this.max = max
+    this.initializeParsers()
 
     this.featureCache = new AbortablePromiseCache({
       cache: new QuickLRU({ maxSize: 1000 }),
@@ -91,6 +94,93 @@ export default class RequestWorker {
         return resultBuffer
       },
     })
+  }
+
+  private initializeParsers() {
+    const le = this.opts.isBigEndian ? 'big' : 'little'
+    this.summaryParser =
+      this.summaryParser ||
+      new Parser()
+        .endianess(le)
+        .uint32('chromId')
+        .uint32('start')
+        .uint32('end')
+        .uint32('validCnt')
+        .float('minScore')
+        .float('maxScore')
+        .float('sumData')
+        .float('sumSqData')
+
+    this.leafParser =
+      this.leafParser ||
+      new Parser()
+        .endianess(le)
+        .uint8('isLeaf')
+        .skip(1)
+        .uint16('cnt')
+        .choice({
+          tag: 'isLeaf',
+          choices: {
+            1: new Parser().array('blocksToFetch', {
+              length: 'cnt',
+              type: new Parser()
+                .uint32('startChrom')
+                .uint32('startBase')
+                .uint32('endChrom')
+                .uint32('endBase')
+                .uint64('blockOffset')
+                .uint64('blockSize'),
+            }),
+            0: new Parser().array('recurOffsets', {
+              length: 'cnt',
+              type: new Parser()
+                .uint32('startChrom')
+                .uint32('startBase')
+                .uint32('endChrom')
+                .uint32('endBase')
+                .uint64('blockOffset'),
+            }),
+          },
+        })
+    this.bigBedParser = new Parser()
+      .endianess(le)
+      .uint32('chromId')
+      .int32('start')
+      .int32('end')
+      .string('rest', {
+        zeroTerminated: true,
+      })
+
+    this.bigWigParser = new Parser()
+      .endianess(le)
+      .skip(4)
+      .int32('blockStart')
+      .skip(4)
+      .uint32('itemStep')
+      .uint32('itemSpan')
+      .uint8('blockType')
+      .skip(1)
+      .uint16('itemCount')
+      .choice({
+        tag: 'blockType',
+        choices: {
+          [BIG_WIG_TYPE_FSTEP]: new Parser().array('items', {
+            length: 'itemCount',
+            type: new Parser().float('score'),
+          }),
+          [BIG_WIG_TYPE_VSTEP]: new Parser().array('items', {
+            length: 'itemCount',
+            type: new Parser().int32('start').float('score'),
+          }),
+          [BIG_WIG_TYPE_GRAPH]: new Parser().array('items', {
+            length: 'itemCount',
+            type: new Parser()
+              .int32('start')
+              .int32('end')
+              .float('score'),
+          }),
+        },
+      })
   }
 
   public cirFobRecur(offset: any, level: number): void {
@@ -126,36 +216,7 @@ export default class RequestWorker {
   private cirFobRecur2(cirBlockData: Buffer, offset: number, level: number): void {
     const data = cirBlockData.slice(offset)
 
-    const parser = new Parser()
-      .endianess(this.opts.isBigEndian ? 'big' : 'little')
-      .uint8('isLeaf')
-      .skip(1)
-      .uint16('cnt')
-      .choice({
-        tag: 'isLeaf',
-        choices: {
-          1: new Parser().array('blocksToFetch', {
-            length: 'cnt',
-            type: new Parser()
-              .uint32('startChrom')
-              .uint32('startBase')
-              .uint32('endChrom')
-              .uint32('endBase')
-              .uint64('blockOffset')
-              .uint64('blockSize'),
-          }),
-          0: new Parser().array('recurOffsets', {
-            length: 'cnt',
-            type: new Parser()
-              .uint32('startChrom')
-              .uint32('startBase')
-              .uint32('endChrom')
-              .uint32('endBase')
-              .uint64('blockOffset'),
-          }),
-        },
-      })
-    const p = parser.parse(data).result
+    const p = this.leafParser.parse(data).result
     const { chrId, max, min } = this
 
     const m = (b: DataBlock): boolean =>
@@ -164,39 +225,27 @@ export default class RequestWorker {
 
     if (p.blocksToFetch) {
       this.blocksToFetch = this.blocksToFetch.concat(
-        p.blocksToFetch
-        .filter(m)
-          .map((l: any): any => ({ offset: l.blockOffset, length: l.blockSize })),
+        p.blocksToFetch.filter(m).map((l: any): any => ({ offset: l.blockOffset, length: l.blockSize })),
       )
     }
     if (p.recurOffsets) {
-      const recurOffsets = p.recurOffsets
-        .filter(m)
-        .map((l: any): any => l.blockOffset)
+      const recurOffsets = p.recurOffsets.filter(m).map((l: any): any => l.blockOffset)
       if (recurOffsets.length > 0) {
         this.cirFobRecur(recurOffsets, level + 1)
       }
     }
   }
 
-  private parseSummaryBlock(bytes: Buffer, startOffset: number): Feature[] {
-    const data = bytes.slice(startOffset)
-    return new Parser()
-      .endianess(this.opts.isBigEndian ? 'big' : 'little')
-      .array('summary', {
-        length: data.byteLength / 32,
-        type: new Parser()
-          .uint32('chromId')
-          .uint32('start')
-          .uint32('end')
-          .uint32('validCnt')
-          .float('minScore')
-          .float('maxScore')
-          .float('sumData')
-          .float('sumSqData'),
-      })
-      .parse(data)
-      .result.summary.filter((elt: SummaryBlock): boolean => elt.chromId === this.chrId)
+  private parseSummaryBlock(data: Buffer, startOffset: number): Feature[] {
+    const features = []
+    let currOffset = startOffset
+    while (currOffset < data.byteLength) {
+      const res = this.summaryParser.parse(data.slice(currOffset))
+      features.push(res.result)
+      currOffset += res.offset
+    }
+    return features
+      .filter((elt: SummaryBlock): boolean => elt.chromId === this.chrId)
       .map(
         (elt: SummaryBlock): Feature => ({
           start: elt.start,
@@ -212,17 +261,9 @@ export default class RequestWorker {
 
   private parseBigBedBlock(data: Buffer, startOffset: number): Feature[] {
     const features = []
-    const p = new Parser()
-      .endianess(this.opts.isBigEndian ? 'big' : 'little')
-      .uint32('chromId')
-      .int32('start')
-      .int32('end')
-      .string('rest', {
-        zeroTerminated: true,
-      })
     let currOffset = startOffset
     while (currOffset < data.byteLength) {
-      const res = p.parse(data.slice(currOffset))
+      const res = this.bigBedParser.parse(data.slice(currOffset))
       res.result.uniqueId = `bb-${startOffset + currOffset}`
       features.push(res.result)
       currOffset += res.offset
@@ -233,37 +274,7 @@ export default class RequestWorker {
 
   private parseBigWigBlock(bytes: Buffer, startOffset: number): Feature[] {
     const data = bytes.slice(startOffset)
-    const parser = new Parser()
-      .endianess(this.opts.isBigEndian ? 'big' : 'little')
-      .skip(4)
-      .int32('blockStart')
-      .skip(4)
-      .uint32('itemStep')
-      .uint32('itemSpan')
-      .uint8('blockType')
-      .skip(1)
-      .uint16('itemCount')
-      .choice({
-        tag: 'blockType',
-        choices: {
-          [BIG_WIG_TYPE_FSTEP]: new Parser().array('items', {
-            length: 'itemCount',
-            type: new Parser().float('score'),
-          }),
-          [BIG_WIG_TYPE_VSTEP]: new Parser().array('items', {
-            length: 'itemCount',
-            type: new Parser().int32('start').float('score'),
-          }),
-          [BIG_WIG_TYPE_GRAPH]: new Parser().array('items', {
-            length: 'itemCount',
-            type: new Parser()
-              .int32('start')
-              .int32('end')
-              .float('score'),
-          }),
-        },
-      })
-    const results = parser.parse(data).result
+    const results = this.bigWigParser.parse(data).result
     let items = results.items
     if (results.blockType === BIG_WIG_TYPE_FSTEP) {
       const { itemStep: step, itemSpan: span } = results
