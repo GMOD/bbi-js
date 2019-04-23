@@ -1,3 +1,7 @@
+## [1.0.16](https://github.com/GMOD/bbi-js/compare/v1.0.15...v1.0.16) (2019-04-23)
+
+
+
 - Pre-compile binary-parser instances for faster
 - Important: fixed bug that caused bigwig summary blocks to not be returned in output
 
