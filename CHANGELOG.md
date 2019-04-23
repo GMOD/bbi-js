@@ -1,3 +1,5 @@
+- Fix important bug with accessing summary blocks
+
 ## [1.0.15](https://github.com/GMOD/bbi-js/compare/v1.0.14...v1.0.15) (2019-04-18)
 
 

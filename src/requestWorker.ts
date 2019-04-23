@@ -45,6 +45,9 @@ interface Options {
   name?: string
   abortSignal?: AbortSignal
 }
+
+
+
 /**
  * Worker object for reading data from a bigwig or bigbed file.
  * Manages the state necessary for traversing the index trees and
@@ -160,12 +163,16 @@ export default class RequestWorker {
       (b.endChrom > chrId || (b.endChrom === chrId && b.endBase >= min))
 
     if (p.blocksToFetch) {
-      this.blocksToFetch = p.blocksToFetch
+      this.blocksToFetch = this.blocksToFetch.concat(
+        p.blocksToFetch
         .filter(m)
-        .map((l: any): any => ({ offset: l.blockOffset, length: l.blockSize }))
+          .map((l: any): any => ({ offset: l.blockOffset, length: l.blockSize })),
+      )
     }
     if (p.recurOffsets) {
-      const recurOffsets = p.recurOffsets.filter(m).map((l: any): any => l.blockOffset)
+      const recurOffsets = p.recurOffsets
+        .filter(m)
+        .map((l: any): any => l.blockOffset)
       if (recurOffsets.length > 0) {
         this.cirFobRecur(recurOffsets, level + 1)
       }
@@ -174,19 +181,20 @@ export default class RequestWorker {
 
   private parseSummaryBlock(bytes: Buffer, startOffset: number): Feature[] {
     const data = bytes.slice(startOffset)
-    const p = new Parser().endianess(this.opts.isBigEndian ? 'big' : 'little').array('summary', {
-      length: data.byteLength / 64,
-      type: new Parser()
-        .int32('chromId')
-        .int32('start')
-        .int32('end')
-        .int32('validCnt')
-        .float('minScore')
-        .float('maxScore')
-        .float('sumData')
-        .float('sumSqData'),
-    })
-    return p
+    return new Parser()
+      .endianess(this.opts.isBigEndian ? 'big' : 'little')
+      .array('summary', {
+        length: data.byteLength / 32,
+        type: new Parser()
+          .uint32('chromId')
+          .uint32('start')
+          .uint32('end')
+          .uint32('validCnt')
+          .float('minScore')
+          .float('maxScore')
+          .float('sumData')
+          .float('sumSqData'),
+      })
       .parse(data)
       .result.summary.filter((elt: SummaryBlock): boolean => elt.chromId === this.chrId)
       .map(
