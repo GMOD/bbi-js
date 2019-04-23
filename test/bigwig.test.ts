@@ -163,4 +163,14 @@ describe('bigwig formats', () => {
     const feats = await ti.getFeatures('ctgA', 10000, 40000)
     expect(feats.length).toEqual(30001)
   })
+
+  it('should load a lot of summary data', async () => {
+    const ti = new BigWig({
+      path: require.resolve('./data/ENCFF826FLP.bw'),
+    })
+    const feats = await ti.getFeatures('chr22', 0, 51222087, { scale: 0.00001 })
+    expect(feats.slice(0, 10)).toMatchSnapshot()
+    expect(feats.slice(-10)).toMatchSnapshot()
+    expect(feats.length).toEqual(595)
+  })
 })
