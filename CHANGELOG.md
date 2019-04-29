@@ -1,3 +1,5 @@
+- Use some standard rxjs notions for combining operator results
+
 ## [1.0.16](https://github.com/GMOD/bbi-js/compare/v1.0.15...v1.0.16) (2019-04-23)
 
 
