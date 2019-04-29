@@ -96,10 +96,9 @@ export default class RequestWorker {
     })
   }
 
-  private initializeParsers() {
+  private initializeParsers(): void {
     const le = this.opts.isBigEndian ? 'big' : 'little'
     this.summaryParser =
-      this.summaryParser ||
       new Parser()
         .endianess(le)
         .uint32('chromId')
@@ -112,7 +111,6 @@ export default class RequestWorker {
         .float('sumSqData')
 
     this.leafParser =
-      this.leafParser ||
       new Parser()
         .endianess(le)
         .uint8('isLeaf')

@@ -1,17 +1,25 @@
 import { Parser } from '@gmod/binary-parser'
 import { LocalFile, RemoteFile } from 'generic-filehandle'
 import { GenericFilehandle } from 'generic-filehandle'
+import { Observable, Observer } from 'rxjs'
+import { reduce } from 'rxjs/operators'
+
 import BlockView from './blockView'
 import { abortBreakPoint, AbortError } from './util'
 
 const BIG_WIG_MAGIC = -2003829722
 const BIG_BED_MAGIC = -2021002517
 
-interface Options {
+interface ConstructorOptions {
   filehandle?: GenericFilehandle
   path?: string
   url?: string
   renameRefSeqs?: (a: string) => string
+}
+declare interface GetFeatureOptions {
+  basesPerSpan?: number
+  scale?: number
+  signal?: AbortSignal
 }
 
 interface Statistics {
@@ -74,7 +82,7 @@ export default abstract class BBIFile {
   protected renameRefSeqs: (a: string) => string
   public getHeader: (abortSignal?: AbortSignal) => Promise<any>
 
-  public constructor(options: Options = {}) {
+  public constructor(options: ConstructorOptions = {}) {
     const { filehandle, renameRefSeqs, path, url } = options
     this.renameRefSeqs = renameRefSeqs || ((s: string): string => s)
     this.headerCache = new AbortAwareCache()
@@ -287,5 +295,49 @@ export default abstract class BBIFile {
       cirLen = nzl.dataOffset - unzoomedIndexOffset
     }
     return new BlockView(bbi, refsByName, unzoomedIndexOffset, cirLen, isBigEndian, uncompressBufSize > 0, fileType)
+  }
+
+  /**
+   * Gets features from a BigWig file
+   *
+   * @param refName - The chromosome name
+   * @param start - The start of a region
+   * @param end - The end of a region
+   * @param opts - An object containing basesPerSpan (e.g. pixels per basepair) or scale used to infer the zoomLevel to use
+   */
+  public async getFeatureStream(
+    refName: string,
+    start: number,
+    end: number,
+    opts: GetFeatureOptions = { scale: 1 },
+  ): Promise<Observable<Feature[]>> {
+    await this.getHeader(opts.signal)
+    const chrName = this.renameRefSeqs(refName)
+    let view: BlockView
+
+    if (opts.basesPerSpan) {
+      view = await this.getView(1 / opts.basesPerSpan, opts.signal)
+    } else if (opts.scale) {
+      view = await this.getView(opts.scale, opts.signal)
+    } else {
+      view = await this.getView(1, opts.signal)
+    }
+
+    if (!view) {
+      throw new Error('unable to get block view for data')
+    }
+    return new Observable((observer: Observer<Feature[]>) => {
+      view.readWigData(chrName, start, end, observer, opts.signal)
+    })
+  }
+
+  public async getFeatures(
+    refName: string,
+    start: number,
+    end: number,
+    opts: GetFeatureOptions = { scale: 1 },
+  ): Promise<Feature[]> {
+    const ob = await this.getFeatureStream(refName, start, end, opts)
+    return ob.pipe(reduce((acc, curr) => acc.concat(curr))).toPromise()
   }
 }
