@@ -56,4 +56,12 @@ describe('bigbed formats', () => {
     const res = await ti.findFeat('ENST00000467796.2')
     expect(res).toMatchSnapshot()
   })
+  it('findFeat in bigbed with multiple extra indexes', async () => {
+    const ti = new BigBed({
+      path: require.resolve('./data/chr22_with_name_and_geneName_index.bb'),
+    })
+    await ti.readIndices()
+    const res = await ti.findFeat('ENST00000467796.2')
+    expect(res).toMatchSnapshot()
+  })
 })
