@@ -75,6 +75,61 @@ class AbortAwareCache {
   }
 }
 
+function getParsers(isBE: boolean): any {
+  const le = isBE ? 'big' : 'little'
+  const headerParser = new Parser()
+    .endianess(le)
+    .int32('magic')
+    .uint16('version')
+    .uint16('numZoomLevels')
+    .uint64('chromTreeOffset')
+    .uint64('unzoomedDataOffset')
+    .uint64('unzoomedIndexOffset')
+    .uint16('fieldCount')
+    .uint16('definedFieldCount')
+    .uint64('asOffset') // autoSql offset, used in bigbed
+    .uint64('totalSummaryOffset')
+    .uint32('uncompressBufSize')
+    .uint64('extHeaderOffset') // name index offset, used in bigbed
+    .array('zoomLevels', {
+      length: 'numZoomLevels',
+      type: new Parser()
+        .uint32('reductionLevel')
+        .uint32('reserved')
+        .uint64('dataOffset')
+        .uint64('indexOffset'),
+    })
+
+  const totalSummaryParser = new Parser()
+    .endianess(le)
+    .uint64('basesCovered')
+    .double('scoreMin')
+    .double('scoreMax')
+    .double('scoreSum')
+    .double('scoreSumSquares')
+
+  const chromTreeParser = new Parser()
+    .endianess(le)
+    .uint32('magic')
+    .uint32('blockSize')
+    .uint32('keySize')
+    .uint32('valSize')
+    .uint64('itemCount')
+
+  const isLeafNode = new Parser()
+    .endianess(le)
+    .uint8('isLeafNode')
+    .skip(1)
+    .uint16('cnt')
+
+  return {
+    chromTreeParser,
+    totalSummaryParser,
+    headerParser,
+    isLeafNode,
+  }
+}
+
 export default abstract class BBIFile {
   protected bbi: GenericFilehandle
   private fileType: string
@@ -107,7 +162,7 @@ export default abstract class BBIFile {
   }
 
   private async _getMainHeader(abortSignal?: AbortSignal): Promise<Header> {
-    const ret = await this.getParsers(await this._isBigEndian())
+    const ret = getParsers(await this._isBigEndian())
     const buf = Buffer.alloc(2000)
     await this.bbi.read(buf, 0, 2000, 0, { signal: abortSignal })
     const header = ret.headerParser.parse(buf).result
@@ -136,62 +191,6 @@ export default abstract class BBIFile {
     }
     throw new Error('not a BigWig/BigBed file')
   }
-
-  private getParsers(isBE: boolean): any {
-    const le = isBE ? 'big' : 'little'
-    const headerParser = new Parser()
-      .endianess(le)
-      .int32('magic')
-      .uint16('version')
-      .uint16('numZoomLevels')
-      .uint64('chromTreeOffset')
-      .uint64('unzoomedDataOffset')
-      .uint64('unzoomedIndexOffset')
-      .uint16('fieldCount')
-      .uint16('definedFieldCount')
-      .uint64('asOffset') // autoSql offset, used in bigbed
-      .uint64('totalSummaryOffset')
-      .uint32('uncompressBufSize')
-      .uint64('extHeaderOffset') // name index offset, used in bigbed
-      .array('zoomLevels', {
-        length: 'numZoomLevels',
-        type: new Parser()
-          .uint32('reductionLevel')
-          .uint32('reserved')
-          .uint64('dataOffset')
-          .uint64('indexOffset'),
-      })
-
-    const totalSummaryParser = new Parser()
-      .endianess(le)
-      .uint64('basesCovered')
-      .double('scoreMin')
-      .double('scoreMax')
-      .double('scoreSum')
-      .double('scoreSumSquares')
-
-    const chromTreeParser = new Parser()
-      .endianess(le)
-      .uint32('magic')
-      .uint32('blockSize')
-      .uint32('keySize')
-      .uint32('valSize')
-      .uint64('itemCount')
-
-    const isLeafNode = new Parser()
-      .endianess(le)
-      .uint8('isLeafNode')
-      .skip(1)
-      .uint16('cnt')
-
-    return {
-      chromTreeParser,
-      totalSummaryParser,
-      headerParser,
-      isLeafNode,
-    }
-  }
-
   // todo: add progress if long running
   private async _readChromTree(abortSignal?: AbortSignal): Promise<ChromTree> {
     const header = await this._getMainHeader(abortSignal)
@@ -209,7 +208,7 @@ export default abstract class BBIFile {
     const data = Buffer.alloc(unzoomedDataOffset - chromTreeOffset)
     await this.bbi.read(data, 0, unzoomedDataOffset - chromTreeOffset, chromTreeOffset, { signal: abortSignal })
 
-    const p = await this.getParsers(isBE)
+    const p = getParsers(isBE)
     const ret = p.chromTreeParser.parse(data).result
     const leafNodeParser = new Parser()
       .endianess(le)
@@ -258,11 +257,8 @@ export default abstract class BBIFile {
       abortSignal,
     )
     const { bbi, fileType } = this
-    let cirLen = 4000
     const nzl = zoomLevels[0]
-    if (nzl) {
-      cirLen = nzl.dataOffset - unzoomedIndexOffset
-    }
+    const cirLen = nzl ? nzl.dataOffset - unzoomedIndexOffset : 4000
     return new BlockView(bbi, refsByName, unzoomedIndexOffset, cirLen, isBigEndian, uncompressBufSize > 0, fileType)
   }
 
@@ -283,6 +279,7 @@ export default abstract class BBIFile {
     end: number,
     opts: GetFeatureOptions = { scale: 1 },
   ): Promise<Observable<Feature[]>> {
+    debugger
     await this.getHeader(opts.signal)
     const chrName = this.renameRefSeqs(refName)
     let view: BlockView
@@ -299,7 +296,7 @@ export default abstract class BBIFile {
       throw new Error('unable to get block view for data')
     }
     return new Observable((observer: Observer<Feature[]>) => {
-      view.readWigData(chrName, start, end, observer, opts.signal)
+      view.readWigData(chrName, start, end, observer, opts)
     })
   }
 

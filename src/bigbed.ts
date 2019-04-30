@@ -25,7 +25,6 @@ export default class BigBed extends BBI {
       .uint16('count')
       .uint64('offset')
       .parse(data).result
-    //console.log(ret)
     const { size, count, offset } = ret
     // no extra index is defined if count==0
     if (ret.count === 0) {
@@ -46,17 +45,16 @@ export default class BigBed extends BBI {
     for (let i = 0; i < count; i += 1) {
       this.indices.push(extParser.parse(data.slice(i * 20)).result)
     }
-    console.log(this.indices)
   }
 
   public async lookup(name: string, opts: SearchOptions = {}) {
-    const { abortSignal } = opts
-    const { isBigEndian } = await this.getHeader(abortSignal)
+    const { signal } = opts
+    const { isBigEndian } = await this.getHeader(signal)
     if (!this.indices.length) return undefined
     const { offset } = this.indices[0]
     const data = Buffer.alloc(32)
 
-    await this.bbi.read(data, 0, 32, offset, { signal: abortSignal })
+    await this.bbi.read(data, 0, 32, offset, { signal })
     const p = new Parser()
       .endianess(isBigEndian ? 'big' : 'little')
       .int32('magic')
@@ -66,16 +64,14 @@ export default class BigBed extends BBI {
       .uint64('itemCount')
     const ret = p.parse(data).result
     const { blockSize, keySize, valSize } = ret
-    console.log(ret)
 
     var rootNodeOffset = 32
 
     const bptReadNode = async (nodeOffset: number) => {
       const len = 4 + blockSize * (keySize + valSize)
       const data = Buffer.alloc(len)
-      console.log(nodeOffset, len)
 
-      await this.bbi.read(data, 0, len, nodeOffset)
+      await this.bbi.read(data, 0, len, nodeOffset, { signal })
 
       const p = new Parser()
         .endianess(isBigEndian ? 'big' : 'little')
@@ -100,7 +96,6 @@ export default class BigBed extends BBI {
           },
         })
       const node = p.parse(data).result
-      console.log(node)
       if (node.leafkeys) {
         let lastOffset
         for (let i = 0; i < node.leafkeys.length; i++) {
@@ -119,13 +114,8 @@ export default class BigBed extends BBI {
 
           if (key == name) {
             return node.keys[i]
-            return thisB.bbi.getUnzoomedView().fetchFeatures(
-              function(chr, min, max, toks) {
-                if (toks && toks.length > thisB.field - 3) return toks[thisB.field - 3] == name
-              },
-              [{ offset: start, size: length }],
-              callback,
-            )
+            const view = await this.getUnzoomedView()
+            return view.readFeatures([{ offset: start, size: length }], callback)
           }
         }
       }
@@ -133,51 +123,3 @@ export default class BigBed extends BBI {
     return bptReadNode(offset + rootNodeOffset)
   }
 }
-// var offset = 4;
-// if (nodeType == 0) {
-//     var lastChildOffset = null;
-//     for (var n = 0; n < cnt; ++n) {
-//         var key = '';
-//         for (var ki = 0; ki < keySize; ++ki) {
-//             var charCode = ba[offset++];
-//             if (charCode != 0) {
-//                 key += String.fromCharCode(charCode);
-//             }
-//         }
-
-//         var childOffset = bwg_readOffset(ba, offset);
-//         offset += 8;
-
-//         if (name.localeCompare(key) < 0 && lastChildOffset) {
-//             bptReadNode(lastChildOffset);
-//             return;
-//         }
-//         lastChildOffset = childOffset;
-//     }
-//     bptReadNode(lastChildOffset);
-// } else {
-//     for (var n = 0; n < cnt; ++n) {
-//         var key = '';
-//         for (var ki = 0; ki < keySize; ++ki) {
-//             var charCode = ba[offset++];
-//             if (charCode != 0) {
-//                 key += String.fromCharCode(charCode);
-//             }
-//         }
-
-//         // Specific for EI case.
-//         if (key == name) {
-//             var start = bwg_readOffset(ba, offset);
-//             var length = readInt(ba, offset + 8);
-
-//             return thisB.bbi.getUnzoomedView().fetchFeatures(
-//                 function(chr, min, max, toks) {
-//                     if (toks && toks.length > thisB.field - 3)
-//                         return toks[thisB.field - 3] == name;
-//                 },
-//                 [{offset: start, size: length}],
-//                 callback);
-//         }
-//         offset += valSize;
-//     }
-//     return callback([]);
