@@ -69,3 +69,21 @@ Array [
   },
 ]
 `;
+
+exports[`bigbed formats lookup name in gencode 1`] = `
+Object {
+  "key": "ENST00000023939.5",
+  "length": 22474,
+  "offset": 5646599,
+  "reserved": 0,
+}
+`;
+
+exports[`bigbed formats lookup returns null on file with no extra index 1`] = `
+Object {
+  "key": "EDEN.1",
+  "length": 167,
+  "offset": 1402,
+  "reserved": 0,
+}
+`;

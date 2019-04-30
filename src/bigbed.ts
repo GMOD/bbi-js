@@ -33,26 +33,30 @@ export default class BigBed extends BBI {
     }
     const len = count * 20
     const buf = Buffer.alloc(len)
-    await this.bbi.read(data, 0, offset, len)
+    await this.bbi.read(data, 0, len, offset)
     const extParser = new Parser()
       .endianess(le)
       .int16('type')
       .int16('fieldcount')
       .uint64('offset')
+      .skip(4)
       .int16('field')
     this.indices = this.indices || []
 
     for (let i = 0; i < count; i += 1) {
       this.indices.push(extParser.parse(data.slice(i * 20)).result)
     }
+    console.log(this.indices)
   }
+
   public async lookup(name: string, opts: SearchOptions = {}) {
     const { abortSignal } = opts
     const { isBigEndian } = await this.getHeader(abortSignal)
+    if (!this.indices.length) return undefined
     const { offset } = this.indices[0]
     const data = Buffer.alloc(32)
 
-    await this.bbi.read(data, 0, offset, 32, { signal: abortSignal })
+    await this.bbi.read(data, 0, 32, offset, { signal: abortSignal })
     const p = new Parser()
       .endianess(isBigEndian ? 'big' : 'little')
       .int32('magic')
@@ -61,83 +65,119 @@ export default class BigBed extends BBI {
       .int32('valSize')
       .uint64('itemCount')
     const ret = p.parse(data).result
+    const { blockSize, keySize, valSize } = ret
     console.log(ret)
 
     var rootNodeOffset = 32
+
+    const bptReadNode = async (nodeOffset: number) => {
+      const len = 4 + blockSize * (keySize + valSize)
+      const data = Buffer.alloc(len)
+      console.log(nodeOffset, len)
+
+      await this.bbi.read(data, 0, len, nodeOffset)
+
+      const p = new Parser()
+        .endianess(isBigEndian ? 'big' : 'little')
+        .int8('nodeType')
+        .skip(1)
+        .int16('cnt')
+        .choice({
+          tag: 'nodeType',
+          choices: {
+            0: new Parser().array('leafkeys', {
+              length: 'cnt',
+              type: new Parser().string('key', { length: keySize, stripNull: true }).uint64('offset'),
+            }),
+            1: new Parser().array('keys', {
+              length: 'cnt',
+              type: new Parser()
+                .string('key', { length: keySize, stripNull: true })
+                .uint64('offset')
+                .uint32('length')
+                .uint32('reserved'),
+            }),
+          },
+        })
+      const node = p.parse(data).result
+      console.log(node)
+      if (node.leafkeys) {
+        let lastOffset
+        for (let i = 0; i < node.leafkeys.length; i++) {
+          const key = node.leafkeys[i].key
+          if (name.localeCompare(key) < 0 && lastOffset) {
+            return bptReadNode(lastOffset)
+            return
+          }
+          lastOffset = node.leafkeys[i].offset
+        }
+        return bptReadNode(lastOffset)
+      } else {
+        let lastOffset
+        for (let i = 0; i < node.keys.length; i++) {
+          const key = node.keys[i].key
+
+          if (key == name) {
+            return node.keys[i]
+            return thisB.bbi.getUnzoomedView().fetchFeatures(
+              function(chr, min, max, toks) {
+                if (toks && toks.length > thisB.field - 3) return toks[thisB.field - 3] == name
+              },
+              [{ offset: start, size: length }],
+              callback,
+            )
+          }
+        }
+      }
+    }
+    return bptReadNode(offset + rootNodeOffset)
   }
-
-  //     const data2 = Buffer.alloc(unzoomedDataOffset - chromTreeOffset)
-  //     await this.bbi.read(data2, 0, unzoomedDataOffset - chromTreeOffset, chromTreeOffset, { signal: abortSignal })
-
-  //     const buf = data.slice(start, start + length)
-  //     var unc = zlib.inflateSync(buf)
-  //     console.log(unc)
-  // 		console.log(bytesRead)
-  //       var ba = new Uint8Array(bpt)
-  //       var sa = new Int16Array(bpt)
-  //       var la = new Int32Array(bpt)
-  //       var bptMagic = la[0]
-  //       var blockSize = la[1]
-  //       var keySize = la[2]
-  //       var valSize = la[3]
-  //       var itemCount = bwg_readOffset(ba, 16)
-  //       var rootNodeOffset = 32
-
-  //       if (bptMagic != BPT_MAGIC) {
-  //         return callback(null, 'Not a valid BPT, magic=0x' + bptMagic.toString(16))
-  //       }
-
-  //       function bptReadNode(nodeOffset) {
-  //         thisB.data.slice(nodeOffset, 4 + blockSize * (keySize + valSize)).fetch(function(node) {
-  //           var ba = new Uint8Array(node)
-  //           var sa = new Uint16Array(node)
-  //           var la = new Uint32Array(node)
-
-  //           var nodeType = ba[0]
-  //           var cnt = sa[1]
-
-  //           var offset = 4
-  //           if (nodeType == 0) {
-  //             var lastChildOffset = null
-  //             for (var n = 0; n < cnt; ++n) {
-  //               var key = ''
-  //               for (var ki = 0; ki < keySize; ++ki) {
-  //                 var charCode = ba[offset++]
-  //                 if (charCode != 0) {
-  //                   key += String.fromCharCode(charCode)
-  //                 }
-  //               }
-
-  //               var childOffset = readInt(ba, offset)
-  //               offset += 8
-
-  //               if (name.localeCompare(key) < 0 && lastChildOffset) {
-  //                 bptReadNode(lastChildOffset)
-  //                 return
-  //               }
-  //               lastChildOffset = childOffset
-  //             }
-  //             bptReadNode(lastChildOffset)
-  //           } else {
-  //             for (var n = 0; n < cnt; ++n) {
-  //               var key = ''
-  //               for (var ki = 0; ki < keySize; ++ki) {
-  //                 var charCode = ba[offset++]
-  //                 if (charCode != 0) {
-  //                   key += String.fromCharCode(charCode)
-  //                 }
-  //               }
-
-  //               if (key == name) {
-  //                 return thisB.readValue(ba, offset, valSize, callback)
-  //               }
-  //               offset += valSize
-  //             }
-  //             return callback([])
-  //           }
-  //         })
-  //       }
-
-  //       bptReadNode(thisB.offset + rootNodeOffset)
-  //     })
 }
+// var offset = 4;
+// if (nodeType == 0) {
+//     var lastChildOffset = null;
+//     for (var n = 0; n < cnt; ++n) {
+//         var key = '';
+//         for (var ki = 0; ki < keySize; ++ki) {
+//             var charCode = ba[offset++];
+//             if (charCode != 0) {
+//                 key += String.fromCharCode(charCode);
+//             }
+//         }
+
+//         var childOffset = bwg_readOffset(ba, offset);
+//         offset += 8;
+
+//         if (name.localeCompare(key) < 0 && lastChildOffset) {
+//             bptReadNode(lastChildOffset);
+//             return;
+//         }
+//         lastChildOffset = childOffset;
+//     }
+//     bptReadNode(lastChildOffset);
+// } else {
+//     for (var n = 0; n < cnt; ++n) {
+//         var key = '';
+//         for (var ki = 0; ki < keySize; ++ki) {
+//             var charCode = ba[offset++];
+//             if (charCode != 0) {
+//                 key += String.fromCharCode(charCode);
+//             }
+//         }
+
+//         // Specific for EI case.
+//         if (key == name) {
+//             var start = bwg_readOffset(ba, offset);
+//             var length = readInt(ba, offset + 8);
+
+//             return thisB.bbi.getUnzoomedView().fetchFeatures(
+//                 function(chr, min, max, toks) {
+//                     if (toks && toks.length > thisB.field - 3)
+//                         return toks[thisB.field - 3] == name;
+//                 },
+//                 [{offset: start, size: length}],
+//                 callback);
+//         }
+//         offset += valSize;
+//     }
+//     return callback([]);
