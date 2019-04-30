@@ -98,48 +98,46 @@ export default class RequestWorker {
 
   private initializeParsers(): void {
     const le = this.opts.isBigEndian ? 'big' : 'little'
-    this.summaryParser =
-      new Parser()
-        .endianess(le)
-        .uint32('chromId')
-        .uint32('start')
-        .uint32('end')
-        .uint32('validCnt')
-        .float('minScore')
-        .float('maxScore')
-        .float('sumData')
-        .float('sumSqData')
+    this.summaryParser = new Parser()
+      .endianess(le)
+      .uint32('chromId')
+      .uint32('start')
+      .uint32('end')
+      .uint32('validCnt')
+      .float('minScore')
+      .float('maxScore')
+      .float('sumData')
+      .float('sumSqData')
 
-    this.leafParser =
-      new Parser()
-        .endianess(le)
-        .uint8('isLeaf')
-        .skip(1)
-        .uint16('cnt')
-        .choice({
-          tag: 'isLeaf',
-          choices: {
-            1: new Parser().array('blocksToFetch', {
-              length: 'cnt',
-              type: new Parser()
-                .uint32('startChrom')
-                .uint32('startBase')
-                .uint32('endChrom')
-                .uint32('endBase')
-                .uint64('blockOffset')
-                .uint64('blockSize'),
-            }),
-            0: new Parser().array('recurOffsets', {
-              length: 'cnt',
-              type: new Parser()
-                .uint32('startChrom')
-                .uint32('startBase')
-                .uint32('endChrom')
-                .uint32('endBase')
-                .uint64('blockOffset'),
-            }),
-          },
-        })
+    this.leafParser = new Parser()
+      .endianess(le)
+      .uint8('isLeaf')
+      .skip(1)
+      .uint16('cnt')
+      .choice({
+        tag: 'isLeaf',
+        choices: {
+          1: new Parser().array('blocksToFetch', {
+            length: 'cnt',
+            type: new Parser()
+              .uint32('startChrom')
+              .uint32('startBase')
+              .uint32('endChrom')
+              .uint32('endBase')
+              .uint64('blockOffset')
+              .uint64('blockSize'),
+          }),
+          0: new Parser().array('recurOffsets', {
+            length: 'cnt',
+            type: new Parser()
+              .uint32('startChrom')
+              .uint32('startBase')
+              .uint32('endChrom')
+              .uint32('endBase')
+              .uint64('blockOffset'),
+          }),
+        },
+      })
     this.bigBedParser = new Parser()
       .endianess(le)
       .uint32('chromId')

@@ -19,7 +19,6 @@ describe('bigbed formats', () => {
     const ti = new BigBed({
       path: require.resolve('./data/volvox.bb'),
     })
-    await ti.getHeader()
     const feats = await ti.getFeatures('chrA', 0, 160)
     expect(feats).toEqual([])
   })
