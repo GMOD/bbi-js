@@ -63,7 +63,14 @@ describe('bigbed formats', () => {
     await ti.readIndices()
     const res = await ti.lookup('ENST00000467796.2')
     expect(res).toMatchSnapshot()
-    // const res2 = await ti.findFeat('SYCE3')
-    // console.log(res2)
+  })
+  it('findFeat in bigbed with multiple extra indexes on the gene name index', async () => {
+
+    const ti = new BigBed({
+      path: require.resolve('./data/chr22_with_name_and_geneName_index.bb'),
+    })
+    await ti.readIndices()
+    const res2 = await ti.findFeat('SYCE3')
+    expect(res2).toMatchSnapshot()
   })
 })

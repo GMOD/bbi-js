@@ -1,5 +1,6 @@
 import { Parser } from '@gmod/binary-parser'
-import { Observable, Observer } from 'rxjs'
+import { Observable, Observer,merge } from 'rxjs'
+import { map,reduce } from 'rxjs/operators'
 import BBI from './bbi'
 
 interface Loc {
@@ -141,15 +142,26 @@ export default class BigBed extends BBI {
   }
 
   public async findFeat(name: string, opts: SearchOptions = {}): Promise<Feature[]> {
-    const ret = await this.lookup(name, opts)
-    if (!ret.length) return []
+    const blocks = await this.lookup(name, opts)
+    if (!blocks.length) return []
     const view = await this.getUnzoomedView()
-    const ob = new Observable((observer: Observer<Feature[]>) => {
-      view.readFeatures(observer, ret, opts)
+    const res= blocks.map(block => {
+        return new Observable((observer: Observer<Feature[]>) => {
+          view.readFeatures(observer, [block], opts)
+        })
+       .pipe(
+         reduce((acc, curr) => acc.concat(curr)),
+         map(x => {
+           for(let i = 0; i < x.length; i+=1) {
+             x[i].field = block.field // eslint-disable-line
+           }
+           return x
+         }),
+       )
     })
-    const res = await ob.toPromise()
-
-
-    return res.filter((f:any) => (f.rest||'').split('\t')[f.field]===name)
+    const  ret = await merge(...res).toPromise()
+    return ret.filter((f:any) => {
+      return f.rest.split('\t')[f.field-3]===name
+    })
   }
 }
