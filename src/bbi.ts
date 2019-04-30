@@ -31,7 +31,7 @@ interface RefInfo {
   id: number
   length: number
 }
-interface Header {
+export interface Header {
   autoSql: string
   totalSummary: Statistics
   zoomLevels: any
@@ -148,8 +148,18 @@ export abstract class BBI {
 
   protected renameRefSeqs: (a: string) => string
 
+  /* fetch and parse header information from a bigwig or bigbed file
+   * @param abortSignal - abort the operation, can be null
+   * @return a Header object
+   */
   public getHeader: (abortSignal?: AbortSignal) => Promise<Header>
 
+  /*
+   * @param filehandle - a filehandle from generic-filehandle or implementing something similar to the node10 fs.promises API
+   * @param path - a Local file path as a string
+   * @param url - a URL string
+   * @param renameRefSeqs - an optional method to rename the internal reference sequences using a mapping function
+   */
   public constructor(
     options: {
       filehandle?: GenericFilehandle
@@ -273,6 +283,10 @@ export abstract class BBI {
     }
   }
 
+  /*
+   * fetches the "unzoomed" view of the bigwig data. this is the default for bigbed
+   * @param abortSignal - a signal to optionally abort this operation
+   */
   protected async getUnzoomedView(abortSignal?: AbortSignal): Promise<BlockView> {
     const {
       unzoomedIndexOffset,
@@ -295,9 +309,10 @@ export abstract class BBI {
     )
   }
 
-  protected async getView(scale: number, abortSignal?: AbortSignal): Promise<BlockView> {
-    return this.getUnzoomedView(abortSignal)
-  }
+  /*
+   * abstract method - get the view for a given scale
+   */
+  protected abstract async getView(scale: number, abortSignal?: AbortSignal): Promise<BlockView>
 
   /**
    * Gets features from a BigWig file

@@ -1,7 +1,9 @@
 import { Parser } from '@gmod/binary-parser'
 import { Observable, Observer, merge } from 'rxjs'
 import { map, reduce } from 'rxjs/operators'
+
 import { BBI, Feature } from './bbi'
+import { BlockView } from './blockView'
 
 interface Loc {
   key: string
@@ -31,6 +33,21 @@ export class BigBed extends BBI {
     this.readIndices = this.headerCache.abortableMemoize(this._readIndices.bind(this))
   }
 
+  /*
+   * retrieve unzoomed view for any scale
+   * @param scale - unused
+   * @param abortSignal - an optional AbortSignal to kill operation
+   * @return promise for a BlockView
+   */
+  protected async getView(scale: number, abortSignal: AbortSignal): Promise<BlockView> {
+    return this.getUnzoomedView(abortSignal)
+  }
+
+  /*
+   * parse the bigbed extraIndex fields
+   * @param abortSignal to abort operation
+   * @return a Promise for an array of Index data structure since there can be multiple extraIndexes in a bigbed, see bedToBigBed documentation
+   */
   public async _readIndices(abortSignal?: AbortSignal): Promise<Index[]> {
     const { extHeaderOffset, isBigEndian } = await this.getHeader(abortSignal)
     const data = Buffer.alloc(64)
@@ -68,6 +85,14 @@ export class BigBed extends BBI {
     return indices
   }
 
+  /*
+   * perform a search in the bigbed extraIndex to find which blocks in the bigbed data to look for the
+   * actual feature data
+   *
+   * @param name - the name to search for
+   * @param opts - a SearchOptions argument with optional signal
+   * @return a Promise for an array of bigbed block Loc entries
+   */
   public async lookup(name: string, opts: SearchOptions = {}): Promise<Loc[]> {
     const { signal } = opts
     const { isBigEndian } = await this.getHeader(signal)
@@ -144,6 +169,14 @@ export class BigBed extends BBI {
     return filterUndef(await Promise.all(locs))
   }
 
+  /*
+   * retrieve the features from the bigbed data that were found through the lookup of the extraIndex
+   * note that there can be multiple extraIndex, see the BigBed specification and the -extraIndex argument to bedToBigBed
+   *
+   * @param name - the name to search for
+   * @param opts - a SearchOptions argument with optional signal
+   * @return a Promise for an array of Feature
+   */
   public async findFeat(name: string, opts: SearchOptions = {}): Promise<Feature[]> {
     const blocks = await this.lookup(name, opts)
     if (!blocks.length) return []
