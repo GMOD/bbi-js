@@ -1,5 +1,17 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
+exports[`bigbed formats findFeat name in gencode 1`] = `
+Array [
+  Object {
+    "chromId": 12,
+    "end": 56518886,
+    "rest": "ENST00000023939.5	1000	+	56468697	56518262	0,0,0	10	182,90,95,94,140,79,114,55,96,800	0,3741,4716,6093,8400,15526,44730,48350,48521,49502	ENSG00000022277.9	RTFDC1	protein_coding	protein_coding	basic,CCDS",
+    "start": 56468584,
+    "uniqueId": "bb-39056",
+  },
+]
+`;
+
 exports[`bigbed formats loads small bigbed file 1`] = `
 Array [
   Object {

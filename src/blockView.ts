@@ -331,7 +331,7 @@ export default class BlockView {
     return f.start < range.end && f.end >= range.start
   }
 
-  public async readFeatures(observer: Observer<Feature[]>, blocks: any, opts: Options): Promise<void> {
+  public async readFeatures(observer: Observer<Feature[]>, blocks: any, opts: Options = {}): Promise<void> {
     const { blockType, isCompressed } = this
     const { signal, request } = opts
     const blockGroupsToFetch = groupBlocks(blocks)

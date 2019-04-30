@@ -1,8 +1,13 @@
 import { Parser } from '@gmod/binary-parser'
+import { Observable, Observer } from 'rxjs'
 import BBI from './bbi'
-
+interface Loc {
+  key: string
+  offset: number
+  length: number
+}
 interface SearchOptions {
-  abortSignal?: AbortSignal
+  signal?: AbortSignal
 }
 
 interface Index {
@@ -67,7 +72,7 @@ export default class BigBed extends BBI {
 
     var rootNodeOffset = 32
 
-    const bptReadNode = async (nodeOffset: number) => {
+    const bptReadNode = async (nodeOffset: number): Promise<Loc | undefined> => {
       const len = 4 + blockSize * (keySize + valSize)
       const data = Buffer.alloc(len)
 
@@ -102,7 +107,6 @@ export default class BigBed extends BBI {
           const key = node.leafkeys[i].key
           if (name.localeCompare(key) < 0 && lastOffset) {
             return bptReadNode(lastOffset)
-            return
           }
           lastOffset = node.leafkeys[i].offset
         }
@@ -110,16 +114,25 @@ export default class BigBed extends BBI {
       } else {
         let lastOffset
         for (let i = 0; i < node.keys.length; i++) {
-          const key = node.keys[i].key
+          const { key, start, length } = node.keys[i]
 
           if (key == name) {
             return node.keys[i]
-            const view = await this.getUnzoomedView()
-            return view.readFeatures([{ offset: start, size: length }], callback)
           }
         }
       }
+      return undefined
     }
     return bptReadNode(offset + rootNodeOffset)
+  }
+  public async findFeat(name: string, opts: SearchOptions = {}): Promise<Feature[]> {
+    const ret = await this.lookup(name, opts)
+    if (!ret) return undefined
+    const view = await this.getUnzoomedView()
+    const ob = new Observable((observer: Observer<Feature[]>) => {
+      view.readFeatures(observer, [ret], opts)
+    })
+    const res = await ob.toPromise()
+    return res.filter(f => (f.rest || '').startsWith(name))
   }
 }
