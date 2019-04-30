@@ -30,14 +30,7 @@ describe('bigbed formats', () => {
     const res = await ti.lookup('EDEN.1')
     expect(res).toMatchSnapshot()
   })
-  it('lookup name in gencode', async () => {
-    const ti = new BigBed({
-      path: require.resolve('./data/chr22.bb'),
-    })
-    await ti.readIndices()
-    const res = await ti.lookup('ENST00000467796.2')
-    expect(res).toMatchSnapshot()
-  })
+
   it('findFeat on file with no name index', async () => {
     const ti = new BigBed({
       path: require.resolve('./data/chr22.bb'),
@@ -45,6 +38,14 @@ describe('bigbed formats', () => {
     await ti.readIndices()
     const res = await ti.findFeat('ENST00000467796.2')
     expect(res).toEqual(undefined)
+  })
+  it('lookup name in gencode on file with no index', async () => {
+    const ti = new BigBed({
+      path: require.resolve('./data/chr22_with_name_index.bb'),
+    })
+    await ti.readIndices()
+    const res = await ti.lookup('ENST00000467796.2')
+    expect(res).toMatchSnapshot()
   })
   it('findFeat name in gencode', async () => {
     const ti = new BigBed({
