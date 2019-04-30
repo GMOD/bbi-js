@@ -1,15 +1,22 @@
 {
   "parser": "@typescript-eslint/parser",
+  "plugins": [
+    "prettier",
+    "jest",
+    "@typescript-eslint"
+  ],
   "extends": [
     "plugin:@typescript-eslint/recommended",
     "prettier/@typescript-eslint",
     "plugin:prettier/recommended"
   ],
-  "parserOptions": {
-    "ecmaVersion": 2018,
-    "sourceType": "module"
-  },
   "rules": {
-    "@typescript-eslint/no-explicit-any": 0
+    "no-underscore-dangle": 0,
+    "@typescript-eslint/no-explicit-any": 0,
+    "@typescript-eslint/explicit-function-return-type": [2, { "allowExpressions": true }],
+    "semi": [
+      "error",
+      "never"
+    ]
   }
 }

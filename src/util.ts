@@ -1,5 +1,7 @@
+/* eslint no-bitwise: ["error", { "allow": ["|"] }] */
 export class AbortError extends Error {
   public code: string
+
   public constructor(message: string) {
     super(message)
     this.code = 'ERR_ABORTED'
@@ -48,10 +50,10 @@ export function checkAbortSignal(signal?: AbortSignal): void {
 
   if (signal.aborted) {
     // console.log('bam aborted!')
-    if (typeof DOMException !== 'undefined')
+    if (typeof DOMException !== 'undefined') {
       // eslint-disable-next-line  no-undef
       throw new DOMException('aborted', 'AbortError')
-    else {
+    } else {
       const e = new AbortError('aborted')
       e.code = 'ERR_ABORTED'
       throw e

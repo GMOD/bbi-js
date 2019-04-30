@@ -95,7 +95,18 @@ returns a promise to an array of features. no concept of zoom levels is used wit
 
 Similar to BigWig, returns an RxJS observable for a observable stream
 
-#### how to parse BigBed results
+#### searchExtraIndex(name, opts)
+
+Specific, to bigbed files, this method searches the bigBed "extra indexes", there can be multiple indexes e.g. for the gene ID and gene name columns. See the usage of -extraIndex in bedToBigBed here https://genome.ucsc.edu/goldenpath/help/bigBed.html
+
+This function accepts two arguments
+
+- name: a string to search for in the BigBed extra indices
+- opts: an opject that can optionally contain opts.signal, an abort signal
+
+Returns a Promise to an array of Features, with an extra field indicating the field that was matched
+
+### How to parse BigBed results
 
 The BigBed line contents are returned as a raw text line e.g. {start: 0, end:100, rest: "ENST00000456328.2\t1000\t..."} where "rest" contains tab delimited text for the fields from 4 and on in the BED format.  The rest line can be parsed by the @gmod/bed module, which is not by integrated with this module, but can be combined with it as follows
 

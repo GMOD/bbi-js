@@ -6,6 +6,7 @@
  */
 export default class Range {
   public ranges: any
+
   public constructor(arg1: any, arg2?: any) {
     this.ranges = arguments.length === 2 ? [{ min: arg1, max: arg2 }] : 0 in arg1 ? Object.assign({}, arg1) : [arg1]
   }

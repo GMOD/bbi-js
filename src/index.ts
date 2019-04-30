@@ -1,4 +1,3 @@
-import BigWig from './bigwig'
-import BigBed from './bigbed'
-
-export { BigWig, BigBed }
+export { BigWig } from './bigwig'
+export { BigBed } from './bigbed'
+export { Feature, Header } from './bbi'

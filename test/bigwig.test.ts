@@ -1,7 +1,9 @@
-import BigWig from '../src/bigwig'
+/* eslint @typescript-eslint/explicit-function-return-type: 0 */
+import { BigWig } from '../src/'
 
 class HalfAbortController {
   public signal: any
+
   public constructor() {
     this.signal = { aborted: false }
   }
@@ -112,16 +114,16 @@ describe('bigwig formats', () => {
     const feats = await ti.getFeatures('GK000001.2', 1000000, 1001000)
 
     // match bigWigToBedGraph output approximately, the start and ends are not clipped like bedGraphToBigWig does though
-    const ret = `GK000001.2	999003	1000189	0
-    GK000001.2	1000189	1000210	1
-    GK000001.2	1000210	1000245	2
-    GK000001.2	1000245	1000276	1
-    GK000001.2	1000276	1000716	0
-    GK000001.2	1000716	1000803	2
-    GK000001.2	1000803	1000933	0
-    GK000001.2	1000933	1000972	2
-    GK000001.2	1000972	1000977	1
-    GK000001.2	1000977	1001000	0`
+    const ret = `GK000001.2\t999003\t1000189\t0
+    GK000001.2\t1000189\t1000210\t1
+    GK000001.2\t1000210\t1000245\t2
+    GK000001.2\t1000245\t1000276\t1
+    GK000001.2\t1000276\t1000716\t0
+    GK000001.2\t1000716\t1000803\t2
+    GK000001.2\t1000803\t1000933\t0
+    GK000001.2\t1000933\t1000972\t2
+    GK000001.2\t1000972\t1000977\t1
+    GK000001.2\t1000977\t1001000\t0`
       .split('\n')
       .map(s => {
         const r = s.split('\t')
@@ -139,7 +141,9 @@ describe('bigwig formats', () => {
       path: require.resolve('./data/cow.bw'),
     })
     const ret = await ti.getHeader()
+    //@ts-ignore
     ret.iWasMemoized = true
+    //@ts-ignore
     expect((await ti.getHeader()).iWasMemoized).toEqual(true)
   })
 
