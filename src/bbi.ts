@@ -100,14 +100,14 @@ export default abstract class BBIFile {
   }
 
   private async _getHeader(abortSignal?: AbortSignal): Promise<any> {
-    const isBigEndian = await this.isBigEndian(abortSignal)
-    const header = await this.getMainHeader(abortSignal)
-    const chroms = await this.readChromTree(abortSignal)
+    const isBigEndian = await this._isBigEndian(abortSignal)
+    const header = await this._getMainHeader(abortSignal)
+    const chroms = await this._readChromTree(abortSignal)
     return { ...header, ...chroms, isBigEndian }
   }
 
-  private async getMainHeader(abortSignal?: AbortSignal): Promise<Header> {
-    const ret = await this.getParsers(await this.isBigEndian())
+  private async _getMainHeader(abortSignal?: AbortSignal): Promise<Header> {
+    const ret = await this.getParsers(await this._isBigEndian())
     const buf = Buffer.alloc(2000)
     await this.bbi.read(buf, 0, 2000, 0, { signal: abortSignal })
     const header = ret.headerParser.parse(buf).result
@@ -123,7 +123,7 @@ export default abstract class BBIFile {
     return header
   }
 
-  private async isBigEndian(abortSignal?: AbortSignal): Promise<boolean> {
+  private async _isBigEndian(abortSignal?: AbortSignal): Promise<boolean> {
     const buf = Buffer.allocUnsafe(4)
     await this.bbi.read(buf, 0, 4, 0, { signal: abortSignal })
     let ret = buf.readInt32LE(0)
@@ -149,10 +149,10 @@ export default abstract class BBIFile {
       .uint64('unzoomedIndexOffset')
       .uint16('fieldCount')
       .uint16('definedFieldCount')
-      .uint64('asOffset')
+      .uint64('asOffset') // autoSql offset, used in bigbed
       .uint64('totalSummaryOffset')
       .uint32('uncompressBufSize')
-      .skip(8) // reserved
+      .uint64('extHeaderOffset') // name index offset, used in bigbed
       .array('zoomLevels', {
         length: 'numZoomLevels',
         type: new Parser()
@@ -193,9 +193,9 @@ export default abstract class BBIFile {
   }
 
   // todo: add progress if long running
-  private async readChromTree(abortSignal?: AbortSignal): Promise<ChromTree> {
-    const header = await this.getMainHeader(abortSignal)
-    const isBE = await this.isBigEndian(abortSignal)
+  private async _readChromTree(abortSignal?: AbortSignal): Promise<ChromTree> {
+    const header = await this._getMainHeader(abortSignal)
+    const isBE = await this._isBigEndian(abortSignal)
     const le = isBE ? 'big' : 'little'
     const refsByNumber: any = {}
     const refsByName: any = {}

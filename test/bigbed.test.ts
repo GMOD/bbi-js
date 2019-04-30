@@ -22,4 +22,18 @@ describe('bigbed formats', () => {
     const feats = await ti.getFeatures('chrA', 0, 160)
     expect(feats).toEqual([])
   })
+  it('lookup returns null on file with no extra index', async () => {
+    const ti = new BigBed({
+      path: require.resolve('./data/volvox.bb'),
+    })
+    const res = await ti.lookup('EDEN')
+    expect(res).toEqual(undefined)
+  })
+  it('lookup name in gencode', async () => {
+    const ti = new BigBed({
+      path: require.resolve('./data/gencode.bb'),
+    })
+    const res = await ti.lookup('EDEN')
+    expect(res).toEqual(undefined)
+  })
 })
