@@ -23,53 +23,39 @@ describe('bigbed formats', () => {
     const feats = await ti.getFeatures('chrA', 0, 160)
     expect(feats).toEqual([])
   })
-  it('lookup returns null on file with no extra index', async () => {
+  it('searchExtraIdex returns null on file with no extra index', async () => {
     const ti = new BigBed({
       path: require.resolve('./data/volvox.bb'),
     })
     await ti.readIndices()
-    const res = await ti.lookup('EDEN.1')
+    const res = await ti.searchExtraIndex('EDEN.1')
     expect(res).toMatchSnapshot()
   })
 
-  it('findFeat on file with no name index', async () => {
+  it('searchExtraIndex on file with no name index', async () => {
     const ti = new BigBed({
       path: require.resolve('./data/chr22.bb'),
     })
     await ti.readIndices()
-    const res = await ti.findFeat('ENST00000467796.2')
+    const res = await ti.searchExtraIndex('ENST00000467796.2')
     expect(res).toEqual([])
   })
-  it('lookup name in gencode on file with no index', async () => {
+
+  it('searchExtraIndex name in gencode', async () => {
     const ti = new BigBed({
       path: require.resolve('./data/chr22_with_name_index.bb'),
     })
     await ti.readIndices()
-    const res = await ti.lookup('ENST00000467796.2')
+    const res = await ti.searchExtraIndex('ENST00000467796.2')
     expect(res).toMatchSnapshot()
   })
-  it('findFeat name in gencode', async () => {
-    const ti = new BigBed({
-      path: require.resolve('./data/chr22_with_name_index.bb'),
-    })
-    await ti.readIndices()
-    const res = await ti.findFeat('ENST00000467796.2')
-    expect(res).toMatchSnapshot()
-  })
-  it('findFeat in bigbed with multiple extra indexes', async () => {
+
+  it('searchExtraIndex in bigbed with multiple extra indexes on the gene name index', async () => {
     const ti = new BigBed({
       path: require.resolve('./data/chr22_with_name_and_geneName_index.bb'),
     })
     await ti.readIndices()
-    const res = await ti.lookup('ENST00000467796.2')
-    expect(res).toMatchSnapshot()
-  })
-  it('findFeat in bigbed with multiple extra indexes on the gene name index', async () => {
-    const ti = new BigBed({
-      path: require.resolve('./data/chr22_with_name_and_geneName_index.bb'),
-    })
-    await ti.readIndices()
-    const res2 = await ti.findFeat('SYCE3')
+    const res2 = await ti.searchExtraIndex('SYCE3')
     expect(res2).toMatchSnapshot()
   })
 })

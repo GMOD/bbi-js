@@ -93,7 +93,7 @@ export class BigBed extends BBI {
    * @param opts - a SearchOptions argument with optional signal
    * @return a Promise for an array of bigbed block Loc entries
    */
-  public async lookup(name: string, opts: SearchOptions = {}): Promise<Loc[]> {
+  private async searchExtraIndexBlocks(name: string, opts: SearchOptions = {}): Promise<Loc[]> {
     const { signal } = opts
     const { isBigEndian } = await this.getHeader(signal)
     const indices = await this.readIndices(signal)
@@ -177,8 +177,8 @@ export class BigBed extends BBI {
    * @param opts - a SearchOptions argument with optional signal
    * @return a Promise for an array of Feature
    */
-  public async findFeat(name: string, opts: SearchOptions = {}): Promise<Feature[]> {
-    const blocks = await this.lookup(name, opts)
+  public async searchExtraIndex(name: string, opts: SearchOptions = {}): Promise<Feature[]> {
+    const blocks = await this.searchExtraIndexBlocks(name, opts)
     if (!blocks.length) return []
     const view = await this.getUnzoomedView()
     const res = blocks.map(block => {

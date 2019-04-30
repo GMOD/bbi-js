@@ -1,51 +1,5 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`bigbed formats findFeat in bigbed with multiple extra indexes 1`] = `
-Array [
-  Object {
-    "field": 3,
-    "key": "ENST00000467796.2",
-    "length": 15790,
-    "offset": 191816,
-    "reserved": 0,
-  },
-]
-`;
-
-exports[`bigbed formats findFeat in bigbed with multiple extra indexes on the gene name index 1`] = `
-Array [
-  Object {
-    "chromId": 0,
-    "end": 50562905,
-    "field": 13,
-    "rest": "ENST00000406915.3	1000	-	50551247	50556405	0,0,0	3	291,109,48	0,5185,11746	ENSG00000217442.3	SYCE3	protein_coding	protein_coding	basic,appris_principal,exp_conf,CCDS",
-    "start": 50551111,
-    "uniqueId": "bb-44795",
-  },
-  Object {
-    "chromId": 0,
-    "end": 50556432,
-    "field": 13,
-    "rest": "ENST00000402753.1	1000	-	50551247	50556405	0,0,0	2	206,136	0,5100	ENSG00000217442.3	SYCE3	protein_coding	protein_coding	basic,appris_principal,CCDS",
-    "start": 50551196,
-    "uniqueId": "bb-44973",
-  },
-]
-`;
-
-exports[`bigbed formats findFeat name in gencode 1`] = `
-Array [
-  Object {
-    "chromId": 0,
-    "end": 50799305,
-    "field": 3,
-    "rest": "ENST00000467796.2	1000	+	0	0	0,0,0	3	41,121,651	0,1919,15401	ENSG00000184319.12	RPL23AP82	processed_transcript	transcribed_unprocessed_pseudogene	-",
-    "start": 50783253,
-    "uniqueId": "bb-58197",
-  },
-]
-`;
-
 exports[`bigbed formats loads small bigbed file 1`] = `
 Array [
   Object {
@@ -116,26 +70,49 @@ Array [
 ]
 `;
 
-exports[`bigbed formats lookup name in gencode on file with no index 1`] = `
+exports[`bigbed formats searchExtraIdex returns null on file with no extra index 1`] = `
 Array [
   Object {
+    "chromId": 0,
+    "end": 9000,
     "field": 3,
-    "key": "ENST00000467796.2",
-    "length": 15790,
-    "offset": 191796,
-    "reserved": 0,
+    "rest": "EDEN.1	1000	+	1200	7608	0,0,0	4	451,903,501,2001	0,1950,3950,5950	EDEN	EDEN	-	-	-",
+    "start": 1049,
+    "uniqueId": "bb-0",
   },
 ]
 `;
 
-exports[`bigbed formats lookup returns null on file with no extra index 1`] = `
+exports[`bigbed formats searchExtraIndex in bigbed with multiple extra indexes on the gene name index 1`] = `
 Array [
   Object {
+    "chromId": 0,
+    "end": 50562905,
+    "field": 13,
+    "rest": "ENST00000406915.3	1000	-	50551247	50556405	0,0,0	3	291,109,48	0,5185,11746	ENSG00000217442.3	SYCE3	protein_coding	protein_coding	basic,appris_principal,exp_conf,CCDS",
+    "start": 50551111,
+    "uniqueId": "bb-44795",
+  },
+  Object {
+    "chromId": 0,
+    "end": 50556432,
+    "field": 13,
+    "rest": "ENST00000402753.1	1000	-	50551247	50556405	0,0,0	2	206,136	0,5100	ENSG00000217442.3	SYCE3	protein_coding	protein_coding	basic,appris_principal,CCDS",
+    "start": 50551196,
+    "uniqueId": "bb-44973",
+  },
+]
+`;
+
+exports[`bigbed formats searchExtraIndex name in gencode 1`] = `
+Array [
+  Object {
+    "chromId": 0,
+    "end": 50799305,
     "field": 3,
-    "key": "EDEN.1",
-    "length": 167,
-    "offset": 1402,
-    "reserved": 0,
+    "rest": "ENST00000467796.2	1000	+	0	0	0,0,0	3	41,121,651	0,1919,15401	ENSG00000184319.12	RPL23AP82	processed_transcript	transcribed_unprocessed_pseudogene	-",
+    "start": 50783253,
+    "uniqueId": "bb-58197",
   },
 ]
 `;
