@@ -1,12 +1,13 @@
 import { Parser } from '@gmod/binary-parser'
-import { Observable, Observer,merge } from 'rxjs'
-import { map,reduce } from 'rxjs/operators'
-import BBI from './bbi'
+import { Observable, Observer, merge } from 'rxjs'
+import { map, reduce } from 'rxjs/operators'
+import { BBI, Feature } from './bbi'
 
 interface Loc {
   key: string
   offset: number
   length: number
+  field?: number
 }
 interface SearchOptions {
   signal?: AbortSignal
@@ -22,7 +23,7 @@ export function filterUndef<T>(ts: (T | undefined)[]): T[] {
   return ts.filter((t: T | undefined): t is T => !!t)
 }
 
-export default class BigBed extends BBI {
+export class BigBed extends BBI {
   public readIndices: (abortSignal?: AbortSignal) => Promise<Index[]>
 
   public constructor(opts: any) {
@@ -49,7 +50,7 @@ export default class BigBed extends BBI {
     }
 
     const blocklen = 20
-    const len = blocklen*count
+    const len = blocklen * count
     const buf = Buffer.alloc(len)
     await this.bbi.read(buf, 0, len, offset)
     const extParser = new Parser()
@@ -74,21 +75,22 @@ export default class BigBed extends BBI {
     if (!indices.length) {
       return []
     }
-    const locs = await Promise.all(indices.map(async (index) => {
-      const {offset, field} = index
-      const data = Buffer.alloc(32)
+    const locs = indices.map(
+      async (index): Promise<Loc | undefined> => {
+        const { offset, field } = index
+        const data = Buffer.alloc(32)
 
-      await this.bbi.read(data, 0, 32, offset, { signal })
-      const p = new Parser()
-        .endianess(isBigEndian ? 'big' : 'little')
-        .int32('magic')
-        .int32('blockSize')
-        .int32('keySize')
-        .int32('valSize')
-        .uint64('itemCount')
+        await this.bbi.read(data, 0, 32, offset, { signal })
+        const p = new Parser()
+          .endianess(isBigEndian ? 'big' : 'little')
+          .int32('magic')
+          .int32('blockSize')
+          .int32('keySize')
+          .int32('valSize')
+          .uint64('itemCount')
 
-      const {blockSize,keySize,valSize} = p.parse(data).result
-      const bpt = new Parser()
+        const { blockSize, keySize, valSize } = p.parse(data).result
+        const bpt = new Parser()
           .endianess(isBigEndian ? 'big' : 'little')
           .int8('nodeType')
           .skip(1)
@@ -111,57 +113,57 @@ export default class BigBed extends BBI {
             },
           })
 
-      const bptReadNode = async (nodeOffset: number): Promise<Loc | undefined> => {
-        const len = 4 + blockSize * (keySize + valSize)
-        const buf = Buffer.alloc(len)
-        await this.bbi.read(buf, 0, len, nodeOffset, { signal })
-        const node = bpt.parse(buf).result
-        if (node.leafkeys) {
-          let lastOffset
-          for (let i = 0; i < node.leafkeys.length; i+=1) {
-            const { key } = node.leafkeys[i]
-            if (name.localeCompare(key) < 0 && lastOffset) {
-              return bptReadNode(lastOffset)
+        const bptReadNode = async (nodeOffset: number): Promise<Loc | undefined> => {
+          const len = 4 + blockSize * (keySize + valSize)
+          const buf = Buffer.alloc(len)
+          await this.bbi.read(buf, 0, len, nodeOffset, { signal })
+          const node = bpt.parse(buf).result
+          if (node.leafkeys) {
+            let lastOffset
+            for (let i = 0; i < node.leafkeys.length; i += 1) {
+              const { key } = node.leafkeys[i]
+              if (name.localeCompare(key) < 0 && lastOffset) {
+                return bptReadNode(lastOffset)
+              }
+              lastOffset = node.leafkeys[i].offset
             }
-            lastOffset = node.leafkeys[i].offset
+            return bptReadNode(lastOffset)
           }
-          return bptReadNode(lastOffset)
-        }
-        for (let i = 0; i < node.keys.length; i+=1) {
-          if (node.keys[i].key === name) {
-            return {...node.keys[i], field}
+          for (let i = 0; i < node.keys.length; i += 1) {
+            if (node.keys[i].key === name) {
+              return { ...node.keys[i], field }
+            }
           }
-        }
 
-        return undefined
-      }
-      const rootNodeOffset = 32
-      return bptReadNode(offset + rootNodeOffset)
-    }))
-    return filterUndef(locs)
+          return undefined
+        }
+        const rootNodeOffset = 32
+        return bptReadNode(offset + rootNodeOffset)
+      },
+    )
+    return filterUndef(await Promise.all(locs))
   }
 
   public async findFeat(name: string, opts: SearchOptions = {}): Promise<Feature[]> {
     const blocks = await this.lookup(name, opts)
     if (!blocks.length) return []
     const view = await this.getUnzoomedView()
-    const res= blocks.map(block => {
-        return new Observable((observer: Observer<Feature[]>) => {
-          view.readFeatures(observer, [block], opts)
-        })
-       .pipe(
-         reduce((acc, curr) => acc.concat(curr)),
-         map(x => {
-           for(let i = 0; i < x.length; i+=1) {
+    const res = blocks.map(block => {
+      return new Observable((observer: Observer<Feature[]>) => {
+        view.readFeatures(observer, [block], opts)
+      }).pipe(
+        reduce((acc, curr) => acc.concat(curr)),
+        map(x => {
+          for (let i = 0; i < x.length; i += 1) {
              x[i].field = block.field // eslint-disable-line
-           }
-           return x
-         }),
-       )
+          }
+          return x
+        }),
+      )
     })
-    const  ret = await merge(...res).toPromise()
-    return ret.filter((f:any) => {
-      return f.rest.split('\t')[f.field-3]===name
+    const ret = await merge(...res).toPromise()
+    return ret.filter((f: any) => {
+      return f.rest.split('\t')[f.field - 3] === name
     })
   }
 }

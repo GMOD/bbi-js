@@ -4,7 +4,7 @@ import { Parser } from '@gmod/binary-parser'
 import AbortablePromiseCache from 'abortable-promise-cache'
 import * as zlib from 'zlib'
 import QuickLRU from 'quick-lru'
-
+import { Feature } from './bbi'
 import Range from './range'
 import { groupBlocks } from './util'
 
@@ -145,7 +145,7 @@ function getParsers(isBigEndian: boolean): any {
  * @constructs
  */
 
-export default class BlockView {
+export class BlockView {
   private cirTreeOffset: number
 
   private cirTreeLength: number

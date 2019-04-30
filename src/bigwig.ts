@@ -1,7 +1,7 @@
-import BlockView from './blockView'
-import BBI from './bbi'
+import { BlockView } from './blockView'
+import { BBI } from './bbi'
 
-export default class BigWig extends BBI {
+export class BigWig extends BBI {
   /**
    * Retrieves a BlockView of a specific zoomLevel
    *

@@ -1,5 +1,5 @@
 /* eslint @typescript-eslint/explicit-function-return-type: 0 */
-import BigWig from '../src/bigwig'
+import { BigWig } from '../src/'
 
 class HalfAbortController {
   public signal: any
@@ -141,7 +141,9 @@ describe('bigwig formats', () => {
       path: require.resolve('./data/cow.bw'),
     })
     const ret = await ti.getHeader()
+    //@ts-ignore
     ret.iWasMemoized = true
+    //@ts-ignore
     expect((await ti.getHeader()).iWasMemoized).toEqual(true)
   })
 

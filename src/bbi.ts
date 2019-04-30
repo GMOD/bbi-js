@@ -3,16 +3,33 @@ import { LocalFile, RemoteFile, GenericFilehandle } from 'generic-filehandle'
 import { Observable, Observer } from 'rxjs'
 import { reduce } from 'rxjs/operators'
 
-import BlockView from './blockView'
+import { BlockView } from './blockView'
 import { abortBreakPoint, AbortError } from './util'
 
 const BIG_WIG_MAGIC = -2003829722
 const BIG_BED_MAGIC = -2021002517
 
+export interface Feature {
+  start: number
+  end: number
+  score: number
+  rest?: string // for bigbed line
+  minScore?: number // for summary line
+  maxScore?: number // for summary line
+  summary?: boolean // is summary line
+  uniqueId?: string // for bigbed contains uniqueId calculated from file offset
+  field?: number // used in bigbed searching
+}
 interface Statistics {
   scoreSum: number
   basesCovered: number
   scoreSumSquares: number
+}
+
+interface RefInfo {
+  name: string
+  id: number
+  length: number
 }
 interface Header {
   autoSql: string
@@ -27,42 +44,44 @@ interface Header {
   isBigEndian: boolean
   fileType: string
   refsByName: Map<string, number>
-  refsByNumber: Map<number, { name: string; id: number; length: number }>
+  refsByNumber: Map<number, RefInfo>
 }
 
 interface ChromTree {
   refsByName: Map<string, number>
-  refsByNumber: Map<number, { name: string; id: number; length: number }>
+  refsByNumber: Map<number, RefInfo>
 }
-
 /*
  * Takes a function that has one argument, abortSignal, that returns a promise
  * and it works by retrying the function if a previous attempt to initialize the parse cache was aborted
  */
+type AbortableCallback = (signal: AbortSignal) => Promise<any>
 class AbortAwareCache {
-  private cache: Map<(abortSignal: AbortSignal) => Promise<any>, any> = new Map()
+  private cache: Map<AbortableCallback, any> = new Map()
 
-  public abortableMemoize(
-    fn: (abortSignal?: AbortSignal) => Promise<any>,
-  ): (abortSignal?: AbortSignal) => Promise<any> {
+  public abortableMemoize(fn: (signal?: AbortSignal) => Promise<any>): (signal?: AbortSignal) => Promise<any> {
     const { cache } = this
-    return function abortableMemoizeFn(abortSignal?: AbortSignal): Promise<any> {
+    return function abortableMemoizeFn(signal?: AbortSignal): Promise<any> {
       if (!cache.has(fn)) {
-        const fnReturn = fn(abortSignal)
+        const fnReturn = fn(signal)
         cache.set(fn, fnReturn)
-        if (abortSignal) {
-          fnReturn.catch(() => {
-            if (abortSignal.aborted) cache.delete(fn)
-          })
+        if (signal) {
+          fnReturn.catch(
+            (): void => {
+              if (signal.aborted) cache.delete(fn)
+            },
+          )
         }
         return cache.get(fn)
       }
-      return cache.get(fn).catch((e: AbortError | DOMException) => {
-        if (e.code === 'ERR_ABORTED' || e.name === 'AbortError') {
-          return fn(abortSignal)
-        }
-        throw e
-      })
+      return cache.get(fn).catch(
+        (e: AbortError | DOMException): Promise<any> => {
+          if (e.code === 'ERR_ABORTED' || e.name === 'AbortError') {
+            return fn(signal)
+          }
+          throw e
+        },
+      )
     }
   }
 }
@@ -122,7 +141,7 @@ function getParsers(isBE: boolean): any {
   }
 }
 
-export default abstract class BBIFile {
+export abstract class BBI {
   protected bbi: GenericFilehandle
 
   protected headerCache: AbortAwareCache
@@ -210,7 +229,7 @@ export default abstract class BBIFile {
     await this.bbi.read(data, 0, unzoomedDataOffset - chromTreeOffset, chromTreeOffset, { signal: abortSignal })
 
     const p = getParsers(isBE)
-    const {keySize} = p.chromTreeParser.parse(data).result
+    const { keySize } = p.chromTreeParser.parse(data).result
     const leafNodeParser = new Parser()
       .endianess(le)
       .string('key', { stripNull: true, length: keySize })
@@ -246,7 +265,6 @@ export default abstract class BBIFile {
           bptReadNode(childOffset)
         }
       }
-
     }
     await bptReadNode(rootNodeOffset)
     return {
@@ -310,9 +328,11 @@ export default abstract class BBIFile {
     if (!view) {
       throw new Error('unable to get block view for data')
     }
-    return new Observable((observer: Observer<Feature[]>) => {
-      view.readWigData(chrName, start, end, observer, opts)
-    })
+    return new Observable(
+      (observer: Observer<Feature[]>): void => {
+        view.readWigData(chrName, start, end, observer, opts)
+      },
+    )
   }
 
   public async getFeatures(
@@ -322,7 +342,7 @@ export default abstract class BBIFile {
     opts: { basesPerSpan?: number; scale?: number; signal?: AbortSignal } = { scale: 1 },
   ): Promise<Feature[]> {
     const ob = await this.getFeatureStream(refName, start, end, opts)
-    const ret = await ob.pipe(reduce((acc, curr) => acc.concat(curr))).toPromise()
+    const ret = await ob.pipe(reduce((acc: Feature[], curr: Feature[]): Feature[] => acc.concat(curr))).toPromise()
     return ret || []
   }
 }

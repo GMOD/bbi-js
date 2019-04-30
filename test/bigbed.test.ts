@@ -1,6 +1,6 @@
 /* eslint @typescript-eslint/explicit-function-return-type: 0 */
 import BED from '@gmod/bed'
-import BigBed from '../src/bigbed'
+import { BigBed } from '../src/'
 
 describe('bigbed formats', () => {
   it('loads small bigbed file', async () => {
@@ -65,7 +65,6 @@ describe('bigbed formats', () => {
     expect(res).toMatchSnapshot()
   })
   it('findFeat in bigbed with multiple extra indexes on the gene name index', async () => {
-
     const ti = new BigBed({
       path: require.resolve('./data/chr22_with_name_and_geneName_index.bb'),
     })
