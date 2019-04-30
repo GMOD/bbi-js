@@ -246,7 +246,7 @@ export default abstract class BBIFile {
           bptReadNode(childOffset)
         }
       }
-      
+
     }
     await bptReadNode(rootNodeOffset)
     return {

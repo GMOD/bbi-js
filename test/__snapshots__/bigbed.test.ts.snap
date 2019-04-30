@@ -3,26 +3,16 @@
 exports[`bigbed formats findFeat in bigbed with multiple extra indexes 1`] = `
 Array [
   Object {
-    "chromId": 0,
-    "end": 50799305,
-    "rest": "ENST00000467796.2	1000	+	0	0	0,0,0	3	41,121,651	0,1919,15401	ENSG00000184319.12	RPL23AP82	processed_transcript	transcribed_unprocessed_pseudogene	-",
-    "start": 50783253,
-    "uniqueId": "bb-58197",
+    "field": 3,
+    "key": "ENST00000467796.2",
+    "length": 15790,
+    "offset": 191816,
+    "reserved": 0,
   },
 ]
 `;
 
-exports[`bigbed formats findFeat name in gencode 1`] = `
-Array [
-  Object {
-    "chromId": 0,
-    "end": 50799305,
-    "rest": "ENST00000467796.2	1000	+	0	0	0,0,0	3	41,121,651	0,1919,15401	ENSG00000184319.12	RPL23AP82	processed_transcript	transcribed_unprocessed_pseudogene	-",
-    "start": 50783253,
-    "uniqueId": "bb-58197",
-  },
-]
-`;
+exports[`bigbed formats findFeat name in gencode 1`] = `Array []`;
 
 exports[`bigbed formats loads small bigbed file 1`] = `
 Array [
@@ -95,19 +85,25 @@ Array [
 `;
 
 exports[`bigbed formats lookup name in gencode on file with no index 1`] = `
-Object {
-  "key": "ENST00000467796.2",
-  "length": 15790,
-  "offset": 191796,
-  "reserved": 0,
-}
+Array [
+  Object {
+    "field": 3,
+    "key": "ENST00000467796.2",
+    "length": 15790,
+    "offset": 191796,
+    "reserved": 0,
+  },
+]
 `;
 
 exports[`bigbed formats lookup returns null on file with no extra index 1`] = `
-Object {
-  "key": "EDEN.1",
-  "length": 167,
-  "offset": 1402,
-  "reserved": 0,
-}
+Array [
+  Object {
+    "field": 3,
+    "key": "EDEN.1",
+    "length": 167,
+    "offset": 1402,
+    "reserved": 0,
+  },
+]
 `;

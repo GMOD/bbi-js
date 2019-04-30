@@ -16,6 +16,11 @@ interface Index {
   offset: number
   field: number
 }
+
+export function filterUndef<T>(ts: (T | undefined)[]): T[] {
+  return ts.filter((t: T | undefined): t is T => !!t)
+}
+
 export default class BigBed extends BBI {
   public readIndices: (abortSignal?: AbortSignal) => Promise<Index[]>
 
@@ -38,10 +43,12 @@ export default class BigBed extends BBI {
     const { count, offset } = ret
 
     // no extra index is defined if count==0
-    if (ret.count === 0) {
+    if (count === 0) {
       return []
     }
-    const len = count * 20
+
+    const blocklen = 20
+    const len = blocklen*count
     const buf = Buffer.alloc(len)
     await this.bbi.read(buf, 0, len, offset)
     const extParser = new Parser()
@@ -54,90 +61,95 @@ export default class BigBed extends BBI {
     const indices = []
 
     for (let i = 0; i < count; i += 1) {
-      indices.push(extParser.parse(buf.slice(i * 20)).result)
+      indices.push(extParser.parse(buf.slice(i * blocklen)).result)
     }
     return indices
   }
 
-  public async lookup(name: string, opts: SearchOptions = {}): Promise<Loc | undefined> {
+  public async lookup(name: string, opts: SearchOptions = {}): Promise<Loc[]> {
     const { signal } = opts
     const { isBigEndian } = await this.getHeader(signal)
     const indices = await this.readIndices(signal)
     if (!indices.length) {
-      return undefined
+      return []
     }
-    const { offset } = indices[0]
-    const data = Buffer.alloc(32)
+    const locs = await Promise.all(indices.map(async (index) => {
+      const {offset, field} = index
+      const data = Buffer.alloc(32)
 
-    await this.bbi.read(data, 0, 32, offset, { signal })
-    const p = new Parser()
-      .endianess(isBigEndian ? 'big' : 'little')
-      .int32('magic')
-      .int32('blockSize')
-      .int32('keySize')
-      .int32('valSize')
-      .uint64('itemCount')
-
-    const {blockSize,keySize,valSize} = p.parse(data).result
-    const bpt = new Parser()
+      await this.bbi.read(data, 0, 32, offset, { signal })
+      const p = new Parser()
         .endianess(isBigEndian ? 'big' : 'little')
-        .int8('nodeType')
-        .skip(1)
-        .int16('cnt')
-        .choice({
-          tag: 'nodeType',
-          choices: {
-            0: new Parser().array('leafkeys', {
-              length: 'cnt',
-              type: new Parser().string('key', { length: keySize, stripNull: true }).uint64('offset'),
-            }),
-            1: new Parser().array('keys', {
-              length: 'cnt',
-              type: new Parser()
-                .string('key', { length: keySize, stripNull: true })
-                .uint64('offset')
-                .uint32('length')
-                .uint32('reserved'),
-            }),
-          },
-        })
-    const rootNodeOffset = 32
+        .int32('magic')
+        .int32('blockSize')
+        .int32('keySize')
+        .int32('valSize')
+        .uint64('itemCount')
 
-    const bptReadNode = async (nodeOffset: number): Promise<Loc | undefined> => {
-      const len = 4 + blockSize * (keySize + valSize)
-      const buf = Buffer.alloc(len)
-      await this.bbi.read(buf, 0, len, nodeOffset, { signal })
-      const node = bpt.parse(buf).result
-      if (node.leafkeys) {
-        let lastOffset
-        for (let i = 0; i < node.leafkeys.length; i+=1) {
-          const { key } = node.leafkeys[i]
-          if (name.localeCompare(key) < 0 && lastOffset) {
-            return bptReadNode(lastOffset)
+      const {blockSize,keySize,valSize} = p.parse(data).result
+      const bpt = new Parser()
+          .endianess(isBigEndian ? 'big' : 'little')
+          .int8('nodeType')
+          .skip(1)
+          .int16('cnt')
+          .choice({
+            tag: 'nodeType',
+            choices: {
+              0: new Parser().array('leafkeys', {
+                length: 'cnt',
+                type: new Parser().string('key', { length: keySize, stripNull: true }).uint64('offset'),
+              }),
+              1: new Parser().array('keys', {
+                length: 'cnt',
+                type: new Parser()
+                  .string('key', { length: keySize, stripNull: true })
+                  .uint64('offset')
+                  .uint32('length')
+                  .uint32('reserved'),
+              }),
+            },
+          })
+
+      const bptReadNode = async (nodeOffset: number): Promise<Loc | undefined> => {
+        const len = 4 + blockSize * (keySize + valSize)
+        const buf = Buffer.alloc(len)
+        await this.bbi.read(buf, 0, len, nodeOffset, { signal })
+        const node = bpt.parse(buf).result
+        if (node.leafkeys) {
+          let lastOffset
+          for (let i = 0; i < node.leafkeys.length; i+=1) {
+            const { key } = node.leafkeys[i]
+            if (name.localeCompare(key) < 0 && lastOffset) {
+              return bptReadNode(lastOffset)
+            }
+            lastOffset = node.leafkeys[i].offset
           }
-          lastOffset = node.leafkeys[i].offset
+          return bptReadNode(lastOffset)
         }
-        return bptReadNode(lastOffset)
-      }
-      for (let i = 0; i < node.keys.length; i+=1) {
-        if (node.keys[i].key === name) {
-          return node.keys[i]
+        for (let i = 0; i < node.keys.length; i+=1) {
+          if (node.keys[i].key === name) {
+            return {...node.keys[i], field}
+          }
         }
-      }
 
-      return undefined
-    }
-    return bptReadNode(offset + rootNodeOffset)
+        return undefined
+      }
+      const rootNodeOffset = 32
+      return bptReadNode(offset + rootNodeOffset)
+    }))
+    return filterUndef(locs)
   }
 
   public async findFeat(name: string, opts: SearchOptions = {}): Promise<Feature[]> {
     const ret = await this.lookup(name, opts)
-    if (!ret) return []
+    if (!ret.length) return []
     const view = await this.getUnzoomedView()
     const ob = new Observable((observer: Observer<Feature[]>) => {
-      view.readFeatures(observer, [ret], opts)
+      view.readFeatures(observer, ret, opts)
     })
     const res = await ob.toPromise()
-    return res.filter(f => (f.rest || '').startsWith(name))
+
+
+    return res.filter((f:any) => (f.rest||'').split('\t')[f.field]===name)
   }
 }

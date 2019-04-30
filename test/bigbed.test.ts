@@ -61,7 +61,9 @@ describe('bigbed formats', () => {
       path: require.resolve('./data/chr22_with_name_and_geneName_index.bb'),
     })
     await ti.readIndices()
-    const res = await ti.findFeat('ENST00000467796.2')
+    const res = await ti.lookup('ENST00000467796.2')
     expect(res).toMatchSnapshot()
+    // const res2 = await ti.findFeat('SYCE3')
+    // console.log(res2)
   })
 })
