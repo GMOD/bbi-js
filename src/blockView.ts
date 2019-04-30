@@ -197,7 +197,7 @@ export default class BlockView {
     observer: Observer<Feature[]>,
     opts: Options,
   ): Promise<void> {
-    const { refsByName, bbi, cirTreeOffset, isBigEndian, isCompressed, blockType } = this
+    const { refsByName, bbi, cirTreeOffset, isBigEndian } = this
     const { signal } = opts
     const chrId = refsByName[chrName]
     if (chrId === undefined) {
@@ -234,9 +234,9 @@ export default class BlockView {
           }
         }
       }
-      // if (outstanding !== 0) {
-      //   throw new Error('did not complete')
-      // }
+      if (outstanding !== 0) {
+        throw new Error('did not complete')
+      }
     }
     cirFobRecur = (offset: any, level: number): void => {
       outstanding += offset.length

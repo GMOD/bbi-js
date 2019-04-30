@@ -9,20 +9,22 @@ interface Loc {
 interface SearchOptions {
   signal?: AbortSignal
 }
-
 interface Index {
   type: number
   fieldcount: number
   offset: number
   field: number
 }
-
 export default class BigBed extends BBI {
-  private indices: Index[] = []
-  public async readIndices(abortSignal?: AbortSignal) {
-    const { unzoomedDataOffset, chromTreeOffset, extHeaderOffset, isBigEndian } = await this.getHeader(abortSignal)
+  public readIndices: (abortSignal?: AbortSignal) => Promise<Index[]>
+  public constructor(opts: any) {
+    super(opts)
+    this.readIndices = this.headerCache.abortableMemoize(this._readIndices.bind(this))
+  }
+  public async _readIndices(abortSignal?: AbortSignal): Promise<Index[]> {
+    const { extHeaderOffset, isBigEndian } = await this.getHeader(abortSignal)
     const data = Buffer.alloc(64)
-    const bytesRead = await this.bbi.read(data, 0, 64, extHeaderOffset)
+    await this.bbi.read(data, 0, 64, extHeaderOffset)
     const le = isBigEndian ? 'big' : 'little'
     const ret = new Parser()
       .endianess(le)
@@ -30,14 +32,15 @@ export default class BigBed extends BBI {
       .uint16('count')
       .uint64('offset')
       .parse(data).result
-    const { size, count, offset } = ret
+    const { count, offset } = ret
+
     // no extra index is defined if count==0
     if (ret.count === 0) {
-      return undefined
+      return []
     }
     const len = count * 20
     const buf = Buffer.alloc(len)
-    await this.bbi.read(data, 0, len, offset)
+    await this.bbi.read(buf, 0, len, offset)
     const extParser = new Parser()
       .endianess(le)
       .int16('type')
@@ -45,18 +48,22 @@ export default class BigBed extends BBI {
       .uint64('offset')
       .skip(4)
       .int16('field')
-    this.indices = this.indices || []
+    const indices = []
 
     for (let i = 0; i < count; i += 1) {
-      this.indices.push(extParser.parse(data.slice(i * 20)).result)
+      indices.push(extParser.parse(buf.slice(i * 20)).result)
     }
+    return indices
   }
 
-  public async lookup(name: string, opts: SearchOptions = {}) {
+  public async lookup(name: string, opts: SearchOptions = {}): Promise<Loc | undefined> {
     const { signal } = opts
     const { isBigEndian } = await this.getHeader(signal)
-    if (!this.indices.length) return undefined
-    const { offset } = this.indices[0]
+    const indices = await this.readIndices(signal)
+    if (!indices.length) {
+      return undefined
+    }
+    const { offset } = indices[0]
     const data = Buffer.alloc(32)
 
     await this.bbi.read(data, 0, 32, offset, { signal })
@@ -112,11 +119,8 @@ export default class BigBed extends BBI {
         }
         return bptReadNode(lastOffset)
       } else {
-        let lastOffset
         for (let i = 0; i < node.keys.length; i++) {
-          const { key, start, length } = node.keys[i]
-
-          if (key == name) {
+          if (node.keys[i].key == name) {
             return node.keys[i]
           }
         }
@@ -125,9 +129,10 @@ export default class BigBed extends BBI {
     }
     return bptReadNode(offset + rootNodeOffset)
   }
+
   public async findFeat(name: string, opts: SearchOptions = {}): Promise<Feature[]> {
     const ret = await this.lookup(name, opts)
-    if (!ret) return undefined
+    if (!ret) return []
     const view = await this.getUnzoomedView()
     const ob = new Observable((observer: Observer<Feature[]>) => {
       view.readFeatures(observer, [ret], opts)

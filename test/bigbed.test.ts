@@ -37,7 +37,7 @@ describe('bigbed formats', () => {
     })
     await ti.readIndices()
     const res = await ti.findFeat('ENST00000467796.2')
-    expect(res).toEqual(undefined)
+    expect(res).toEqual([])
   })
   it('lookup name in gencode on file with no index', async () => {
     const ti = new BigBed({
