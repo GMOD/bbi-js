@@ -1,6 +1,5 @@
 import { Parser } from '@gmod/binary-parser'
-import { LocalFile, RemoteFile } from 'generic-filehandle'
-import { GenericFilehandle } from 'generic-filehandle'
+import { LocalFile, RemoteFile, GenericFilehandle } from 'generic-filehandle'
 import { Observable, Observer } from 'rxjs'
 import { reduce } from 'rxjs/operators'
 
@@ -47,7 +46,7 @@ class AbortAwareCache {
     fn: (abortSignal?: AbortSignal) => Promise<any>,
   ): (abortSignal?: AbortSignal) => Promise<any> {
     const { cache } = this
-    return function abortableMemoizeFn(abortSignal?: AbortSignal) {
+    return function abortableMemoizeFn(abortSignal?: AbortSignal): Promise<any> {
       if (!cache.has(fn)) {
         const fnReturn = fn(abortSignal)
         cache.set(fn, fnReturn)
@@ -125,8 +124,11 @@ function getParsers(isBE: boolean): any {
 
 export default abstract class BBIFile {
   protected bbi: GenericFilehandle
+
   protected headerCache: AbortAwareCache
+
   protected renameRefSeqs: (a: string) => string
+
   public getHeader: (abortSignal?: AbortSignal) => Promise<Header>
 
   public constructor(
@@ -189,6 +191,7 @@ export default abstract class BBIFile {
     }
     throw new Error('not a BigWig/BigBed file')
   }
+
   // todo: add progress if long running
   private async _readChromTree(abortSignal?: AbortSignal): Promise<ChromTree> {
     const header = await this._getMainHeader(abortSignal)
@@ -207,15 +210,15 @@ export default abstract class BBIFile {
     await this.bbi.read(data, 0, unzoomedDataOffset - chromTreeOffset, chromTreeOffset, { signal: abortSignal })
 
     const p = getParsers(isBE)
-    const ret = p.chromTreeParser.parse(data).result
+    const {keySize} = p.chromTreeParser.parse(data).result
     const leafNodeParser = new Parser()
       .endianess(le)
-      .string('key', { stripNull: true, length: ret.keySize })
+      .string('key', { stripNull: true, length: keySize })
       .uint32('refId')
       .uint32('refSize')
     const nonleafNodeParser = new Parser()
       .endianess(le)
-      .skip(ret.keySize)
+      .skip(keySize)
       .uint64('childOffset')
     const rootNodeOffset = 32
     const bptReadNode = async (currentOffset: number): Promise<void> => {
@@ -225,6 +228,7 @@ export default abstract class BBIFile {
       const { isLeafNode, cnt } = ret.result
       offset += ret.offset
       for (let n = 0; n < cnt; n += 1) {
+        // eslint-disable-next-line no-await-in-loop
         await abortBreakPoint(abortSignal)
         if (isLeafNode) {
           const leafRet = leafNodeParser.parse(data.slice(offset))
@@ -239,9 +243,10 @@ export default abstract class BBIFile {
           let { childOffset } = nonleafRet.result
           offset += nonleafRet.offset
           childOffset -= chromTreeOffset
-          return bptReadNode(childOffset)
+          bptReadNode(childOffset)
         }
       }
+      
     }
     await bptReadNode(rootNodeOffset)
     return {
@@ -275,6 +280,7 @@ export default abstract class BBIFile {
   protected async getView(scale: number, abortSignal?: AbortSignal): Promise<BlockView> {
     return this.getUnzoomedView(abortSignal)
   }
+
   /**
    * Gets features from a BigWig file
    *
@@ -289,7 +295,6 @@ export default abstract class BBIFile {
     end: number,
     opts: { basesPerSpan?: number; scale?: number; signal?: AbortSignal } = { scale: 1 },
   ): Promise<Observable<Feature[]>> {
-    debugger
     await this.getHeader(opts.signal)
     const chrName = this.renameRefSeqs(refName)
     let view: BlockView

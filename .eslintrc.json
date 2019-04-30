@@ -1,0 +1,31 @@
+{
+  "parser": "@typescript-eslint/parser",
+  "plugins": [
+    "prettier",
+    "jest",
+    "@typescript-eslint"
+  ],
+  "extends": [
+    "airbnb-base",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:import/typescript",
+    "prettier",
+    "prettier/@typescript-eslint"
+  ],
+  "rules": {
+    "import/named": "off",
+    "no-underscore-dangle": 0,
+    "@typescript-eslint/no-explicit-any": 0,
+    "semi": [
+      "error",
+      "never"
+    ]
+  },
+  "parserOptions": {
+    "project": "./tsconfig.json",
+    "tsconfigRootDir": "."
+  },
+  "env": {
+    "jest/globals": true
+  }
+}

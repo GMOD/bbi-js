@@ -1,5 +1,6 @@
-import BigBed from '../src/bigbed'
+/* eslint @typescript-eslint/explicit-function-return-type: 0 */
 import BED from '@gmod/bed'
+import BigBed from '../src/bigbed'
 
 describe('bigbed formats', () => {
   it('loads small bigbed file', async () => {

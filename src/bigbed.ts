@@ -1,6 +1,7 @@
 import { Parser } from '@gmod/binary-parser'
 import { Observable, Observer } from 'rxjs'
 import BBI from './bbi'
+
 interface Loc {
   key: string
   offset: number
@@ -17,10 +18,12 @@ interface Index {
 }
 export default class BigBed extends BBI {
   public readIndices: (abortSignal?: AbortSignal) => Promise<Index[]>
+
   public constructor(opts: any) {
     super(opts)
     this.readIndices = this.headerCache.abortableMemoize(this._readIndices.bind(this))
   }
+
   public async _readIndices(abortSignal?: AbortSignal): Promise<Index[]> {
     const { extHeaderOffset, isBigEndian } = await this.getHeader(abortSignal)
     const data = Buffer.alloc(64)
@@ -74,18 +77,9 @@ export default class BigBed extends BBI {
       .int32('keySize')
       .int32('valSize')
       .uint64('itemCount')
-    const ret = p.parse(data).result
-    const { blockSize, keySize, valSize } = ret
 
-    var rootNodeOffset = 32
-
-    const bptReadNode = async (nodeOffset: number): Promise<Loc | undefined> => {
-      const len = 4 + blockSize * (keySize + valSize)
-      const data = Buffer.alloc(len)
-
-      await this.bbi.read(data, 0, len, nodeOffset, { signal })
-
-      const p = new Parser()
+    const {blockSize,keySize,valSize} = p.parse(data).result
+    const bpt = new Parser()
         .endianess(isBigEndian ? 'big' : 'little')
         .int8('nodeType')
         .skip(1)
@@ -107,24 +101,30 @@ export default class BigBed extends BBI {
             }),
           },
         })
-      const node = p.parse(data).result
+    const rootNodeOffset = 32
+
+    const bptReadNode = async (nodeOffset: number): Promise<Loc | undefined> => {
+      const len = 4 + blockSize * (keySize + valSize)
+      const buf = Buffer.alloc(len)
+      await this.bbi.read(buf, 0, len, nodeOffset, { signal })
+      const node = bpt.parse(buf).result
       if (node.leafkeys) {
         let lastOffset
-        for (let i = 0; i < node.leafkeys.length; i++) {
-          const key = node.leafkeys[i].key
+        for (let i = 0; i < node.leafkeys.length; i+=1) {
+          const { key } = node.leafkeys[i]
           if (name.localeCompare(key) < 0 && lastOffset) {
             return bptReadNode(lastOffset)
           }
           lastOffset = node.leafkeys[i].offset
         }
         return bptReadNode(lastOffset)
-      } else {
-        for (let i = 0; i < node.keys.length; i++) {
-          if (node.keys[i].key == name) {
-            return node.keys[i]
-          }
+      }
+      for (let i = 0; i < node.keys.length; i+=1) {
+        if (node.keys[i].key === name) {
+          return node.keys[i]
         }
       }
+
       return undefined
     }
     return bptReadNode(offset + rootNodeOffset)
