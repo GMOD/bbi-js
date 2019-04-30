@@ -86,6 +86,25 @@ class AbortAwareCache {
   }
 }
 
+/**
+ * Wrapper for rxjs Observable.create with improved error handling, from jbrowse-components
+ * @param {function} func observer function, could be async
+ */
+function ObservableCreate<T>(func: Function): Observable<T> {
+  return Observable.create((observer: Observer<T>) => {
+    try {
+      const ret = func(observer)
+      // catch async errors
+      if (ret && ret.catch) ret.catch((error: any) => observer.error(error))
+      return ret
+    } catch (error) {
+      // catch sync errors
+      observer.error(error)
+    }
+    return undefined
+  })
+}
+
 function getParsers(isBE: boolean): any {
   const le = isBE ? 'big' : 'little'
   const headerParser = new Parser()
@@ -343,7 +362,7 @@ export abstract class BBI {
     if (!view) {
       throw new Error('unable to get block view for data')
     }
-    return new Observable(
+    return ObservableCreate(
       (observer: Observer<Feature[]>): void => {
         view.readWigData(chrName, start, end, observer, opts)
       },

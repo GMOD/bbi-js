@@ -147,31 +147,18 @@ function getParsers(isBigEndian: boolean): any {
 
 export class BlockView {
   private cirTreeOffset: number
-
   private cirTreeLength: number
-
   private bbi: any
-
   private isCompressed: boolean
-
   private isBigEndian: boolean
-
   private refsByName: any
-
   private blockType: string
-
   private cirTreeBuffer: Buffer
-
   private cirTreePromise?: Promise<void>
-
   private featureCache: any
-
   private leafParser: any
-
   private bigWigParser: any
-
   private bigBedParser: any
-
   private summaryParser: any
 
   public constructor(
@@ -250,9 +237,6 @@ export class BlockView {
             this.readFeatures(observer, blocksToFetch, { ...opts, request })
           }
         }
-      }
-      if (outstanding !== 0) {
-        throw new Error('did not complete')
       }
     }
     const cirFobRecur = (offset: any, level: number): void => {
