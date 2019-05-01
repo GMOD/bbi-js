@@ -51,14 +51,19 @@ interface ChromTree {
   refsByName: Map<string, number>
   refsByNumber: Map<number, RefInfo>
 }
-/*
- * Takes a function that has one argument, abortSignal, that returns a promise
- * and it works by retrying the function if a previous attempt to initialize the parse cache was aborted
- */
+
 type AbortableCallback = (signal: AbortSignal) => Promise<any>
+
+/* A class that provides memoization for abortable calls */
 class AbortAwareCache {
   private cache: Map<AbortableCallback, any> = new Map()
 
+  /*
+   * Takes a function that has one argument, abortSignal, that returns a promise
+   * and it works by retrying the function if a previous attempt to initialize the parse cache was aborted
+   * @param fn - an AbortableCallback
+   * @return a memoized version of the AbortableCallback using the AbortAwareCache
+   */
   public abortableMemoize(fn: (signal?: AbortSignal) => Promise<any>): (signal?: AbortSignal) => Promise<any> {
     const { cache } = this
     return function abortableMemoizeFn(signal?: AbortSignal): Promise<any> {
@@ -95,16 +100,25 @@ function ObservableCreate<T>(func: Function): Observable<T> {
     try {
       const ret = func(observer)
       // catch async errors
-      if (ret && ret.catch) ret.catch((error: any) => observer.error(error))
+      if (ret && ret.catch) {
+      console.log('wtf2')
+        ret.catch((error: any) => observer.error(error))
+      }
       return ret
     } catch (error) {
       // catch sync errors
+      console.log('wtf')
       observer.error(error)
     }
     return undefined
   })
 }
 
+/* get the compiled parsers for different sections of the bigwig file
+ *
+ * @param isBE - is big endian, typically false
+ * @return an object with compiled parsers
+ */
 function getParsers(isBE: boolean): any {
   const le = isBE ? 'big' : 'little'
   const headerParser = new Parser()
@@ -120,7 +134,7 @@ function getParsers(isBE: boolean): any {
     .uint64('asOffset') // autoSql offset, used in bigbed
     .uint64('totalSummaryOffset')
     .uint32('uncompressBufSize')
-    .uint64('extHeaderOffset') // name index offset, used in bigbed
+    .uint64('extHeaderOffset') // extraIndex offset, used in bigbed
     .array('zoomLevels', {
       length: 'numZoomLevels',
       type: new Parser()
@@ -364,7 +378,11 @@ export abstract class BBI {
     }
     return ObservableCreate(
       (observer: Observer<Feature[]>): void => {
+        try {
         view.readWigData(chrName, start, end, observer, opts)
+        } catch(e) {
+          console.error('wtf',e)
+        }
       },
     )
   }
