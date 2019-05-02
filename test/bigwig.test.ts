@@ -195,4 +195,11 @@ describe('bigwig formats', () => {
     aborter.abort()
     await expect(ob.toPromise()).rejects.toThrow(/aborted/)
   })
+  it('test uncompressed bw (-unc from wigToBigWig)', async () => {
+    const ti = new BigWig({
+      path: require.resolve('./data/uncompressed.bw'),
+    })
+    const ob = await ti.getFeatures('ctgA', 40000, 40100)
+    expect(ob.slice(0, 10)).toMatchSnapshot()
+  })
 })

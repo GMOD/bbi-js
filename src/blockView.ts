@@ -374,8 +374,11 @@ export class BlockView {
           const data = await this.featureCache.get(`${length}_${offset}`, blockGroup, signal)
           blockGroup.blocks.forEach((block: any) => {
             let blockOffset = block.offset - blockGroup.offset
-            const resultData = isCompressed ? zlib.inflateSync(data.slice(blockOffset)) : data
-            blockOffset = isCompressed ? 0 : offset
+            let resultData = data
+            if (isCompressed) {
+              resultData = zlib.inflateSync(data.slice(blockOffset))
+              blockOffset = 0
+            }
 
             switch (blockType) {
               case 'summary':

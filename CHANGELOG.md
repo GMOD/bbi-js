@@ -1,3 +1,5 @@
+- Add regression fix since 1.0.16 for uncompressed files. Thanks to @lidaof for reporting!
+
 ## [1.0.18](https://github.com/GMOD/bbi-js/compare/v1.0.17...v1.0.18) (2019-05-02)
 
 

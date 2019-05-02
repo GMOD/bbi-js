@@ -1344,3 +1344,58 @@ Array [
   },
 ]
 `;
+
+exports[`bigwig formats test uncompressed bw (-unc from wigToBigWig) 1`] = `
+Array [
+  Object {
+    "end": 40000,
+    "score": 23,
+    "start": 39999,
+  },
+  Object {
+    "end": 40001,
+    "score": 23,
+    "start": 40000,
+  },
+  Object {
+    "end": 40002,
+    "score": 23,
+    "start": 40001,
+  },
+  Object {
+    "end": 40003,
+    "score": 23,
+    "start": 40002,
+  },
+  Object {
+    "end": 40004,
+    "score": 25,
+    "start": 40003,
+  },
+  Object {
+    "end": 40005,
+    "score": 25,
+    "start": 40004,
+  },
+  Object {
+    "end": 40006,
+    "score": 24,
+    "start": 40005,
+  },
+  Object {
+    "end": 40007,
+    "score": 23,
+    "start": 40006,
+  },
+  Object {
+    "end": 40008,
+    "score": 22,
+    "start": 40007,
+  },
+  Object {
+    "end": 40009,
+    "score": 22,
+    "start": 40008,
+  },
+]
+`;
