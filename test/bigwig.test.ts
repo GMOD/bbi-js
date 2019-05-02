@@ -176,4 +176,23 @@ describe('bigwig formats', () => {
     expect(feats.slice(-10)).toMatchSnapshot()
     expect(feats.length).toEqual(595)
   })
+
+  it('abort with getFeatures', async () => {
+    const ti = new BigWig({
+      path: require.resolve('./data/volvox.bw'),
+    })
+    const aborter = new HalfAbortController()
+    const ob = ti.getFeatures('ctgA', 0, 100, { signal: aborter.signal })
+    aborter.abort()
+    await expect(ob).rejects.toThrow(/aborted/)
+  })
+  it('abort with getFeatureStream', async () => {
+    const ti = new BigWig({
+      path: require.resolve('./data/volvox.bw'),
+    })
+    const aborter = new HalfAbortController()
+    const ob = await ti.getFeatureStream('ctgA', 0, 100, { signal: aborter.signal })
+    aborter.abort()
+    await expect(ob.toPromise()).rejects.toThrow(/aborted/)
+  })
 })
