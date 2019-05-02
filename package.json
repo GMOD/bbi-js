@@ -44,7 +44,7 @@
     "abortable-promise-cache": "^1.0.1",
     "buffer-crc32": "^0.2.13",
     "es6-promisify": "^6.0.1",
-    "generic-filehandle": "^1.0.8",
+    "generic-filehandle": "^1.0.9",
     "quick-lru": "^4.0.0",
     "rxjs": "^6.5.1"
   },
