@@ -51,14 +51,19 @@ interface ChromTree {
   refsByName: Map<string, number>
   refsByNumber: Map<number, RefInfo>
 }
-/*
- * Takes a function that has one argument, abortSignal, that returns a promise
- * and it works by retrying the function if a previous attempt to initialize the parse cache was aborted
- */
+
 type AbortableCallback = (signal: AbortSignal) => Promise<any>
+
+/* A class that provides memoization for abortable calls */
 class AbortAwareCache {
   private cache: Map<AbortableCallback, any> = new Map()
 
+  /*
+   * Takes a function that has one argument, abortSignal, that returns a promise
+   * and it works by retrying the function if a previous attempt to initialize the parse cache was aborted
+   * @param fn - an AbortableCallback
+   * @return a memoized version of the AbortableCallback using the AbortAwareCache
+   */
   public abortableMemoize(fn: (signal?: AbortSignal) => Promise<any>): (signal?: AbortSignal) => Promise<any> {
     const { cache } = this
     return function abortableMemoizeFn(signal?: AbortSignal): Promise<any> {
@@ -86,6 +91,11 @@ class AbortAwareCache {
   }
 }
 
+/* get the compiled parsers for different sections of the bigwig file
+ *
+ * @param isBE - is big endian, typically false
+ * @return an object with compiled parsers
+ */
 function getParsers(isBE: boolean): any {
   const le = isBE ? 'big' : 'little'
   const headerParser = new Parser()
