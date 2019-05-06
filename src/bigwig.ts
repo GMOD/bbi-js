@@ -19,7 +19,7 @@ export class BigWig extends BBI {
       maxLevel -= 1
     }
 
-    for (let i = maxLevel; i > 0; i -= 1) {
+    for (let i = maxLevel; i >= 0; i -= 1) {
       const zh = zoomLevels[i]
       if (zh && zh.reductionLevel <= 2 * basesPerPx) {
         const indexLength =
