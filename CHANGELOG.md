@@ -1,3 +1,7 @@
+## [1.0.20](https://github.com/GMOD/bbi-js/compare/v1.0.19...v1.0.20) (2019-05-06)
+
+
+
 - Add fix that prevented accessing the lowest zoom/reduction level
 
 ## [1.0.19](https://github.com/GMOD/bbi-js/compare/v1.0.18...v1.0.19) (2019-05-02)
