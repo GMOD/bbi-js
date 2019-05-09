@@ -1,3 +1,5 @@
+- Add fix for reading files with greater than 256 contigs
+
 ## [1.0.20](https://github.com/GMOD/bbi-js/compare/v1.0.19...v1.0.20) (2019-05-06)
 
 

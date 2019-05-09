@@ -266,24 +266,27 @@ export abstract class BBI {
       const ret = p.isLeafNode.parse(data.slice(offset))
       const { isLeafNode, cnt } = ret.result
       offset += ret.offset
-      for (let n = 0; n < cnt; n += 1) {
-        // eslint-disable-next-line no-await-in-loop
-        await abortBreakPoint(abortSignal)
-        if (isLeafNode) {
+      await abortBreakPoint(abortSignal)
+      if (isLeafNode) {
+        for (let n = 0; n < cnt; n += 1) {
           const leafRet = leafNodeParser.parse(data.slice(offset))
           offset += leafRet.offset
           const { key, refId, refSize } = leafRet.result
           const refRec = { name: key, id: refId, length: refSize }
           refsByName[this.renameRefSeqs(key)] = refId
           refsByNumber[refId] = refRec
-        } else {
-          // parse index node
+        }
+      } else {
+        // parse index node
+        const nextNodes = []
+        for (let n = 0; n < cnt; n += 1) {
           const nonleafRet = nonleafNodeParser.parse(data.slice(offset))
           let { childOffset } = nonleafRet.result
           offset += nonleafRet.offset
           childOffset -= chromTreeOffset
-          bptReadNode(childOffset)
+          nextNodes.push(bptReadNode(childOffset))
         }
+        await Promise.all(nextNodes)
       }
     }
     await bptReadNode(rootNodeOffset)

@@ -58,4 +58,11 @@ describe('bigbed formats', () => {
     const res2 = await ti.searchExtraIndex('SYCE3')
     expect(res2).toMatchSnapshot()
   })
+  it('2057 contigs', async () => {
+    const ti = new BigBed({
+      path: require.resolve('./data/2057.bb'),
+    })
+    const header = await ti.getHeader()
+    expect(Object.keys(header.refsByName).length).toEqual(2057)
+  })
 })
