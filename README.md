@@ -156,9 +156,6 @@ Features after parsing with @gmod/bed:
         spID: 'AL137655' }
 ```
 
-## Documentation
-
-See [docs](docs/README.md)
 
 ## Academic Use
 
