@@ -3,113 +3,44 @@
 [![NPM version](https://img.shields.io/npm/v/@gmod/bbi.svg?style=flat-square)](https://npmjs.org/package/@gmod/bbi)
 [![Build Status](https://img.shields.io/travis/GMOD/bbi-js/master.svg?style=flat-square)](https://travis-ci.org/GMOD/bbi-js) [![Coverage Status](https://img.shields.io/codecov/c/github/GMOD/bbi-js/master.svg?style=flat-square)](https://codecov.io/gh/GMOD/bbi-js/branch/master)
 
-
 A parser for bigwig and bigbed file formats
 
-## Usage
+## Examples
 
-If using locally
+### BigWig example
 
+```js
     const {BigWig} = require('@gmod/bbi');
     const ti = new BigWig({
       path: 'volvox.bw'
+      // url: 'http://localhost/volvox.bw'
+      // filehandle: new RemoteFile('http://localhost/volvox.bw') from generic-filehandle
     });
     (async () => {
-      await ti.getHeader();
-      const feats = await ti.getFeatures('chr1', 0, 100, { scale: 1 });
+      // contains features and information about chromosomes in response
+      const header = await ti.getHeader();
+
+      // acquire features, note 0-based query and 0-based features are returned
+      const feats = await ti.getFeatures('chr1', 0, 100,);
+
+      // alternatively, use getFeatureStream. featCallback will receives arrays of features
+      // const observer = await bigwig.getFeatureStream('chr1', 0, 100)
+      // observer.subscribe(featCallback, errorCallback, completedCallback)
     })();
+```
 
+### BigBed example
 
-## Documentation
+The BigBed line contents are returned as a "rest" field in the output  e.g. 
 
-### BigWig/BigBed constructors
+    {
+        uniqueId: 'bb-171', // based on file offset
+        start: 0,
+        end: 100,
+        rest: "ENST00000456328.2\t1000\t..."
+    }
 
-Accepts an object containing either
-
-* path - path to a local file
-* url - path to a url
-* filehandle - a filehandle instance that you can implement as a custom class yourself. path and url are based on https://www.npmjs.com/package/generic-filehandle but by implementing a class containing the Filehandle interface specified therein, you can pass it to this module
-
-
-### BigWig
-
-#### getFeatures(refName, start, end, opts)
-
-* refName - a name of a chromosome in the file
-* start - a 0-based half open start coordinate
-* end - a 0-based half open end coordinate
-* opts.scale - indicates zoom level to use, specified as pxPerBp, e.g. being zoomed out, you might have 100bp per pixel so opts.scale would be 1/100. the zoom level that is returned is the one which has reductionLevel<=2/opts.scale (reductionLevel is a property of the zoom level structure in the bigwig file data)
-* opts.basesPerScale - optional, inverse of opts.scale e.g. bpPerPx
-* opts.signal - optional, an AbortSignal to halt processing
-
-
-Returns a promise to an array of features. If an incorrect refName or no features are found the result is an empty array.
-
-Example:
-
-    const feats = await bigwig.getFeatures('chr1', 0, 100)
-    // returns array of features with start, end, score
-    // coordinates on returned data are are 0-based half open
-    // no conversion to 1-based as in wig is done)
-    // note refseq is not returned on the object, it is clearly chr1 from the query though
-
-
-### Understanding scale and reductionLevel
-
-Here is what the reductionLevel structure looks like in a file. The zoomLevel that is chosen is the first reductionLevel<2*opts.basesPerScale (or reductionLevel<2/opts.scale) when scanning backwards through this list
-
-      [ { reductionLevel: 40, ... },
-        { reductionLevel: 160, ... },
-        { reductionLevel: 640, ... },
-        { reductionLevel: 2560, ... },
-        { reductionLevel: 10240, ... },
-        { reductionLevel: 40960, ... },
-        { reductionLevel: 163840, ... } ]
-
-
-#### getFeatureStream(refName, start, end, opts)
-
-Same as getFeatures but returns an RxJS observable stream, useful for very large queries
-
-    const observer = await bigwig.getFeatureStream('chr1', 0, 100)
-    observer.subscribe(chunk => {
-       /* chunk contains array of features with start, end, score */
-    }, error => {
-       /* process error */
-    }, () => {
-       /* completed */
-    })
-
-### BigBed
-
-#### getFeatures(refName, start, end, opts)
-
-* refName - a name of a chromosome in the file
-* start - a 0-based half open start coordinate
-* end - a 0-based half open end coordinate
-* opts.signal - optional, an AbortSignal to halt processing
-
-returns a promise to an array of features. no concept of zoom levels is used with bigwig data
-
-#### getFeatureStream(refName, start, end, opts)
-
-Similar to BigWig, returns an RxJS observable for a observable stream
-
-#### searchExtraIndex(name, opts)
-
-Specific, to bigbed files, this method searches the bigBed "extra indexes", there can be multiple indexes e.g. for the gene ID and gene name columns. See the usage of -extraIndex in bedToBigBed here https://genome.ucsc.edu/goldenpath/help/bigBed.html
-
-This function accepts two arguments
-
-- name: a string to search for in the BigBed extra indices
-- opts: an opject that can optionally contain opts.signal, an abort signal
-
-Returns a Promise to an array of Features, with an extra field indicating the field that was matched
-
-### How to parse BigBed results
-
-The BigBed line contents are returned as a raw text line e.g. {start: 0, end:100, rest: "ENST00000456328.2\t1000\t..."} where "rest" contains tab delimited text for the fields from 4 and on in the BED format.  The rest line can be parsed by the @gmod/bed module, which is not by integrated with this module, but can be combined with it as follows
-
+The rest line can be parsed by the @gmod/bed module, which is not by integrated with this module, but can be combined with it as follows
 
 ```js
     import {BigBed} from '@gmod/bbi'
@@ -123,26 +54,14 @@ The BigBed line contents are returned as a raw text line e.g. {start: 0, end:100
     const parser = new BED({autoSql})
     const lines = feats.map(f => {
         const { start, end, rest, uniqueId } = f
-        return parser.parseLine(`chr7\t${start}\t${end}\t${rest}, { uniqueId })\
+        // we reconstitute this as a line for @gmod/bed with a template string
+        return parser.parseLine(`chr7\t${f.start}\t${f.end}\t${f.rest}, { uniqueId: f.uniqueId })\
     })
-    // @gmod/bbi returns features with {uniqueId, start, end, rest}
-    // we reconstitute this as a line for @gmod/bed with a template string
-    // note: the uniqueId is based on file offsets and helps to deduplicate exact feature copies if they exist
 ```
 
-Features before parsing with @gmod/bed:
+Example feature after parsing with @gmod/bed:
 
-```
-      { chromId: 0,
-        start: 64068,
-        end: 64107,
-        rest: 'uc003sil.1\t0\t-\t64068\t64068\t255,0,0\t.\tDQ584609',
-        uniqueId: 'bb-171' }
-```
-
-Features after parsing with @gmod/bed:
-
-```
+```js
       { uniqueId: 'bb-0',
         chrom: 'chr7',
         chromStart: 54028,
@@ -158,7 +77,69 @@ Features after parsing with @gmod/bed:
 
 ## Documentation
 
-See [docs](docs/README.md)
+### BBI
+
+<!-- Generated by documentation.js. Update this documentation by updating the source code. -->
+
+##### Table of Contents
+
+-   [getFeatureStream](#getfeaturestream)
+    -   [Parameters](#parameters)
+
+#### getFeatureStream
+
+Gets features from a BigWig file
+
+##### Parameters
+
+-   `refName` **[string](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String)** The chromosome name
+-   `start` **[number](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number)** The start of a region
+-   `end` **[number](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number)** The end of a region
+-   `opts` **{basesPerSpan: [number](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number)?, scale: [number](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number)?, signal: AbortSignal?}** An object containing basesPerSpan (e.g. pixels per basepair) or scale used to infer the zoomLevel to use (optional, default `{scale:1}`)
+
+Returns **[Promise](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Promise)&lt;Observable&lt;[Array](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Array)&lt;Feature>>>** 
+
+### BigWig
+
+<!-- Generated by documentation.js. Update this documentation by updating the source code. -->
+
+##### Table of Contents
+
+-   [getView](#getview)
+    -   [Parameters](#parameters)
+
+#### getView
+
+Retrieves a BlockView of a specific zoomLevel
+
+##### Parameters
+
+-   `scale` **[number](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Number)** 
+-   `abortSignal` **AbortSignal?** 
+-   `refName`  The chromosome name
+-   `start`  The start of a region
+-   `end`  The end of a region
+-   `opts`  An object containing basesPerSpan (e.g. pixels per basepair) or scale used to infer the zoomLevel to use
+
+Returns **[Promise](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Promise)&lt;BlockView>** 
+
+### BigBed
+
+<!-- Generated by documentation.js. Update this documentation by updating the source code. -->
+
+#### Table of Contents
+
+### Understanding scale and reductionLevel
+
+Here is what the reductionLevel structure looks like in a file. The zoomLevel that is chosen is the first reductionLevel&lt;2\*opts.basesPerScale (or reductionLevel&lt;2/opts.scale) when scanning backwards through this list
+
+      [ { reductionLevel: 40, ... },
+        { reductionLevel: 160, ... },
+        { reductionLevel: 640, ... },
+        { reductionLevel: 2560, ... },
+        { reductionLevel: 10240, ... },
+        { reductionLevel: 40960, ... },
+        { reductionLevel: 163840, ... } ]
 
 ## Academic Use
 
@@ -167,4 +148,3 @@ This package was written with funding from the [NHGRI](http://genome.gov) as par
 ## License
 
 MIT © [Colin Diesh](https://github.com/cmdcolin)
-

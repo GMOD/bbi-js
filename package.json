@@ -17,17 +17,18 @@
     "dist"
   ],
   "scripts": {
-    "test": "jest",
-    "coverage": "npm test -- --coverage",
-    "lint": "eslint --ext .ts src test",
-    "clean": "rimraf dist",
-    "prebuild": "npm run clean",
-    "build:types": "tsc --emitDeclarationOnly",
-    "build:js": "babel src --out-dir dist --extensions \".ts,.tsx\" --source-maps inline",
     "build": "npm run build:types && npm run build:js",
+    "build:js": "babel src --out-dir dist --extensions \".ts,.tsx\" --source-maps inline",
+    "build:types": "tsc --emitDeclarationOnly",
+    "clean": "rimraf dist",
+    "coverage": "npm test -- --coverage",
+    "docs": "documentation readme --shallow src/bbi.ts --section=BBI; documentation readme --shallow src/bigbed.ts --section=BigBed; documentation readme --shallow src/bigwig.ts --section=BigWig;",
+    "lint": "eslint --ext .ts src test",
+    "prebuild": "npm run clean",
     "preversion": "npm run lint && npm test && npm run build",
-    "version": "standard-changelog && git add CHANGELOG.md",
-    "postpublish": "git push origin master --follow-tags"
+    "postpublish": "git push origin master --follow-tags",
+    "test": "jest",
+    "version": "standard-changelog && git add CHANGELOG.md"
   },
   "keywords": [
     "bionode",
@@ -62,6 +63,7 @@
     "babel-eslint": "^10.0.1",
     "babel-preset-typescript": "^7.0.0-alpha.19",
     "cross-fetch": "^3.0.2",
+    "documentation": "^11.0.0",
     "eslint": "^5.16.0",
     "eslint-config-airbnb-base": "^13.1.0",
     "eslint-config-prettier": "^4.2.0",
