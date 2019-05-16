@@ -2,11 +2,11 @@
 import { Observer } from 'rxjs'
 import { Parser } from '@gmod/binary-parser'
 import AbortablePromiseCache from 'abortable-promise-cache'
-import * as zlib from 'zlib'
+import zlib from 'zlib'
 import QuickLRU from 'quick-lru'
 import { Feature } from './bbi'
 import Range from './range'
-import { groupBlocks } from './util'
+import { groupBlocks, checkAbortSignal } from './util'
 
 interface CoordRequest {
   chrId: number
@@ -344,17 +344,15 @@ export class BlockView {
     let { items } = results
     if (results.blockType === BIG_WIG_TYPE_FSTEP) {
       const { itemStep: step, itemSpan: span } = results
-      items = items.map((feature: any, index: number) => ({
-        ...feature,
-        start: index * step,
-        end: index * step + span,
-      }))
+      for (let i = 0; i < items.length; i++) {
+        items[i].start = i * step
+        items[i].end = i * step + span
+      }
     } else if (results.blockType === BIG_WIG_TYPE_VSTEP) {
       const { itemSpan: span } = results
-      items = items.map((feature: any) => ({
-        ...feature,
-        end: feature.start + span,
-      }))
+      for (let i = 0; i < items.length; i++) {
+        items[i].end = items[i].start + span
+      }
     }
     return request ? items.filter((f: any) => BlockView.coordFilter(f, request)) : items
   }
@@ -368,17 +366,21 @@ export class BlockView {
       const { blockType, isCompressed } = this
       const { signal, request } = opts
       const blockGroupsToFetch = groupBlocks(blocks)
+      checkAbortSignal(signal)
       await Promise.all(
         blockGroupsToFetch.map(async (blockGroup: any) => {
+          checkAbortSignal(signal)
           const { length, offset } = blockGroup
           const data = await this.featureCache.get(`${length}_${offset}`, blockGroup, signal)
           blockGroup.blocks.forEach((block: any) => {
+            checkAbortSignal(signal)
             let blockOffset = block.offset - blockGroup.offset
             let resultData = data
             if (isCompressed) {
               resultData = zlib.inflateSync(data.slice(blockOffset))
               blockOffset = 0
             }
+            checkAbortSignal(signal)
 
             switch (blockType) {
               case 'summary':
