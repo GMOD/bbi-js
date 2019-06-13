@@ -1,3 +1,7 @@
+## [1.0.22](https://github.com/GMOD/bbi-js/compare/v1.0.21...v1.0.22) (2019-06-13)
+
+
+
 - Bump generic-filehandle
 - Add more checks for abort signal to allow early bailing
 
