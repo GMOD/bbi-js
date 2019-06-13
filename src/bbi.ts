@@ -71,11 +71,9 @@ class AbortAwareCache {
         const fnReturn = fn(signal)
         cache.set(fn, fnReturn)
         if (signal) {
-          fnReturn.catch(
-            (): void => {
-              if (signal.aborted) cache.delete(fn)
-            },
-          )
+          fnReturn.catch((): void => {
+            if (signal.aborted) cache.delete(fn)
+          })
         }
         return cache.get(fn)
       }
@@ -356,11 +354,9 @@ export abstract class BBI {
     if (!view) {
       throw new Error('unable to get block view for data')
     }
-    return new Observable(
-      (observer: Observer<Feature[]>): void => {
-        view.readWigData(chrName, start, end, observer, opts)
-      },
-    )
+    return new Observable((observer: Observer<Feature[]>): void => {
+      view.readWigData(chrName, start, end, observer, opts)
+    })
   }
 
   public async getFeatures(
