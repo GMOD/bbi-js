@@ -233,6 +233,7 @@ export class BlockView {
       let blocksToFetch: any[] = []
       let outstanding = 0
 
+      //eslint-disable-next-line prefer-const
       let cirFobRecur2: Function
 
       const filterFeats = (b: DataBlock): boolean =>
@@ -341,7 +342,7 @@ export class BlockView {
   private parseBigWigBlock(bytes: Buffer, startOffset: number, request?: CoordRequest): Feature[] {
     const data = bytes.slice(startOffset)
     const results = this.bigWigParser.parse(data).result
-    let { items } = results
+    const { items } = results
     if (results.blockType === BIG_WIG_TYPE_FSTEP) {
       const { itemStep: step, itemSpan: span } = results
       for (let i = 0; i < items.length; i++) {

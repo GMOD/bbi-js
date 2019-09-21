@@ -42,9 +42,7 @@ export default class Range {
   }
 
   public union(s1: Range): Range {
-    const s0 = this
-    const ranges = s0
-      .getRanges()
+    const ranges = this.getRanges()
       .concat(s1.getRanges())
       .sort(this.rangeOrder)
     const oranges = []
@@ -68,9 +66,8 @@ export default class Range {
   }
 
   public intersection(arg: Range): Range {
-    let s0 = this
     let s1 = arg
-    const r0 = s0.ranges()
+    const r0 = this.ranges()
     const r1 = s1.ranges()
     const l0 = r0.length
 
