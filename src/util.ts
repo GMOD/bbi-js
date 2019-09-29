@@ -49,7 +49,6 @@ export function checkAbortSignal(signal?: AbortSignal): void {
   if (!signal) return
 
   if (signal.aborted) {
-    // console.log('bam aborted!')
     if (typeof DOMException !== 'undefined') {
       throw new DOMException('aborted', 'AbortError')
     } else {
