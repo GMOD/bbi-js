@@ -1,6 +1,7 @@
 import { Parser } from '@gmod/binary-parser'
 import { Observable, Observer, merge } from 'rxjs'
 import { map, reduce } from 'rxjs/operators'
+import { AbortAwareCache } from './util'
 
 import { BBI, Feature } from './bbi'
 import { BlockView } from './blockView'
@@ -26,11 +27,12 @@ export function filterUndef<T>(ts: (T | undefined)[]): T[] {
 }
 
 export class BigBed extends BBI {
+  protected indicesCache: AbortAwareCache<Index[]> = new AbortAwareCache()
   public readIndices: (abortSignal?: AbortSignal) => Promise<Index[]>
 
   public constructor(opts: any) {
     super(opts)
-    this.readIndices = this.headerCache.abortableMemoize(this._readIndices.bind(this))
+    this.readIndices = this.indicesCache.abortableMemoize(this._readIndices.bind(this))
   }
 
   /*

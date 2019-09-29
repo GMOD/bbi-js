@@ -4,7 +4,7 @@ import { Observable, Observer } from 'rxjs'
 import { reduce } from 'rxjs/operators'
 
 import { BlockView } from './blockView'
-import { abortBreakPoint, AbortError } from './util'
+import { abortBreakPoint, AbortError, AbortAwareCache } from './util'
 
 const BIG_WIG_MAGIC = -2003829722
 const BIG_BED_MAGIC = -2021002517
@@ -45,43 +45,6 @@ export interface Header {
   fileType: string
   refsByName: Map<string, number>
   refsByNumber: Map<number, RefInfo>
-}
-
-type AbortableCallback = (signal: AbortSignal) => Promise<any>
-
-/* A class that provides memoization for abortable calls */
-class AbortAwareCache {
-  private cache: Map<AbortableCallback, any> = new Map()
-
-  /*
-   * Takes a function that has one argument, abortSignal, that returns a promise
-   * and it works by retrying the function if a previous attempt to initialize the parse cache was aborted
-   * @param fn - an AbortableCallback
-   * @return a memoized version of the AbortableCallback using the AbortAwareCache
-   */
-  public abortableMemoize(fn: (signal?: AbortSignal) => Promise<any>): (signal?: AbortSignal) => Promise<any> {
-    const { cache } = this
-    return function abortableMemoizeFn(signal?: AbortSignal): Promise<any> {
-      if (!cache.has(fn)) {
-        const fnReturn = fn(signal)
-        cache.set(fn, fnReturn)
-        if (signal) {
-          fnReturn.catch((): void => {
-            if (signal.aborted) cache.delete(fn)
-          })
-        }
-        return cache.get(fn)
-      }
-      return cache.get(fn).catch(
-        (e: AbortError | DOMException): Promise<any> => {
-          if (e.code === 'ERR_ABORTED' || e.name === 'AbortError') {
-            return fn(signal)
-          }
-          throw e
-        },
-      )
-    }
-  }
 }
 
 /* get the compiled parsers for different sections of the bigwig file
@@ -147,9 +110,9 @@ function getParsers(isBE: boolean): any {
 export abstract class BBI {
   protected bbi: GenericFilehandle
 
-  protected headerCache: AbortAwareCache
+  protected headerCache: AbortAwareCache<Header> = new AbortAwareCache()
 
-  protected renameRefSeqs: (a: string) => string
+  protected renameRefSeqs: (a: string) => string = s => s
 
   /* fetch and parse header information from a bigwig or bigbed file
    * @param abortSignal - abort the operation, can be null
@@ -172,8 +135,9 @@ export abstract class BBI {
     } = {},
   ) {
     const { filehandle, renameRefSeqs, path, url } = options
-    this.renameRefSeqs = renameRefSeqs || ((s: string): string => s)
-    this.headerCache = new AbortAwareCache()
+    if (renameRefSeqs) {
+      this.renameRefSeqs = renameRefSeqs
+    }
     if (filehandle) {
       this.bbi = filehandle
     } else if (url) {
@@ -193,19 +157,14 @@ export abstract class BBI {
     return { ...header, ...chroms, isBigEndian }
   }
 
-  private async _getMainHeader(abortSignal?: AbortSignal, requestSize = 2000): Promise<Header> {
+  private async _getMainHeader(abortSignal?: AbortSignal) {
     const ret = getParsers(await this._isBigEndian())
-    const { buffer } = await this.bbi.read(Buffer.alloc(requestSize), 0, requestSize, 0, { signal: abortSignal })
+    const { buffer } = await this.bbi.read(Buffer.alloc(2000), 0, 2000, 0, { signal: abortSignal })
     const header = ret.headerParser.parse(buffer).result
     header.fileType = header.magic === BIG_BED_MAGIC ? 'bigbed' : 'bigwig'
-    if (header.asOffset > requestSize || header.totalSummaryOffset > requestSize) {
-      return this._getMainHeader(abortSignal, requestSize * 2)
-    }
+
     if (header.asOffset) {
-      header.autoSql = buffer.slice(header.asOffset, buffer.indexOf(0, header.asOffset)).toString('utf8')
-    }
-    if (header.totalSummaryOffset > requestSize) {
-      return this._getMainHeader(abortSignal, requestSize * 2)
+      header.autoSql = buffer.slice(header.asOffset, buf.indexOf(0, header.asOffset)).toString('utf8')
     }
     if (header.totalSummaryOffset) {
       const tail = buffer.slice(header.totalSummaryOffset)
@@ -214,7 +173,7 @@ export abstract class BBI {
     return header
   }
 
-  private async _isBigEndian(abortSignal?: AbortSignal): Promise<boolean> {
+  private async _isBigEndian(abortSignal?: AbortSignal) {
     const { buffer } = await this.bbi.read(Buffer.allocUnsafe(4), 0, 4, 0, { signal: abortSignal })
     let ret = buffer.readInt32LE(0)
     if (ret === BIG_WIG_MAGIC || ret === BIG_BED_MAGIC) {
@@ -232,7 +191,7 @@ export abstract class BBI {
     const header = await this._getMainHeader(abortSignal)
     const isBE = await this._isBigEndian(abortSignal)
     const le = isBE ? 'big' : 'little'
-    const refsByNumber: { [key: number]: { name: string; id: number; length: number } } = []
+    const refsByNumber: { name: string; id: number; length: number }[] = []
     const refsByName: { [key: string]: number } = {}
     const { chromTreeOffset } = header
     let { unzoomedDataOffset } = header
@@ -301,7 +260,7 @@ export abstract class BBI {
    * fetches the "unzoomed" view of the bigwig data. this is the default for bigbed
    * @param abortSignal - a signal to optionally abort this operation
    */
-  protected async getUnzoomedView(abortSignal?: AbortSignal): Promise<BlockView> {
+  protected async getUnzoomedView(abortSignal?: AbortSignal) {
     const {
       unzoomedIndexOffset,
       zoomLevels,
@@ -341,7 +300,7 @@ export abstract class BBI {
     start: number,
     end: number,
     opts: { basesPerSpan?: number; scale?: number; signal?: AbortSignal } = { scale: 1 },
-  ): Promise<Observable<Feature[]>> {
+  ) {
     await this.getHeader(opts.signal)
     const chrName = this.renameRefSeqs(refName)
     let view: BlockView
@@ -357,7 +316,7 @@ export abstract class BBI {
     if (!view) {
       throw new Error('unable to get block view for data')
     }
-    return new Observable((observer: Observer<Feature[]>): void => {
+    return new Observable((observer: Observer<Feature[]>) => {
       view.readWigData(chrName, start, end, observer, opts)
     })
   }
@@ -367,9 +326,9 @@ export abstract class BBI {
     start: number,
     end: number,
     opts: { basesPerSpan?: number; scale?: number; signal?: AbortSignal } = { scale: 1 },
-  ): Promise<Feature[]> {
+  ) {
     const ob = await this.getFeatureStream(refName, start, end, opts)
-    const ret = await ob.pipe(reduce((acc: Feature[], curr: Feature[]): Feature[] => acc.concat(curr))).toPromise()
+    const ret = await ob.pipe(reduce((acc: Feature[], curr: Feature[]) => acc.concat(curr))).toPromise()
     return ret || []
   }
 }
