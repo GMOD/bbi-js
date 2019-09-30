@@ -148,15 +148,22 @@ export class BlockView {
 
   private isBigEndian: boolean
 
-  private refsByName: any
-
+  private refsByName: { [key: string]: number }
   private blockType: string
 
   private cirTreeBuffer: Buffer
 
   private cirTreePromise?: Promise<void>
 
-  private featureCache: any
+  private featureCache = new AbortablePromiseCache({
+    cache: new QuickLRU({ maxSize: 1000 }),
+
+    async fill(requestData: ReadData, signal: AbortSignal) {
+      const { length, offset } = requestData
+      const { buffer } = await this.bbi.read(Buffer.alloc(length), 0, length, offset, { signal })
+      return buffer
+    },
+  })
 
   private leafParser: ReturnType<typeof initLeafParser>
   private bigWigParser: ReturnType<typeof initBigWigParser>
@@ -184,16 +191,6 @@ export class BlockView {
     this.blockType = blockType
     this.cirTreeBuffer = Buffer.alloc(48)
     this.initializeParsers(isBigEndian)
-
-    this.featureCache = new AbortablePromiseCache({
-      cache: new QuickLRU({ maxSize: 1000 }),
-
-      async fill(requestData: ReadData, signal: AbortSignal) {
-        const { length, offset } = requestData
-        const { buffer } = await bbi.read(Buffer.alloc(length), 0, length, offset, { signal })
-        return buffer
-      },
-    })
   }
   private initializeParsers(isBigEndian: boolean) {
     const le = isBigEndian ? 'big' : 'little'
