@@ -8,11 +8,11 @@ export class AbortError extends Error {
   }
 }
 
-interface Block {
+export interface Block {
   offset: number
   length: number
 }
-interface BlockGroup {
+export interface BlockGroup {
   offset: number
   length: number
   blocks: Block[]

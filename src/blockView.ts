@@ -6,7 +6,8 @@ import zlib from 'zlib'
 import QuickLRU from 'quick-lru'
 import { Feature } from './bbi'
 import Range from './range'
-import { groupBlocks, checkAbortSignal } from './util'
+import { groupBlocks, checkAbortSignal, Block, BlockGroup } from './util'
+import { GenericFilehandle } from 'generic-filehandle'
 
 interface CoordRequest {
   chrId: number
@@ -118,14 +119,16 @@ const initBigWigParser = (le: string) =>
       },
     })
 const initBigBedParser = (le: string) =>
-  new Parser()
-    .endianess(le)
-    .uint32('chromId')
-    .int32('start')
-    .int32('end')
-    .string('rest', {
-      zeroTerminated: true,
-    })
+  new Parser().endianess(le).array('items', {
+    readUntil: 'eof',
+    type: new Parser()
+      .uint32('chromId')
+      .int32('start')
+      .int32('end')
+      .string('rest', {
+        zeroTerminated: true,
+      }),
+  })
 const initSummaryParser = (le: string) =>
   new Parser()
     .endianess(le)
@@ -142,7 +145,7 @@ export class BlockView {
 
   private cirTreeLength: number
 
-  private bbi: any
+  private bbi: GenericFilehandle
 
   private isCompressed: boolean
 
@@ -153,17 +156,9 @@ export class BlockView {
 
   private cirTreeBuffer: Buffer
 
-  private cirTreePromise?: Promise<void>
+  private cirTreePromise?: Promise<{ bytesRead: number; buffer: Buffer }>
 
-  private featureCache = new AbortablePromiseCache({
-    cache: new QuickLRU({ maxSize: 1000 }),
-
-    async fill(requestData: ReadData, signal: AbortSignal) {
-      const { length, offset } = requestData
-      const { buffer } = await this.bbi.read(Buffer.alloc(length), 0, length, offset, { signal })
-      return buffer
-    },
-  })
+  private featureCache: typeof AbortablePromiseCache
 
   private leafParser: ReturnType<typeof initLeafParser>
   private bigWigParser: ReturnType<typeof initBigWigParser>
@@ -171,8 +166,8 @@ export class BlockView {
   private summaryParser: ReturnType<typeof initSummaryParser>
 
   public constructor(
-    bbi: any,
-    refsByName: any,
+    bbi: GenericFilehandle,
+    refsByName: { [key: string]: number },
     cirTreeOffset: number,
     cirTreeLength: number,
     isBigEndian: boolean,
@@ -191,6 +186,15 @@ export class BlockView {
     this.blockType = blockType
     this.cirTreeBuffer = Buffer.alloc(48)
     this.initializeParsers(isBigEndian)
+    this.featureCache = new AbortablePromiseCache({
+      cache: new QuickLRU({ maxSize: 1000 }),
+
+      async fill(requestData: ReadData, signal: AbortSignal) {
+      const { length, offset } = requestData
+      const { buffer } = await this.bbi.read(Buffer.alloc(length), 0, length, offset, { signal })
+      return buffer
+      },
+    })
   }
   private initializeParsers(isBigEndian: boolean) {
     const le = isBigEndian ? 'big' : 'little'
@@ -200,13 +204,7 @@ export class BlockView {
     this.bigBedParser = initBigBedParser(le)
   }
 
-  public async readWigData(
-    chrName: string,
-    start: number,
-    end: number,
-    observer: Observer<Feature[]>,
-    opts: Options,
-  ): Promise<void> {
+  public async readWigData(chrName: string, start: number, end: number, observer: Observer<Feature[]>, opts: Options) {
     try {
       const { refsByName, bbi, cirTreeOffset, isBigEndian } = this
       const { signal } = opts
@@ -216,21 +214,22 @@ export class BlockView {
       }
       const request = { chrId, start, end }
       if (!this.cirTreePromise) {
-        this.cirTreePromise = bbi.read(Buffer.alloc(48), 0, 48, cirTreeOffset, { signal })
+        this.cirTreePromise = bbi.read(this.cirTreeBuffer, 0, 48, cirTreeOffset, { signal })
       }
-      const { buffer } = await this.cirTreePromise
+      await this.cirTreePromise
+      const buffer = this.cirTreeBuffer
       const cirBlockSize = isBigEndian ? buffer.readUInt32BE(4) : buffer.readUInt32LE(4)
-      let blocksToFetch: any[] = []
+      let blocksToFetch: Block[] = []
       let outstanding = 0
 
       //eslint-disable-next-line prefer-const
       let cirFobRecur2: Function
 
-      const filterFeats = (b: DataBlock): boolean =>
+      const filterFeats = (b: DataBlock) =>
         (b.startChrom < chrId || (b.startChrom === chrId && b.startBase <= end)) &&
         (b.endChrom > chrId || (b.endChrom === chrId && b.endBase >= start))
 
-      const cirFobStartFetch = async (off: any, fr: any, level: number): Promise<void> => {
+      const cirFobStartFetch = async (off: number[], fr: Range, level: number) => {
         try {
           const length = fr.max() - fr.min()
           const offset = fr.min()
@@ -248,7 +247,7 @@ export class BlockView {
           observer.error(e)
         }
       }
-      const cirFobRecur = (offset: any, level: number): void => {
+      const cirFobRecur = (offset: number[], level: number) => {
         try {
           outstanding += offset.length
 
@@ -271,13 +270,11 @@ export class BlockView {
           const p = this.leafParser.parse(data).result
           if (p.blocksToFetch) {
             blocksToFetch = blocksToFetch.concat(
-              p.blocksToFetch
-                .filter(filterFeats)
-                .map((l: any): any => ({ offset: l.blockOffset, length: l.blockSize })),
+              p.blocksToFetch.filter(filterFeats).map(l => ({ offset: l.blockOffset, length: l.blockSize })),
             )
           }
           if (p.recurOffsets) {
-            const recurOffsets = p.recurOffsets.filter(filterFeats).map((l: any): any => l.blockOffset)
+            const recurOffsets = p.recurOffsets.filter(filterFeats).map(l => l.blockOffset)
             if (recurOffsets.length > 0) {
               cirFobRecur(recurOffsets, level + 1)
             }
@@ -316,17 +313,12 @@ export class BlockView {
     return request ? items.filter(f => BlockView.coordFilter(f, request)) : items
   }
 
-  private parseBigBedBlock(data: Buffer, startOffset: number, offset: number, request?: CoordRequest): Feature[] {
-    const items = []
-    let currOffset = startOffset
-    while (currOffset < data.byteLength) {
-      const res = this.bigBedParser.parse(data.slice(currOffset))
-      res.result.uniqueId = `bb-${offset + currOffset}`
-      items.push(res.result)
-      currOffset += res.offset
-    }
+  private parseBigBedBlock(data: Buffer, startOffset: number, request?: CoordRequest): Feature[] {
+    const currOffset = startOffset
+    const res = this.bigBedParser.parse(data.slice(currOffset)).result
+    res.items.forEach((r, i) => (r.uniqueId = `bb-${startOffset}-${i}`))
 
-    return request ? items.filter((f: any) => BlockView.coordFilter(f, request)) : items
+    return request ? res.items.filter(f => BlockView.coordFilter(f, request)) : res.items
   }
 
   private parseBigWigBlock(bytes: Buffer, startOffset: number, request?: CoordRequest): Feature[] {
@@ -343,25 +335,25 @@ export class BlockView {
         items[i].end = items[i].start + itemSpan
       }
     }
-    return request ? items.filter((f: any) => BlockView.coordFilter(f, request)) : items
+    return request ? items.filter(f => BlockView.coordFilter(f, request)) : items
   }
 
   private static coordFilter(f: Feature, range: CoordRequest): boolean {
     return f.start < range.end && f.end >= range.start
   }
 
-  public async readFeatures(observer: Observer<Feature[]>, blocks: any, opts: Options = {}): Promise<void> {
+  public async readFeatures(observer: Observer<Feature[]>, blocks: Block[], opts: Options = {}): Promise<void> {
     try {
       const { blockType, isCompressed } = this
       const { signal, request } = opts
       const blockGroupsToFetch = groupBlocks(blocks)
       checkAbortSignal(signal)
       await Promise.all(
-        blockGroupsToFetch.map(async (blockGroup: any) => {
+        blockGroupsToFetch.map(async (blockGroup: BlockGroup) => {
           checkAbortSignal(signal)
           const { length, offset } = blockGroup
           const data = await this.featureCache.get(`${length}_${offset}`, blockGroup, signal)
-          blockGroup.blocks.forEach((block: any) => {
+          blockGroup.blocks.forEach((block: Block) => {
             checkAbortSignal(signal)
             let blockOffset = block.offset - blockGroup.offset
             let resultData = data
@@ -379,8 +371,7 @@ export class BlockView {
                 observer.next(this.parseBigWigBlock(resultData, blockOffset, request))
                 break
               case 'bigbed':
-                // eslint-disable-next-line no-bitwise
-                observer.next(this.parseBigBedBlock(resultData, blockOffset, block.offset * (1 << 8), request))
+                observer.next(this.parseBigBedBlock(resultData, blockOffset, request))
                 break
               default:
                 console.warn(`Don't know what to do with ${blockType}`)
