@@ -4,7 +4,7 @@ import { Observable, Observer } from 'rxjs'
 import { reduce } from 'rxjs/operators'
 
 import { BlockView } from './blockView'
-import { abortBreakPoint, AbortError, AbortAwareCache } from './util'
+import { abortBreakPoint, AbortAwareCache } from './util'
 
 const BIG_WIG_MAGIC = -2003829722
 const BIG_BED_MAGIC = -2021002517
@@ -20,6 +20,12 @@ export interface Feature {
   uniqueId?: string // for bigbed contains uniqueId calculated from file offset
   field?: number // used in bigbed searching
 }
+
+export interface BigBedFeature extends Feature {
+  rest: string
+  field: number
+}
+
 interface Statistics {
   scoreSum: number
   basesCovered: number
@@ -31,30 +37,9 @@ interface RefInfo {
   id: number
   length: number
 }
-export interface Header {
-  autoSql: string
-  totalSummary: Statistics
-  zoomLevels: any
-  unzoomedIndexOffset: number
-  unzoomedDataOffset: number
-  uncompressBufSize: number
-  chromTreeOffset: number
-  fileSize: number
-  extHeaderOffset: number
-  isBigEndian: boolean
-  fileType: string
-  refsByName: Map<string, number>
-  refsByNumber: Map<number, RefInfo>
-}
 
-/* get the compiled parsers for different sections of the bigwig file
- *
- * @param isBE - is big endian, typically false
- * @return an object with compiled parsers
- */
-function getParsers(isBE: boolean): any {
-  const le = isBE ? 'big' : 'little'
-  const headerParser = new Parser()
+const initHeaderParser = (le: string) =>
+  new Parser()
     .endianess(le)
     .int32('magic')
     .uint16('version')
@@ -77,7 +62,10 @@ function getParsers(isBE: boolean): any {
         .uint64('indexOffset'),
     })
 
-  const totalSummaryParser = new Parser()
+type Header = ReturnType<typeof initHeaderParser>
+
+const initTotalSummaryParser = (le: string) =>
+  new Parser()
     .endianess(le)
     .uint64('basesCovered')
     .double('scoreMin')
@@ -85,7 +73,8 @@ function getParsers(isBE: boolean): any {
     .double('scoreSum')
     .double('scoreSumSquares')
 
-  const chromTreeParser = new Parser()
+const initChromTreeParser = (le: string) =>
+  new Parser()
     .endianess(le)
     .uint32('magic')
     .uint32('blockSize')
@@ -93,32 +82,32 @@ function getParsers(isBE: boolean): any {
     .uint32('valSize')
     .uint64('itemCount')
 
-  const isLeafNode = new Parser()
+const initIsLeafNode = (le: string) =>
+  new Parser()
     .endianess(le)
     .uint8('isLeafNode')
     .skip(1)
     .uint16('cnt')
-
-  return {
-    chromTreeParser,
-    totalSummaryParser,
-    headerParser,
-    isLeafNode,
-  }
-}
+/* get the compiled parsers for different sections of the bigwig file
+ *
+ * @param isBE - is big endian, typically false
+ * @return an object with compiled parsers
+ */
 
 export abstract class BBI {
   protected bbi: GenericFilehandle
-
   protected headerCache: AbortAwareCache<Header> = new AbortAwareCache()
-
   protected renameRefSeqs: (a: string) => string = s => s
+  private headerParser: ReturnType<typeof initHeaderParser>
+  private isLeafNode: ReturnType<typeof initIsLeafNode>
+  private chromTreeParser: ReturnType<typeof initChromTreeParser>
+  private totalSummaryParser: ReturnType<typeof initTotalSummaryParser>
 
   /* fetch and parse header information from a bigwig or bigbed file
    * @param abortSignal - abort the operation, can be null
    * @return a Header object
    */
-  public getHeader: (abortSignal?: AbortSignal) => Promise<Header>
+  public getHeader = this.headerCache.abortableMemoize(this._getHeader.bind(this))
 
   /*
    * @param filehandle - a filehandle from generic-filehandle or implementing something similar to the node10 fs.promises API
@@ -147,39 +136,43 @@ export abstract class BBI {
     } else {
       throw new Error('no file given')
     }
-    this.getHeader = this.headerCache.abortableMemoize(this._getHeader.bind(this))
   }
 
   private async _getHeader(abortSignal?: AbortSignal) {
     const isBigEndian = await this._isBigEndian(abortSignal)
+    const le = isBigEndian ? 'big' : 'little'
+
+    this.headerParser = initHeaderParser(le)
+    this.totalSummaryParser = initTotalSummaryParser(le)
+
+    this.chromTreeParser = initChromTreeParser(le)
+    this.isLeafNode = initIsLeafNode(le)
     const header = await this._getMainHeader(abortSignal)
     const chroms = await this._readChromTree(abortSignal)
     return { ...header, ...chroms, isBigEndian }
   }
 
   private async _getMainHeader(abortSignal?: AbortSignal) {
-    const ret = getParsers(await this._isBigEndian())
-    const { buffer } = await this.bbi.read(Buffer.alloc(2000), 0, 2000, 0, { signal: abortSignal })
-    const header = ret.headerParser.parse(buffer).result
+    const {buffer} this.bbi.read(Buffer.alloc(2000), 0, 2000, 0, { signal: abortSignal })
+    const header = this.headerParser.parse(buffer).result
     header.fileType = header.magic === BIG_BED_MAGIC ? 'bigbed' : 'bigwig'
 
     if (header.asOffset) {
-      header.autoSql = buffer.slice(header.asOffset, buf.indexOf(0, header.asOffset)).toString('utf8')
+      header.autoSql = buffer.slice(header.asOffset, buffer.indexOf(0, header.asOffset)).toString('utf8')
     }
     if (header.totalSummaryOffset) {
-      const tail = buffer.slice(header.totalSummaryOffset)
-      header.totalSummary = ret.totalSummaryParser.parse(tail).result
+      header.totalSummary = this.totalSummaryParser.parse(buffer.slice(header.totalSummaryOffset)).result
     }
     return header
   }
 
   private async _isBigEndian(abortSignal?: AbortSignal) {
     const { buffer } = await this.bbi.read(Buffer.allocUnsafe(4), 0, 4, 0, { signal: abortSignal })
-    let ret = buffer.readInt32LE(0)
+    let ret = buf.readInt32LE(0)
     if (ret === BIG_WIG_MAGIC || ret === BIG_BED_MAGIC) {
       return false
     }
-    ret = buffer.readInt32BE(0)
+    ret = buf.readInt32BE(0)
     if (ret === BIG_WIG_MAGIC || ret === BIG_BED_MAGIC) {
       return true
     }
@@ -191,7 +184,7 @@ export abstract class BBI {
     const header = await this._getMainHeader(abortSignal)
     const isBE = await this._isBigEndian(abortSignal)
     const le = isBE ? 'big' : 'little'
-    const refsByNumber: { name: string; id: number; length: number }[] = []
+    const refsByNumber: RefInfo[] = []
     const refsByName: { [key: string]: number } = {}
     const { chromTreeOffset } = header
     let { unzoomedDataOffset } = header
@@ -208,8 +201,7 @@ export abstract class BBI {
       { signal: abortSignal },
     )
 
-    const p = getParsers(isBE)
-    const { keySize } = p.chromTreeParser.parse(data).result
+    const { keySize } = this.chromTreeParser.parse(data).result
     const leafNodeParser = new Parser()
       .endianess(le)
       .string('key', { stripNull: true, length: keySize })
@@ -223,7 +215,7 @@ export abstract class BBI {
     const bptReadNode = async (currentOffset: number): Promise<void> => {
       let offset = currentOffset
       if (offset >= data.length) throw new Error('reading beyond end of buffer')
-      const ret = p.isLeafNode.parse(data.slice(offset))
+      const ret = this.isLeafNode.parse(data.slice(offset))
       const { isLeafNode, cnt } = ret.result
       offset += ret.offset
       await abortBreakPoint(abortSignal)
@@ -295,7 +287,7 @@ export abstract class BBI {
    * @param end - The end of a region
    * @param opts - An object containing basesPerSpan (e.g. pixels per basepair) or scale used to infer the zoomLevel to use
    */
-  public async getFeatureStream(
+  public async getFeatureStream<K extends Feature>(
     refName: string,
     start: number,
     end: number,
@@ -316,19 +308,19 @@ export abstract class BBI {
     if (!view) {
       throw new Error('unable to get block view for data')
     }
-    return new Observable((observer: Observer<Feature[]>) => {
+    return new Observable<K[]>((observer: Observer<K[]>) => {
       view.readWigData(chrName, start, end, observer, opts)
     })
   }
 
-  public async getFeatures(
+  public async getFeatures<K extends Feature>(
     refName: string,
     start: number,
     end: number,
     opts: { basesPerSpan?: number; scale?: number; signal?: AbortSignal } = { scale: 1 },
   ) {
     const ob = await this.getFeatureStream(refName, start, end, opts)
-    const ret = await ob.pipe(reduce((acc: Feature[], curr: Feature[]) => acc.concat(curr))).toPromise()
+    const ret = await ob.pipe(reduce((acc: K[], curr: K[]) => acc.concat(curr))).toPromise()
     return ret || []
   }
 }

@@ -3,8 +3,7 @@ import { Observable, Observer, merge } from 'rxjs'
 import { map, reduce } from 'rxjs/operators'
 import { AbortAwareCache } from './util'
 
-import { BBI, Feature } from './bbi'
-import { BlockView } from './blockView'
+import { BBI, BigBedFeature } from './bbi'
 
 interface Loc {
   key: string
@@ -28,12 +27,9 @@ export function filterUndef<T>(ts: (T | undefined)[]): T[] {
 
 export class BigBed extends BBI {
   protected indicesCache: AbortAwareCache<Index[]> = new AbortAwareCache()
-  public readIndices: (abortSignal?: AbortSignal) => Promise<Index[]>
-
-  public constructor(opts: any) {
-    super(opts)
-    this.readIndices = this.indicesCache.abortableMemoize(this._readIndices.bind(this))
-  }
+  public readIndices: (abortSignal?: AbortSignal) => Promise<Index[]> = this.indicesCache.abortableMemoize(
+    this._readIndices.bind(this),
+  )
 
   /*
    * retrieve unzoomed view for any scale
@@ -179,7 +175,7 @@ export class BigBed extends BBI {
     if (!blocks.length) return []
     const view = await this.getUnzoomedView()
     const res = blocks.map(block => {
-      return new Observable((observer: Observer<Feature[]>) => {
+      return new Observable((observer: Observer<BigBedFeature[]>) => {
         view.readFeatures(observer, [block], opts)
       }).pipe(
         reduce((acc, curr) => acc.concat(curr)),
@@ -192,7 +188,7 @@ export class BigBed extends BBI {
       )
     })
     const ret = await merge(...res).toPromise()
-    return ret.filter((f: any) => {
+    return ret.filter(f => {
       return f.rest.split('\t')[f.field - 3] === name
     })
   }

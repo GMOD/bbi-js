@@ -4,7 +4,7 @@ import { Parser } from '@gmod/binary-parser'
 import AbortablePromiseCache from 'abortable-promise-cache'
 import zlib from 'zlib'
 import QuickLRU from 'quick-lru'
-import { Feature } from './bbi'
+import { Feature, BigBedFeature } from './bbi'
 import Range from './range'
 import { groupBlocks, checkAbortSignal, Block, BlockGroup } from './util'
 import { GenericFilehandle } from 'generic-filehandle'
@@ -130,16 +130,19 @@ const initBigBedParser = (le: string) =>
       }),
   })
 const initSummaryParser = (le: string) =>
-  new Parser()
-    .endianess(le)
-    .uint32('chromId')
-    .uint32('start')
-    .uint32('end')
-    .uint32('validCnt')
-    .float('minScore')
-    .float('maxScore')
-    .float('sumData')
-    .float('sumSqData')
+  new Parser().endianess(le).array('items', {
+    readUntil: 'eof',
+    type: new Parser()
+      .endianess(le)
+      .uint32('chromId')
+      .uint32('start')
+      .uint32('end')
+      .uint32('validCnt')
+      .float('minScore')
+      .float('maxScore')
+      .float('sumData')
+      .float('sumSqData'),
+  })
 export class BlockView {
   private cirTreeOffset: number
 
@@ -152,6 +155,7 @@ export class BlockView {
   private isBigEndian: boolean
 
   private refsByName: { [key: string]: number }
+
   private blockType: string
 
   private cirTreeBuffer: Buffer
@@ -198,13 +202,19 @@ export class BlockView {
   }
   private initializeParsers(isBigEndian: boolean) {
     const le = isBigEndian ? 'big' : 'little'
-    this.summaryParser = this.leafParser = initLeafParser(le)
+    this.leafParser = initLeafParser(le)
     this.summaryParser = initSummaryParser(le)
     this.bigWigParser = initBigWigParser(le)
     this.bigBedParser = initBigBedParser(le)
   }
 
-  public async readWigData(chrName: string, start: number, end: number, observer: Observer<Feature[]>, opts: Options) {
+  public async readWigData<K extends Feature>(
+    chrName: string,
+    start: number,
+    end: number,
+    observer: Observer<K[]>,
+    opts: Options,
+  ) {
     try {
       const { refsByName, bbi, cirTreeOffset, isBigEndian } = this
       const { signal } = opts
@@ -290,18 +300,11 @@ export class BlockView {
     }
   }
 
-  private parseSummaryBlock(data: Buffer, startOffset: number, request?: CoordRequest): Feature[] {
-    const features = []
-    let currOffset = startOffset
-    while (currOffset < data.byteLength) {
-      const res = this.summaryParser.parse(data.slice(currOffset))
-      features.push(res.result)
-      currOffset += res.offset
-    }
-    let items = features
-    if (request) items = items.filter((elt: SummaryBlock): boolean => elt.chromId === request.chrId)
-    items = items.map(
-      (elt: SummaryBlock): Feature => ({
+  private parseSummaryBlock<K extends Feature>(data: Buffer, startOffset: number, request?: CoordRequest): K[] {
+    const currOffset = startOffset
+    const res = this.summaryParser.parse(data.slice(currOffset)).result
+    const items = res.items.map(
+      (elt): K => ({
         start: elt.start,
         end: elt.end,
         maxScore: elt.maxScore,
@@ -313,7 +316,7 @@ export class BlockView {
     return request ? items.filter(f => BlockView.coordFilter(f, request)) : items
   }
 
-  private parseBigBedBlock(data: Buffer, startOffset: number, request?: CoordRequest): Feature[] {
+  private parseBigBedBlock(data: Buffer, startOffset: number, request?: CoordRequest): BigBedFeature[] {
     const currOffset = startOffset
     const res = this.bigBedParser.parse(data.slice(currOffset)).result
     res.items.forEach((r, i) => (r.uniqueId = `bb-${startOffset}-${i}`))
@@ -321,7 +324,7 @@ export class BlockView {
     return request ? res.items.filter(f => BlockView.coordFilter(f, request)) : res.items
   }
 
-  private parseBigWigBlock(bytes: Buffer, startOffset: number, request?: CoordRequest): Feature[] {
+  private parseBigWigBlock<K extends Feature>(bytes: Buffer, startOffset: number, request?: CoordRequest): K[] {
     const data = bytes.slice(startOffset)
     const results = this.bigWigParser.parse(data).result
     const { items, itemSpan, itemStep, blockStart, blockType } = results
@@ -338,11 +341,11 @@ export class BlockView {
     return request ? items.filter(f => BlockView.coordFilter(f, request)) : items
   }
 
-  private static coordFilter(f: Feature, range: CoordRequest): boolean {
+  private static coordFilter<K extends Feature>(f: K, range: CoordRequest): boolean {
     return f.start < range.end && f.end >= range.start
   }
 
-  public async readFeatures(observer: Observer<Feature[]>, blocks: Block[], opts: Options = {}): Promise<void> {
+  public async readFeatures<K extends Feature>(observer: Observer<K[]>, blocks: Block[], opts: Options = {}) {
     try {
       const { blockType, isCompressed } = this
       const { signal, request } = opts
