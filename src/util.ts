@@ -7,14 +7,24 @@ export class AbortError extends Error {
     this.code = 'ERR_ABORTED'
   }
 }
+
+interface Block {
+  offset: number
+  length: number
+}
+interface BlockGroup {
+  offset: number
+  length: number
+  blocks: Block[]
+}
 // sort blocks by file offset and
 // group blocks that are within 2KB of eachother
-export function groupBlocks(blocks: any[]): any[] {
+export function groupBlocks(blocks: Block[]): BlockGroup[] {
   blocks.sort((b0, b1) => (b0.offset | 0) - (b1.offset | 0))
 
   const blockGroups = []
   let lastBlock
-  let lastBlockEnd
+  let lastBlockEnd = 0
   for (let i = 0; i < blocks.length; i += 1) {
     if (lastBlock && blocks[i].offset - lastBlockEnd <= 2000) {
       lastBlock.length += blocks[i].length - lastBlockEnd + blocks[i].offset
