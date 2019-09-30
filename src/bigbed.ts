@@ -41,7 +41,7 @@ export class BigBed extends BBI {
    * @param abortSignal - an optional AbortSignal to kill operation
    * @return promise for a BlockView
    */
-  protected async getView(scale: number, abortSignal: AbortSignal): Promise<BlockView> {
+  protected async getView(scale: number, abortSignal: AbortSignal) {
     return this.getUnzoomedView(abortSignal)
   }
 
@@ -50,7 +50,7 @@ export class BigBed extends BBI {
    * @param abortSignal to abort operation
    * @return a Promise for an array of Index data structure since there can be multiple extraIndexes in a bigbed, see bedToBigBed documentation
    */
-  public async _readIndices(abortSignal?: AbortSignal): Promise<Index[]> {
+  public async _readIndices(abortSignal?: AbortSignal) {
     const { extHeaderOffset, isBigEndian } = await this.getHeader(abortSignal)
     const { buffer: data } = await this.bbi.read(Buffer.alloc(64), 0, 64, extHeaderOffset)
     const le = isBigEndian ? 'big' : 'little'
@@ -93,7 +93,7 @@ export class BigBed extends BBI {
    * @param opts - a SearchOptions argument with optional signal
    * @return a Promise for an array of bigbed block Loc entries
    */
-  private async searchExtraIndexBlocks(name: string, opts: SearchOptions = {}): Promise<Loc[]> {
+  private async searchExtraIndexBlocks(name: string, opts: SearchOptions = {}) {
     const { signal } = opts
     const { isBigEndian } = await this.getHeader(signal)
     const indices = await this.readIndices(signal)
@@ -174,7 +174,7 @@ export class BigBed extends BBI {
    * @param opts - a SearchOptions argument with optional signal
    * @return a Promise for an array of Feature
    */
-  public async searchExtraIndex(name: string, opts: SearchOptions = {}): Promise<Feature[]> {
+  public async searchExtraIndex(name: string, opts: SearchOptions = {}) {
     const blocks = await this.searchExtraIndexBlocks(name, opts)
     if (!blocks.length) return []
     const view = await this.getUnzoomedView()

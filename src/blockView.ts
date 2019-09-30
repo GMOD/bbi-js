@@ -2,7 +2,6 @@
 import { Observer } from 'rxjs'
 import { Parser } from '@gmod/binary-parser'
 import AbortablePromiseCache from 'abortable-promise-cache'
-import { GenericFilehandle } from 'generic-filehandle'
 import zlib from 'zlib'
 import QuickLRU from 'quick-lru'
 import { Feature } from './bbi'
@@ -49,20 +48,15 @@ const BIG_WIG_TYPE_GRAPH = 1
 const BIG_WIG_TYPE_VSTEP = 2
 const BIG_WIG_TYPE_FSTEP = 3
 
-function getParsers(isBigEndian: boolean): any {
-  const le = isBigEndian ? 'big' : 'little'
-  const summaryParser = new Parser()
-    .endianess(le)
-    .uint32('chromId')
-    .uint32('start')
-    .uint32('end')
-    .uint32('validCnt')
-    .float('minScore')
-    .float('maxScore')
-    .float('sumData')
-    .float('sumSqData')
-
-  const leafParser = new Parser()
+/**
+ * View into a subset of the data in a BigWig file.
+ *
+ * Adapted by Robert Buels and Colin Diesh from bigwig.js in the Dalliance Genome
+ * Explorer by Thomas Down.
+ * @constructs
+ */
+const initLeafParser = (le: string) =>
+  new Parser()
     .endianess(le)
     .uint8('isLeaf')
     .skip(1)
@@ -91,16 +85,9 @@ function getParsers(isBigEndian: boolean): any {
         }),
       },
     })
-  const bigBedParser = new Parser()
-    .endianess(le)
-    .uint32('chromId')
-    .int32('start')
-    .int32('end')
-    .string('rest', {
-      zeroTerminated: true,
-    })
 
-  const bigWigParser = new Parser()
+const initBigWigParser = (le: string) =>
+  new Parser()
     .endianess(le)
     .skip(4)
     .int32('blockStart')
@@ -130,28 +117,32 @@ function getParsers(isBigEndian: boolean): any {
         }),
       },
     })
-  return {
-    bigWigParser,
-    bigBedParser,
-    summaryParser,
-    leafParser,
-  }
-}
-
-/**
- * View into a subset of the data in a BigWig file.
- *
- * Adapted by Robert Buels and Colin Diesh from bigwig.js in the Dalliance Genome
- * Explorer by Thomas Down.
- * @constructs
- */
-
+const initBigBedParser = (le: string) =>
+  new Parser()
+    .endianess(le)
+    .uint32('chromId')
+    .int32('start')
+    .int32('end')
+    .string('rest', {
+      zeroTerminated: true,
+    })
+const initSummaryParser = (le: string) =>
+  new Parser()
+    .endianess(le)
+    .uint32('chromId')
+    .uint32('start')
+    .uint32('end')
+    .uint32('validCnt')
+    .float('minScore')
+    .float('maxScore')
+    .float('sumData')
+    .float('sumSqData')
 export class BlockView {
   private cirTreeOffset: number
 
   private cirTreeLength: number
 
-  private bbi: GenericFilehandle
+  private bbi: any
 
   private isCompressed: boolean
 
@@ -161,17 +152,16 @@ export class BlockView {
 
   private blockType: string
 
-  private cirTreePromise?: Promise<{ bytesRead: number; buffer: Buffer }>
+  private cirTreeBuffer: Buffer
+
+  private cirTreePromise?: Promise<void>
 
   private featureCache: any
 
-  private leafParser: any
-
-  private bigWigParser: any
-
-  private bigBedParser: any
-
-  private summaryParser: any
+  private leafParser: ReturnType<typeof initLeafParser>
+  private bigWigParser: ReturnType<typeof initBigWigParser>
+  private bigBedParser: ReturnType<typeof initBigBedParser>
+  private summaryParser: ReturnType<typeof initSummaryParser>
 
   public constructor(
     bbi: any,
@@ -192,7 +182,8 @@ export class BlockView {
     this.isBigEndian = isBigEndian
     this.bbi = bbi
     this.blockType = blockType
-    Object.assign(this, getParsers(isBigEndian))
+    this.cirTreeBuffer = Buffer.alloc(48)
+    this.initializeParsers(isBigEndian)
 
     this.featureCache = new AbortablePromiseCache({
       cache: new QuickLRU({ maxSize: 1000 }),
@@ -203,6 +194,13 @@ export class BlockView {
         return buffer
       },
     })
+  }
+  private initializeParsers(isBigEndian: boolean) {
+    const le = isBigEndian ? 'big' : 'little'
+    this.summaryParser = this.leafParser = initLeafParser(le)
+    this.summaryParser = initSummaryParser(le)
+    this.bigWigParser = initBigWigParser(le)
+    this.bigBedParser = initBigBedParser(le)
   }
 
   public async readWigData(
