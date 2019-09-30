@@ -4,7 +4,7 @@ import { Parser } from '@gmod/binary-parser'
 import AbortablePromiseCache from 'abortable-promise-cache'
 import zlib from 'zlib'
 import QuickLRU from 'quick-lru'
-import { Feature, BigBedFeature } from './bbi'
+import { Feature, BigBedFeature, SummaryFeature } from './bbi'
 import Range from './range'
 import { groupBlocks, checkAbortSignal, Block, BlockGroup } from './util'
 import { GenericFilehandle } from 'generic-filehandle'
@@ -280,11 +280,11 @@ export class BlockView {
           const p = this.leafParser.parse(data).result
           if (p.blocksToFetch) {
             blocksToFetch = blocksToFetch.concat(
-              p.blocksToFetch.filter(filterFeats).map(l => ({ offset: l.blockOffset, length: l.blockSize })),
+              p.blocksToFetch.filter(filterFeats).map((l: any) => ({ offset: l.blockOffset, length: l.blockSize })),
             )
           }
           if (p.recurOffsets) {
-            const recurOffsets = p.recurOffsets.filter(filterFeats).map(l => l.blockOffset)
+            const recurOffsets = p.recurOffsets.filter(filterFeats).map((l: any) => l.blockOffset)
             if (recurOffsets.length > 0) {
               cirFobRecur(recurOffsets, level + 1)
             }
@@ -300,28 +300,44 @@ export class BlockView {
     }
   }
 
-  private parseSummaryBlock<K extends Feature>(data: Buffer, startOffset: number, request?: CoordRequest): K[] {
+  private parseSummaryBlock(data: Buffer, startOffset: number, request?: CoordRequest): SummaryFeature[] {
     const currOffset = startOffset
     const res = this.summaryParser.parse(data.slice(currOffset)).result
     const items = res.items.map(
-      (elt): K => ({
-        start: elt.start,
-        end: elt.end,
-        maxScore: elt.maxScore,
-        minScore: elt.minScore,
-        score: elt.sumData / (elt.validCnt || 1),
+      ({
+        sumData,
+        validCnt = 1,
+        start,
+        end,
+        maxScore,
+        minScore,
+      }: {
+        sumData: number
+        validCnt: number
+        start: number
+        end: number
+        maxScore: number
+        minScore: number
+      }): SummaryFeature => ({
+        start,
+        end,
+        maxScore,
+        minScore,
+        score: sumData / validCnt,
         summary: true,
       }),
     )
-    return request ? items.filter(f => BlockView.coordFilter(f, request)) : items
+    return request ? items.filter((f: any) => BlockView.coordFilter(f, request)) : items
   }
 
   private parseBigBedBlock(data: Buffer, startOffset: number, request?: CoordRequest): BigBedFeature[] {
     const currOffset = startOffset
     const res = this.bigBedParser.parse(data.slice(currOffset)).result
-    res.items.forEach((r, i) => (r.uniqueId = `bb-${startOffset}-${i}`))
+    res.items.forEach((r: any, i: number) => {
+      r.uniqueId = `bb-${startOffset}-${i}`
+    })
 
-    return request ? res.items.filter(f => BlockView.coordFilter(f, request)) : res.items
+    return request ? res.items.filter((f: any) => BlockView.coordFilter<BigBedFeature>(f, request)) : res.items
   }
 
   private parseBigWigBlock<K extends Feature>(bytes: Buffer, startOffset: number, request?: CoordRequest): K[] {
@@ -338,7 +354,7 @@ export class BlockView {
         items[i].end = items[i].start + itemSpan
       }
     }
-    return request ? items.filter(f => BlockView.coordFilter(f, request)) : items
+    return request ? items.filter((f: any) => BlockView.coordFilter(f, request)) : items
   }
 
   private static coordFilter<K extends Feature>(f: K, range: CoordRequest): boolean {

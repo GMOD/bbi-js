@@ -13,17 +13,18 @@ export interface Feature {
   start: number
   end: number
   score: number
-  rest?: string // for bigbed line
-  minScore?: number // for summary line
-  maxScore?: number // for summary line
-  summary?: boolean // is summary line
-  uniqueId?: string // for bigbed contains uniqueId calculated from file offset
-  field?: number // used in bigbed searching
 }
 
 export interface BigBedFeature extends Feature {
   rest: string
   field: number
+  uniqueId: string // for bigbed contains uniqueId calculated from file offset
+}
+
+export interface SummaryFeature extends Feature {
+  summary: boolean // is summary line
+  maxScore: number
+  minScore: number
 }
 
 interface Statistics {
@@ -309,7 +310,7 @@ export abstract class BBI {
       throw new Error('unable to get block view for data')
     }
     return new Observable<K[]>((observer: Observer<K[]>) => {
-      view.readWigData(chrName, start, end, observer, opts)
+      view.readWigData<K>(chrName, start, end, observer, opts)
     })
   }
 
@@ -319,7 +320,7 @@ export abstract class BBI {
     end: number,
     opts: { basesPerSpan?: number; scale?: number; signal?: AbortSignal } = { scale: 1 },
   ) {
-    const ob = await this.getFeatureStream(refName, start, end, opts)
+    const ob = await this.getFeatureStream<K>(refName, start, end, opts)
     const ret = await ob.pipe(reduce((acc: K[], curr: K[]) => acc.concat(curr))).toPromise()
     return ret || []
   }
