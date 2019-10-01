@@ -161,8 +161,6 @@ export class BlockView {
 
   private blockType: string
 
-  private cirTreeBuffer: Buffer
-
   private cirTreePromise?: Promise<{ bytesRead: number; buffer: Buffer }>
 
   private featureCache: any
@@ -194,7 +192,6 @@ export class BlockView {
     this.isBigEndian = isBigEndian
     this.bbi = bbi
     this.blockType = blockType
-    this.cirTreeBuffer = Buffer.alloc(48)
     Object.assign(this, getParsers(isBigEndian))
 
     this.featureCache = new AbortablePromiseCache({
@@ -224,7 +221,7 @@ export class BlockView {
       }
       const request = { chrId, start, end }
       if (!this.cirTreePromise) {
-        this.cirTreePromise = bbi.read(this.cirTreeBuffer, 0, 48, cirTreeOffset, { signal })
+        this.cirTreePromise = bbi.read(Buffer.alloc(48), 0, 48, cirTreeOffset, { signal })
       }
       const { buffer } = await this.cirTreePromise
       const cirBlockSize = isBigEndian ? buffer.readUInt32BE(4) : buffer.readUInt32LE(4)
