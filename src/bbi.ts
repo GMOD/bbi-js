@@ -200,29 +200,27 @@ export abstract class BBI {
 
   private async _getMainHeader(abortSignal?: AbortSignal): Promise<Header> {
     const ret = getParsers(await this._isBigEndian())
-    const buf = Buffer.alloc(2000)
-    await this.bbi.read(buf, 0, 2000, 0, { signal: abortSignal })
-    const header = ret.headerParser.parse(buf).result
+    const { buffer } = await this.bbi.read(Buffer.alloc(2000), 0, 2000, 0, { signal: abortSignal })
+    const header = ret.headerParser.parse(buffer).result
     header.fileType = header.magic === BIG_BED_MAGIC ? 'bigbed' : 'bigwig'
 
     if (header.asOffset) {
-      header.autoSql = buf.slice(header.asOffset, buf.indexOf(0, header.asOffset)).toString('utf8')
+      header.autoSql = buffer.slice(header.asOffset, buffer.indexOf(0, header.asOffset)).toString('utf8')
     }
     if (header.totalSummaryOffset) {
-      const tail = buf.slice(header.totalSummaryOffset)
+      const tail = buffer.slice(header.totalSummaryOffset)
       header.totalSummary = ret.totalSummaryParser.parse(tail).result
     }
     return header
   }
 
   private async _isBigEndian(abortSignal?: AbortSignal): Promise<boolean> {
-    const buf = Buffer.allocUnsafe(4)
-    await this.bbi.read(buf, 0, 4, 0, { signal: abortSignal })
-    let ret = buf.readInt32LE(0)
+    const { buffer } = await this.bbi.read(Buffer.allocUnsafe(4), 0, 4, 0, { signal: abortSignal })
+    let ret = buffer.readInt32LE(0)
     if (ret === BIG_WIG_MAGIC || ret === BIG_BED_MAGIC) {
       return false
     }
-    ret = buf.readInt32BE(0)
+    ret = buffer.readInt32BE(0)
     if (ret === BIG_WIG_MAGIC || ret === BIG_BED_MAGIC) {
       return true
     }
@@ -243,8 +241,13 @@ export abstract class BBI {
       unzoomedDataOffset += 1
     }
 
-    const data = Buffer.alloc(unzoomedDataOffset - chromTreeOffset)
-    await this.bbi.read(data, 0, unzoomedDataOffset - chromTreeOffset, chromTreeOffset, { signal: abortSignal })
+    const { buffer: data } = await this.bbi.read(
+      Buffer.alloc(unzoomedDataOffset - chromTreeOffset),
+      0,
+      unzoomedDataOffset - chromTreeOffset,
+      chromTreeOffset,
+      { signal: abortSignal },
+    )
 
     const p = getParsers(isBE)
     const { keySize } = p.chromTreeParser.parse(data).result

@@ -2,6 +2,7 @@
 import { Observer } from 'rxjs'
 import { Parser } from '@gmod/binary-parser'
 import AbortablePromiseCache from 'abortable-promise-cache'
+import { GenericFilehandle } from 'generic-filehandle'
 import zlib from 'zlib'
 import QuickLRU from 'quick-lru'
 import { Feature } from './bbi'
@@ -150,7 +151,7 @@ export class BlockView {
 
   private cirTreeLength: number
 
-  private bbi: any
+  private bbi: GenericFilehandle
 
   private isCompressed: boolean
 
@@ -162,7 +163,7 @@ export class BlockView {
 
   private cirTreeBuffer: Buffer
 
-  private cirTreePromise?: Promise<void>
+  private cirTreePromise?: Promise<{ bytesRead: number; buffer: Buffer }>
 
   private featureCache: any
 
@@ -201,9 +202,8 @@ export class BlockView {
 
       async fill(requestData: ReadData, signal: AbortSignal) {
         const { length, offset } = requestData
-        const resultBuffer = Buffer.alloc(length)
-        await bbi.read(resultBuffer, 0, length, offset, { signal })
-        return resultBuffer
+        const { buffer } = await bbi.read(Buffer.alloc(length), 0, length, offset, { signal })
+        return buffer
       },
     })
   }
@@ -223,12 +223,10 @@ export class BlockView {
         observer.complete()
       }
       const request = { chrId, start, end }
-      if (this.cirTreePromise) {
-        await this.cirTreePromise
-      } else {
-        this.cirTreePromise = await bbi.read(this.cirTreeBuffer, 0, 48, cirTreeOffset, { signal })
+      if (!this.cirTreePromise) {
+        this.cirTreePromise = bbi.read(this.cirTreeBuffer, 0, 48, cirTreeOffset, { signal })
       }
-      const buffer = this.cirTreeBuffer
+      const { buffer } = await this.cirTreePromise
       const cirBlockSize = isBigEndian ? buffer.readUInt32BE(4) : buffer.readUInt32LE(4)
       let blocksToFetch: any[] = []
       let outstanding = 0
