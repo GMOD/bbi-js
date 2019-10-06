@@ -1,3 +1,6 @@
+- Small refactor of `filehandle.read()` to make it more robust
+
+
 ## [1.0.22](https://github.com/GMOD/bbi-js/compare/v1.0.21...v1.0.22) (2019-06-13)
 
 
