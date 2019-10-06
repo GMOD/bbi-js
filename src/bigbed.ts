@@ -50,8 +50,7 @@ export class BigBed extends BBI {
    */
   public async _readIndices(abortSignal?: AbortSignal): Promise<Index[]> {
     const { extHeaderOffset, isBigEndian } = await this.getHeader(abortSignal)
-    const data = Buffer.alloc(64)
-    await this.bbi.read(data, 0, 64, extHeaderOffset)
+    const { buffer: data } = await this.bbi.read(Buffer.alloc(64), 0, 64, extHeaderOffset)
     const le = isBigEndian ? 'big' : 'little'
     const ret = new Parser()
       .endianess(le)
@@ -68,8 +67,7 @@ export class BigBed extends BBI {
 
     const blocklen = 20
     const len = blocklen * count
-    const buf = Buffer.alloc(len)
-    await this.bbi.read(buf, 0, len, offset)
+    const { buffer } = await this.bbi.read(Buffer.alloc(len), 0, len, offset)
     const extParser = new Parser()
       .endianess(le)
       .int16('type')
@@ -80,7 +78,7 @@ export class BigBed extends BBI {
     const indices = []
 
     for (let i = 0; i < count; i += 1) {
-      indices.push(extParser.parse(buf.slice(i * blocklen)).result)
+      indices.push(extParser.parse(buffer.slice(i * blocklen)).result)
     }
     return indices
   }
@@ -103,9 +101,7 @@ export class BigBed extends BBI {
     const locs = indices.map(
       async (index): Promise<Loc | undefined> => {
         const { offset, field } = index
-        const data = Buffer.alloc(32)
-
-        await this.bbi.read(data, 0, 32, offset, { signal })
+        const { buffer: data } = await this.bbi.read(Buffer.alloc(32), 0, 32, offset, { signal })
         const p = new Parser()
           .endianess(isBigEndian ? 'big' : 'little')
           .int32('magic')
@@ -140,9 +136,8 @@ export class BigBed extends BBI {
 
         const bptReadNode = async (nodeOffset: number): Promise<Loc | undefined> => {
           const len = 4 + blockSize * (keySize + valSize)
-          const buf = Buffer.alloc(len)
-          await this.bbi.read(buf, 0, len, nodeOffset, { signal })
-          const node = bpt.parse(buf).result
+          const { buffer } = await this.bbi.read(Buffer.alloc(len), 0, len, nodeOffset, { signal })
+          const node = bpt.parse(buffer).result
           if (node.leafkeys) {
             let lastOffset
             for (let i = 0; i < node.leafkeys.length; i += 1) {
