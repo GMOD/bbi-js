@@ -63,7 +63,7 @@ const initHeaderParser = (le: string) =>
         .uint64('indexOffset'),
     })
 
-type Header = ReturnType<typeof initHeaderParser>
+export type Header = ReturnType<typeof initHeaderParser>
 
 const initTotalSummaryParser = (le: string) =>
   new Parser()
@@ -154,7 +154,7 @@ export abstract class BBI {
   }
 
   private async _getMainHeader(abortSignal?: AbortSignal) {
-    const {buffer} this.bbi.read(Buffer.alloc(2000), 0, 2000, 0, { signal: abortSignal })
+    const { buffer } = await this.bbi.read(Buffer.alloc(2000), 0, 2000, 0, { signal: abortSignal })
     const header = this.headerParser.parse(buffer).result
     header.fileType = header.magic === BIG_BED_MAGIC ? 'bigbed' : 'bigwig'
 
@@ -169,11 +169,11 @@ export abstract class BBI {
 
   private async _isBigEndian(abortSignal?: AbortSignal) {
     const { buffer } = await this.bbi.read(Buffer.allocUnsafe(4), 0, 4, 0, { signal: abortSignal })
-    let ret = buf.readInt32LE(0)
+    let ret = buffer.readInt32LE(0)
     if (ret === BIG_WIG_MAGIC || ret === BIG_BED_MAGIC) {
       return false
     }
-    ret = buf.readInt32BE(0)
+    ret = buffer.readInt32BE(0)
     if (ret === BIG_WIG_MAGIC || ret === BIG_BED_MAGIC) {
       return true
     }
@@ -288,7 +288,7 @@ export abstract class BBI {
    * @param end - The end of a region
    * @param opts - An object containing basesPerSpan (e.g. pixels per basepair) or scale used to infer the zoomLevel to use
    */
-  public async getFeatureStream<K extends Feature>(
+  public async getFeatureStream(
     refName: string,
     start: number,
     end: number,
@@ -309,19 +309,19 @@ export abstract class BBI {
     if (!view) {
       throw new Error('unable to get block view for data')
     }
-    return new Observable<K[]>((observer: Observer<K[]>) => {
-      view.readWigData<K>(chrName, start, end, observer, opts)
+    return new Observable<unknown[]>((observer: Observer<unknown[]>) => {
+      view.readWigData(chrName, start, end, observer, opts)
     })
   }
 
-  public async getFeatures<K extends Feature>(
+  public async getFeatures(
     refName: string,
     start: number,
     end: number,
     opts: { basesPerSpan?: number; scale?: number; signal?: AbortSignal } = { scale: 1 },
   ) {
-    const ob = await this.getFeatureStream<K>(refName, start, end, opts)
-    const ret = await ob.pipe(reduce((acc: K[], curr: K[]) => acc.concat(curr))).toPromise()
+    const ob = await this.getFeatureStream(refName, start, end, opts)
+    const ret = await ob.pipe(reduce((acc, curr) => acc.concat(curr))).toPromise()
     return ret || []
   }
 }

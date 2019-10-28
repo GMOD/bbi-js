@@ -194,9 +194,9 @@ export class BlockView {
       cache: new QuickLRU({ maxSize: 1000 }),
 
       async fill(requestData: ReadData, signal: AbortSignal) {
-      const { length, offset } = requestData
-      const { buffer } = await this.bbi.read(Buffer.alloc(length), 0, length, offset, { signal })
-      return buffer
+        const { length, offset } = requestData
+        const { buffer } = await bbi.read(Buffer.alloc(length), 0, length, offset, { signal })
+        return buffer
       },
     })
   }
@@ -208,13 +208,7 @@ export class BlockView {
     this.bigBedParser = initBigBedParser(le)
   }
 
-  public async readWigData<K extends Feature>(
-    chrName: string,
-    start: number,
-    end: number,
-    observer: Observer<K[]>,
-    opts: Options,
-  ) {
+  public async readWigData(chrName: string, start: number, end: number, observer: Observer<unknown[]>, opts: Options) {
     try {
       const { refsByName, bbi, cirTreeOffset, isBigEndian } = this
       const { signal } = opts
@@ -340,7 +334,7 @@ export class BlockView {
     return request ? res.items.filter((f: any) => BlockView.coordFilter<BigBedFeature>(f, request)) : res.items
   }
 
-  private parseBigWigBlock<K extends Feature>(bytes: Buffer, startOffset: number, request?: CoordRequest): K[] {
+  private parseBigWigBlock(bytes: Buffer, startOffset: number, request?: CoordRequest): Feature[] {
     const data = bytes.slice(startOffset)
     const results = this.bigWigParser.parse(data).result
     const { items, itemSpan, itemStep, blockStart, blockType } = results
@@ -361,7 +355,7 @@ export class BlockView {
     return f.start < range.end && f.end >= range.start
   }
 
-  public async readFeatures<K extends Feature>(observer: Observer<K[]>, blocks: Block[], opts: Options = {}) {
+  public async readFeatures(observer: Observer<unknown[]>, blocks: Block[], opts: Options = {}) {
     try {
       const { blockType, isCompressed } = this
       const { signal, request } = opts

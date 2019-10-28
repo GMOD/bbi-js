@@ -9,11 +9,13 @@ interface Loc {
   key: string
   offset: number
   length: number
-  field?: number
+  field: number
 }
+
 interface SearchOptions {
   signal?: AbortSignal
 }
+
 interface Index {
   type: number
   fieldcount: number
@@ -175,19 +177,23 @@ export class BigBed extends BBI {
     if (!blocks.length) return []
     const view = await this.getUnzoomedView()
     const res = blocks.map(block => {
-      return new Observable((observer: Observer<BigBedFeature[]>) => {
+      return new Observable((observer: Observer<unknown[]>) => {
         view.readFeatures(observer, [block], opts)
       }).pipe(
         reduce((acc, curr) => acc.concat(curr)),
-        map(x => {
-          for (let i = 0; i < x.length; i += 1) {
-             x[i].field = block.field // eslint-disable-line
-          }
-          return x
-        }),
+        map(
+          (x: unknown[]): BigBedFeature => {
+            for (let i = 0; i < x.length; i += 1) {
+              ;(x[i] as BigBedFeature).field = block.field
+            }
+            // @ts-ignore
+            return x as BigBedFeature[]
+          },
+        ),
       )
     })
-    const ret = await merge(...res).toPromise()
+    // @ts-ignore
+    const ret: BigBedFeature[] = await merge(...res).toPromise()
     return ret.filter(f => {
       return f.rest.split('\t')[f.field - 3] === name
     })
