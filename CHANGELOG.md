@@ -1,3 +1,7 @@
+## [1.0.24](https://github.com/GMOD/bbi-js/compare/v1.0.23...v1.0.24) (2019-10-29)
+
+
+
 - Fix the uniqueIds generated via the bigbed features
 
 ## [1.0.23](https://github.com/GMOD/bbi-js/compare/v1.0.22...v1.0.23) (2019-10-06)
