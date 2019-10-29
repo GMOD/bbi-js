@@ -1,5 +1,6 @@
-## [1.0.23](https://github.com/GMOD/bbi-js/compare/v1.0.22...v1.0.23) (2019-10-06)
+- Fix the uniqueIds generated via the bigbed features
 
+## [1.0.23](https://github.com/GMOD/bbi-js/compare/v1.0.22...v1.0.23) (2019-10-06)
 
 
 - Small refactor of `filehandle.read()` to make it more robust
