@@ -387,7 +387,7 @@ export class BlockView {
                 break
               case 'bigbed':
                 // eslint-disable-next-line no-bitwise
-                observer.next(this.parseBigBedBlock(resultData, blockOffset, block.offset * (1 << 16), request))
+                observer.next(this.parseBigBedBlock(resultData, blockOffset, block.offset * (1 << 14), request))
                 break
               default:
                 console.warn(`Don't know what to do with ${blockType}`)
