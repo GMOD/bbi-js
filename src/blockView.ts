@@ -321,12 +321,12 @@ export class BlockView {
     return request ? items.filter(f => BlockView.coordFilter(f, request)) : items
   }
 
-  private parseBigBedBlock(data: Buffer, startOffset: number, request?: CoordRequest): Feature[] {
+  private parseBigBedBlock(data: Buffer, startOffset: number, offset: number, request?: CoordRequest): Feature[] {
     const items = []
     let currOffset = startOffset
     while (currOffset < data.byteLength) {
       const res = this.bigBedParser.parse(data.slice(currOffset))
-      res.result.uniqueId = `bb-${startOffset + currOffset}`
+      res.result.uniqueId = `bb-${offset + currOffset}`
       items.push(res.result)
       currOffset += res.offset
     }
@@ -386,7 +386,8 @@ export class BlockView {
                 observer.next(this.parseBigWigBlock(resultData, blockOffset, request))
                 break
               case 'bigbed':
-                observer.next(this.parseBigBedBlock(resultData, blockOffset, request))
+                // eslint-disable-next-line no-bitwise
+                observer.next(this.parseBigBedBlock(resultData, blockOffset, block.offset * (1 << 16), request))
                 break
               default:
                 console.warn(`Don't know what to do with ${blockType}`)
