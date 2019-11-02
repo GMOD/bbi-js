@@ -108,7 +108,7 @@ Returns a Promise to an array of Features, with an extra field indicating the fi
 
 ### How to parse BigBed results
 
-The BigBed line contents are returned as a raw text line e.g. {start: 0, end:100, rest: "ENST00000456328.2\t1000\t..."} where "rest" contains tab delimited text for the fields from 4 and on in the BED format.  The rest line can be parsed by the @gmod/bed module, which is not by integrated with this module, but can be combined with it as follows
+The BigBed line contents are returned as a raw text line e.g. {start: 0, end:100, rest: "ENST00000456328.2\t1000\t..."} where "rest" contains tab delimited text for the fields from 4 and on in the BED format.  Since BED files from BigBed format often come with autoSql (a description of all the columns) it can be useful to parse it with BED parser that can handle autoSql. The rest line can be parsed by the @gmod/bed module, which is not by default integrated with this module, but can be combined with it as follows
 
 
 ```js
