@@ -1,3 +1,5 @@
+- Add fix for files with a large header, if autoSql is large in a bigbed file would be likely scenario
+
 ## [1.0.24](https://github.com/GMOD/bbi-js/compare/v1.0.23...v1.0.24) (2019-10-29)
 
 
