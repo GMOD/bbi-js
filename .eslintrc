@@ -13,7 +13,7 @@
   "rules": {
     "no-underscore-dangle": 0,
     "@typescript-eslint/no-explicit-any": 0,
-    "@typescript-eslint/explicit-function-return-type": [2, { "allowExpressions": true }],
+    "@typescript-eslint/explicit-function-return-type": 0,
     "semi": [
       "error",
       "never"

@@ -47,11 +47,6 @@ export interface Header {
   refsByNumber: Map<number, RefInfo>
 }
 
-interface ChromTree {
-  refsByName: Map<string, number>
-  refsByNumber: Map<number, RefInfo>
-}
-
 type AbortableCallback = (signal: AbortSignal) => Promise<any>
 
 /* A class that provides memoization for abortable calls */
@@ -191,21 +186,26 @@ export abstract class BBI {
     this.getHeader = this.headerCache.abortableMemoize(this._getHeader.bind(this))
   }
 
-  private async _getHeader(abortSignal?: AbortSignal): Promise<Header> {
+  private async _getHeader(abortSignal?: AbortSignal) {
     const isBigEndian = await this._isBigEndian(abortSignal)
     const header = await this._getMainHeader(abortSignal)
     const chroms = await this._readChromTree(abortSignal)
     return { ...header, ...chroms, isBigEndian }
   }
 
-  private async _getMainHeader(abortSignal?: AbortSignal): Promise<Header> {
+  private async _getMainHeader(abortSignal?: AbortSignal, requestSize = 2000): Promise<Header> {
     const ret = getParsers(await this._isBigEndian())
-    const { buffer } = await this.bbi.read(Buffer.alloc(2000), 0, 2000, 0, { signal: abortSignal })
+    const { buffer } = await this.bbi.read(Buffer.alloc(requestSize), 0, requestSize, 0, { signal: abortSignal })
     const header = ret.headerParser.parse(buffer).result
     header.fileType = header.magic === BIG_BED_MAGIC ? 'bigbed' : 'bigwig'
-
+    if (header.asOffset > requestSize || header.totalSummaryOffset > requestSize) {
+      return this._getMainHeader(abortSignal, requestSize * 2)
+    }
     if (header.asOffset) {
       header.autoSql = buffer.slice(header.asOffset, buffer.indexOf(0, header.asOffset)).toString('utf8')
+    }
+    if (header.totalSummaryOffset > requestSize) {
+      return this._getMainHeader(abortSignal, requestSize * 2)
     }
     if (header.totalSummaryOffset) {
       const tail = buffer.slice(header.totalSummaryOffset)
@@ -228,12 +228,12 @@ export abstract class BBI {
   }
 
   // todo: add progress if long running
-  private async _readChromTree(abortSignal?: AbortSignal): Promise<ChromTree> {
+  private async _readChromTree(abortSignal?: AbortSignal) {
     const header = await this._getMainHeader(abortSignal)
     const isBE = await this._isBigEndian(abortSignal)
     const le = isBE ? 'big' : 'little'
-    const refsByNumber: any = {}
-    const refsByName: any = {}
+    const refsByNumber: { [key: number]: { name: string; id: number; length: number } } = []
+    const refsByName: { [key: string]: number } = {}
     const { chromTreeOffset } = header
     let { unzoomedDataOffset } = header
 

@@ -65,4 +65,11 @@ describe('bigbed formats', () => {
     const header = await ti.getHeader()
     expect(Object.keys(header.refsByName).length).toEqual(2057)
   })
+  it('bigbed file with large header', async () => {
+    const ti = new BigBed({
+      path: require.resolve('./data/clinvarCnv.bb'),
+    })
+    const header = await ti.getHeader()
+    expect(header).toBeTruthy()
+  })
 })
