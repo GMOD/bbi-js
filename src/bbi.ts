@@ -154,10 +154,14 @@ export abstract class BBI {
   }
 
   private async _getMainHeader(abortSignal?: AbortSignal) {
-    const { buffer } = await this.bbi.read(Buffer.alloc(2000), 0, 2000, 0, { signal: abortSignal })
+    let requestSize = 2000
+    let { buffer } = await this.bbi.read(Buffer.alloc(requestSize), 0, requestSize, 0, { signal: abortSignal })
     const header = this.headerParser.parse(buffer).result
     header.fileType = header.magic === BIG_BED_MAGIC ? 'bigbed' : 'bigwig'
-
+    if (header.asOffset > requestSize || header.totalSummaryOffset > requestSize) {
+      requestSize = header.totalSummaryOffset + 2000
+      ;({ buffer } = await this.bbi.read(Buffer.alloc(requestSize), 0, requestSize, 0, { signal: abortSignal }))
+    }
     if (header.asOffset) {
       header.autoSql = buffer.slice(header.asOffset, buffer.indexOf(0, header.asOffset)).toString('utf8')
     }
