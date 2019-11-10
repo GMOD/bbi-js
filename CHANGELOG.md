@@ -1,3 +1,7 @@
+## [1.0.26](https://github.com/GMOD/bbi-js/compare/v1.0.25...v1.0.26) (2019-11-10)
+
+
+
 - Fix important bug with fixed step bigwig files not using the proper start coordinate
 
 ## [1.0.25](https://github.com/GMOD/bbi-js/compare/v1.0.24...v1.0.25) (2019-11-03)
