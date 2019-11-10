@@ -337,17 +337,15 @@ export class BlockView {
   private parseBigWigBlock(bytes: Buffer, startOffset: number, request?: CoordRequest): Feature[] {
     const data = bytes.slice(startOffset)
     const results = this.bigWigParser.parse(data).result
-    const { items } = results
-    if (results.blockType === BIG_WIG_TYPE_FSTEP) {
-      const { itemStep: step, itemSpan: span } = results
+    const { items, itemSpan, itemStep, blockStart, blockType } = results
+    if (blockType === BIG_WIG_TYPE_FSTEP) {
       for (let i = 0; i < items.length; i++) {
-        items[i].start = i * step
-        items[i].end = i * step + span
+        items[i].start = blockStart + i * itemStep
+        items[i].end = blockStart + i * itemStep + itemSpan
       }
-    } else if (results.blockType === BIG_WIG_TYPE_VSTEP) {
-      const { itemSpan: span } = results
+    } else if (blockType === BIG_WIG_TYPE_VSTEP) {
       for (let i = 0; i < items.length; i++) {
-        items[i].end = items[i].start + span
+        items[i].end = items[i].start + itemSpan
       }
     }
     return request ? items.filter((f: any) => BlockView.coordFilter(f, request)) : items

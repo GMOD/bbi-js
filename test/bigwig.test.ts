@@ -41,7 +41,7 @@ describe('bigwig formats', () => {
     expect(feats1[feats1.length - 1].start).toEqual(47)
     expect(feats2[feats2.length - 1].start).toEqual(51)
   })
-  it('loads fixedstep bigwig', async () => {
+  it('loads simple fixedstep bigwig', async () => {
     const ti = new BigWig({
       path: require.resolve('./data/volvox_microarray.bw'),
     })
@@ -54,7 +54,15 @@ describe('bigwig formats', () => {
     expect(feats3).toMatchSnapshot()
     expect(feats4).toMatchSnapshot()
   })
-
+  it('loads fixedstep bigwig with starts', async () => {
+    const ti = new BigWig({
+      path: require.resolve('./data/fixedStep.bw'),
+    })
+    const feats1 = await ti.getFeatures('chr1', 0, 1000, { scale: 1 })
+    const feats2 = await ti.getFeatures('chr1', 11000, 12000, { scale: 1 })
+    expect(feats1).toMatchSnapshot()
+    expect(feats2).toMatchSnapshot()
+  })
   it('inside file deeply', async () => {
     const ti = new BigWig({
       path: require.resolve('./data/volvox.bw'),

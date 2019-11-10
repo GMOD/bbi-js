@@ -1,6 +1,6 @@
+- Fix important bug with fixed step bigwig files not using the proper start coordinate
+
 ## [1.0.25](https://github.com/GMOD/bbi-js/compare/v1.0.24...v1.0.25) (2019-11-03)
-
-
 
 - Add fix for files with a large header, if autoSql is large in a bigbed file would be likely scenario
 
