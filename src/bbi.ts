@@ -37,6 +37,7 @@ export interface Header {
   zoomLevels: any
   unzoomedIndexOffset: number
   unzoomedDataOffset: number
+  definedFieldCount: number
   uncompressBufSize: number
   chromTreeOffset: number
   fileSize: number
@@ -187,15 +188,15 @@ export abstract class BBI {
   }
 
   private async _getHeader(abortSignal?: AbortSignal) {
-    const isBigEndian = await this._isBigEndian(abortSignal)
     const header = await this._getMainHeader(abortSignal)
-    const chroms = await this._readChromTree(abortSignal)
-    return { ...header, ...chroms, isBigEndian }
+    const chroms = await this._readChromTree(header, abortSignal)
+    return { ...header, ...chroms }
   }
 
   private async _getMainHeader(abortSignal?: AbortSignal, requestSize = 2000): Promise<Header> {
-    const ret = getParsers(await this._isBigEndian())
     const { buffer } = await this.bbi.read(Buffer.alloc(requestSize), 0, requestSize, 0, { signal: abortSignal })
+    const isBigEndian = this._isBigEndian(buffer)
+    const ret = getParsers(isBigEndian)
     const header = ret.headerParser.parse(buffer).result
     header.fileType = header.magic === BIG_BED_MAGIC ? 'bigbed' : 'bigwig'
     if (header.asOffset > requestSize || header.totalSummaryOffset > requestSize) {
@@ -211,11 +212,10 @@ export abstract class BBI {
       const tail = buffer.slice(header.totalSummaryOffset)
       header.totalSummary = ret.totalSummaryParser.parse(tail).result
     }
-    return header
+    return { ...header, isBigEndian }
   }
 
-  private async _isBigEndian(abortSignal?: AbortSignal): Promise<boolean> {
-    const { buffer } = await this.bbi.read(Buffer.allocUnsafe(4), 0, 4, 0, { signal: abortSignal })
+  private _isBigEndian(buffer: Buffer): boolean {
     let ret = buffer.readInt32LE(0)
     if (ret === BIG_WIG_MAGIC || ret === BIG_BED_MAGIC) {
       return false
@@ -228,9 +228,8 @@ export abstract class BBI {
   }
 
   // todo: add progress if long running
-  private async _readChromTree(abortSignal?: AbortSignal) {
-    const header = await this._getMainHeader(abortSignal)
-    const isBE = await this._isBigEndian(abortSignal)
+  private async _readChromTree(header: Header, abortSignal?: AbortSignal) {
+    const isBE = header.isBigEndian
     const le = isBE ? 'big' : 'little'
     const refsByNumber: { [key: number]: { name: string; id: number; length: number } } = []
     const refsByName: { [key: string]: number } = {}
