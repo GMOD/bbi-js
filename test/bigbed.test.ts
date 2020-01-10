@@ -1,6 +1,7 @@
 /* eslint @typescript-eslint/explicit-function-return-type: 0 */
 import BED from '@gmod/bed'
 import { BigBed } from '../src/'
+import { LocalFile } from 'generic-filehandle'
 
 describe('bigbed formats', () => {
   it('loads small bigbed file', async () => {
@@ -17,10 +18,13 @@ describe('bigbed formats', () => {
     expect(lines.slice(0, 5)).toMatchSnapshot()
   })
   it('loads volvox.bb', async () => {
+    const filehandle = new LocalFile(require.resolve('./data/volvox.bb'))
     const ti = new BigBed({
-      path: require.resolve('./data/volvox.bb'),
+      filehandle,
     })
+    const spy = jest.spyOn(filehandle, "read")
     const feats = await ti.getFeatures('chrA', 0, 160)
+    expect(spy.mock.calls.length).toBeLessThanOrEqual(3)
     expect(feats).toEqual([])
   })
   it('searchExtraIdex returns null on file with no extra index', async () => {
@@ -66,10 +70,13 @@ describe('bigbed formats', () => {
     expect(Object.keys(header.refsByName).length).toEqual(2057)
   })
   it('bigbed file with large header', async () => {
+    const filehandle = new LocalFile(require.resolve('./data/clinvarCnv.bb'))
     const ti = new BigBed({
-      path: require.resolve('./data/clinvarCnv.bb'),
+      filehandle,
     })
+    const spy = jest.spyOn(filehandle, "read")
     const header = await ti.getHeader()
+    expect(spy.mock.calls.length).toBeLessThanOrEqual(3);
     expect(header).toBeTruthy()
   })
 })
