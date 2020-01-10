@@ -1,3 +1,7 @@
+## [1.0.27](https://github.com/GMOD/bbi-js/compare/v1.0.26...v1.0.27) (2020-01-10)
+
+
+
 - Reduce number of requests needed on initial header
 - Add definedFieldCount to the returned Header
 
