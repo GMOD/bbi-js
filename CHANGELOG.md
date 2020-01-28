@@ -1,3 +1,6 @@
+- Change typescript interface to use object keys instead of Map type for refsByName, refsById
+- Typescript only release change
+
 ## [1.0.27](https://github.com/GMOD/bbi-js/compare/v1.0.26...v1.0.27) (2020-01-10)
 
 
