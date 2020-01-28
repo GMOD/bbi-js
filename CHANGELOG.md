@@ -1,3 +1,7 @@
+## [1.0.29](https://github.com/GMOD/bbi-js/compare/v1.0.28...v1.0.29) (2020-01-28)
+
+
+
 - Accidentally made the package include itself as dependency in 1.0.28, republish
 
 
