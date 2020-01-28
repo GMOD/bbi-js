@@ -44,8 +44,8 @@ export interface Header {
   extHeaderOffset: number
   isBigEndian: boolean
   fileType: string
-  refsByName: Map<string, number>
-  refsByNumber: Map<number, RefInfo>
+  refsByName: { [key: string]: number }
+  refsByNumber: { [key: number]: RefInfo }
 }
 
 type AbortableCallback = (signal: AbortSignal) => Promise<any>
