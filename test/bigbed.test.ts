@@ -22,7 +22,7 @@ describe('bigbed formats', () => {
     const ti = new BigBed({
       filehandle,
     })
-    const spy = jest.spyOn(filehandle, "read")
+    const spy = jest.spyOn(filehandle, 'read')
     const feats = await ti.getFeatures('chrA', 0, 160)
     expect(spy.mock.calls.length).toBeLessThanOrEqual(3)
     expect(feats).toEqual([])
@@ -74,9 +74,23 @@ describe('bigbed formats', () => {
     const ti = new BigBed({
       filehandle,
     })
-    const spy = jest.spyOn(filehandle, "read")
+    const spy = jest.spyOn(filehandle, 'read')
     const header = await ti.getHeader()
-    expect(spy.mock.calls.length).toBeLessThanOrEqual(3);
+    expect(spy.mock.calls.length).toBeLessThanOrEqual(3)
     expect(header).toBeTruthy()
+  })
+  it('bigbed file consistent file ID', async () => {
+    const filehandle = new LocalFile(require.resolve('./data/clinvarCnv.bb'))
+    const ti = new BigBed({
+      filehandle,
+    })
+    const feats1 = await ti.getFeatures('chr21', 8850000, 10050000)
+    const feats2 = await ti.getFeatures('chr21', 9550000, 10750000)
+    const f1 = feats1.find(f => f.start === 9734795)
+    const f2 = feats2.find(f => f.start === 9734795)
+    expect(f1.uniqueId).toEqual(f2.uniqueId)
+    const f11 = feats1.filter(f => f.start === 9734795)
+    const f22 = feats2.filter(f => f.start === 9734795)
+    expect(f11).toEqual(f22)
   })
 })
