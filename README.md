@@ -11,13 +11,38 @@ A parser for bigwig and bigbed file formats
 If using locally
 
     const {BigWig} = require('@gmod/bbi');
-    const ti = new BigWig({
+    const file = new BigWig({
       path: 'volvox.bw'
     });
     (async () => {
-      await ti.getHeader();
-      const feats = await ti.getFeatures('chr1', 0, 100, { scale: 1 });
+      await file.getHeader();
+      const feats = await file.getFeatures('chr1', 0, 100, { scale: 1 });
     })();
+
+
+If using remotely, you can use it in combination with generic-filehandle or your own implementation of something like generic-filehandle
+https://github.com/GMOD/generic-filehandle/
+
+    const {BigWig} = require('@gmod/bbi');
+    const {RemoteFile} = require('generic-filehandle')
+
+    // if running in the browser, RemoteFile will use the the global fetch
+    const file = new BigWig({
+      filehandle: new RemoteFile('volvox.bw')
+    });
+
+
+    // if running under node.js you must supply the fetch function to RemoteFile
+    const fetch = require('node-fetch')
+    const file = new BigWig({
+      filehandle: new RemoteFile('volvox.bw', {fetch})
+    });
+
+    (async () => {
+      await file.getHeader();
+      const feats = await file.getFeatures('chr1', 0, 100, { scale: 1 });
+    })();
+
 
 
 ## Documentation
