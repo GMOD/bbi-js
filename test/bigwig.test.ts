@@ -163,6 +163,18 @@ describe('bigwig formats', () => {
       path: require.resolve('./data/volvox.bw'),
     })
     const aborter = new HalfAbortController()
+    const indexDataP = ti.getHeader({ signal: aborter.signal })
+    aborter.abort()
+    await expect(indexDataP).rejects.toThrow(/aborted/)
+    const header = await ti.getHeader()
+    expect(header.isBigEndian).toEqual(false)
+  })
+
+  it('abort loading a bigwig file (plain abortsignal passed in)', async () => {
+    const ti = new BigWig({
+      path: require.resolve('./data/volvox.bw'),
+    })
+    const aborter = new HalfAbortController()
     const indexDataP = ti.getHeader(aborter.signal)
     aborter.abort()
     await expect(indexDataP).rejects.toThrow(/aborted/)
