@@ -163,7 +163,7 @@ describe('bigwig formats', () => {
       path: require.resolve('./data/volvox.bw'),
     })
     const aborter = new HalfAbortController()
-    const indexDataP = ti.getHeader(aborter.signal)
+    const indexDataP = ti.getHeader({ signal: aborter.signal })
     aborter.abort()
     await expect(indexDataP).rejects.toThrow(/aborted/)
     const header = await ti.getHeader()
