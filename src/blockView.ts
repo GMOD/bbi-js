@@ -239,7 +239,11 @@ export class BlockView {
         try {
           const length = fr.max() - fr.min()
           const offset = fr.min()
-          const resultBuffer = await this.featureCache.get(`${length}_${offset}`, { length, offset }, signal)
+          const resultBuffer = await this.featureCache.get(
+            `${length}_${offset}`,
+            { length, offset },
+            signal,
+          )
           for (let i = 0; i < off.length; i += 1) {
             if (fr.contains(off[i])) {
               cirFobRecur2(resultBuffer, off[i] - offset, level, observer, opts)
@@ -282,7 +286,9 @@ export class BlockView {
             )
           }
           if (p.recurOffsets) {
-            const recurOffsets = p.recurOffsets.filter(filterFeats).map((l: any): any => l.blockOffset)
+            const recurOffsets = p.recurOffsets
+              .filter(filterFeats)
+              .map((l: any): any => l.blockOffset)
             if (recurOffsets.length > 0) {
               cirFobRecur(recurOffsets, level + 1)
             }
@@ -321,7 +327,12 @@ export class BlockView {
     return request ? items.filter(f => BlockView.coordFilter(f, request)) : items
   }
 
-  private parseBigBedBlock(data: Buffer, startOffset: number, offset: number, request?: CoordRequest): Feature[] {
+  private parseBigBedBlock(
+    data: Buffer,
+    startOffset: number,
+    offset: number,
+    request?: CoordRequest,
+  ): Feature[] {
     const items = []
     let currOffset = startOffset
     while (currOffset < data.byteLength) {
@@ -355,7 +366,11 @@ export class BlockView {
     return f.start < range.end && f.end >= range.start
   }
 
-  public async readFeatures(observer: Observer<Feature[]>, blocks: any, opts: Options = {}): Promise<void> {
+  public async readFeatures(
+    observer: Observer<Feature[]>,
+    blocks: any,
+    opts: Options = {},
+  ): Promise<void> {
     try {
       const { blockType, isCompressed } = this
       const { signal, request } = opts

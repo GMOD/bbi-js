@@ -1,3 +1,6 @@
+- Use abortable-promise-cache instead of abortable-memoize
+- Allow opts parameter to getHeader instead of just abortsignal
+
 ## [1.0.29](https://github.com/GMOD/bbi-js/compare/v1.0.28...v1.0.29) (2020-01-28)
 
 

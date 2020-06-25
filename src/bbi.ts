@@ -111,6 +111,7 @@ function getParsers(isBE: boolean): any {
 export interface RequestOptions {
   signal?: AbortSignal
   headers?: Record<string, string>
+  [key: string]: unknown
 }
 
 export abstract class BBI {
@@ -129,14 +130,9 @@ export abstract class BBI {
    * @param abortSignal - abort the operation, can be null
    * @return a Header object
    */
-  public getHeader(opts?: RequestOptions | AbortSignal) {
-    if (opts === undefined) {
-      opts = {}
-    }
-    if ('aborted' in opts) {
-      opts = { signal: opts }
-    }
-    return this.headerCache.get(JSON.stringify(opts), opts, opts.signal)
+  public getHeader(opts: RequestOptions | AbortSignal = {}) {
+    const options = 'aborted' in opts ? { signal: opts } : opts
+    return this.headerCache.get(JSON.stringify(options), options, options.signal)
   }
 
   /*
@@ -182,7 +178,9 @@ export abstract class BBI {
       return this._getMainHeader(opts, requestSize * 2)
     }
     if (header.asOffset) {
-      header.autoSql = buffer.slice(header.asOffset, buffer.indexOf(0, header.asOffset)).toString('utf8')
+      header.autoSql = buffer
+        .slice(header.asOffset, buffer.indexOf(0, header.asOffset))
+        .toString('utf8')
     }
     if (header.totalSummaryOffset > requestSize) {
       return this._getMainHeader(opts, requestSize * 2)
@@ -317,7 +315,7 @@ export abstract class BBI {
     refName: string,
     start: number,
     end: number,
-    opts: RequestOptions & { scale: number; basesPerSpan?: number } = { scale: 1 },
+    opts: RequestOptions & { scale?: number; basesPerSpan?: number } = { scale: 1 },
   ): Promise<Observable<Feature[]>> {
     await this.getHeader(opts)
     const chrName = this.renameRefSeqs(refName)
@@ -343,10 +341,11 @@ export abstract class BBI {
     refName: string,
     start: number,
     end: number,
-    opts: RequestOptions & { scale: number; basesPerSpan?: number } = { scale: 1 },
+    opts: RequestOptions & { scale?: number; basesPerSpan?: number } = { scale: 1 },
   ): Promise<Feature[]> {
     const ob = await this.getFeatureStream(refName, start, end, opts)
-    const ret = await ob.pipe(reduce((acc: Feature[], curr: Feature[]): Feature[] => acc.concat(curr))).toPromise()
+
+    const ret = await ob.pipe(reduce((acc, curr) => acc.concat(curr))).toPromise()
     return ret || []
   }
 }

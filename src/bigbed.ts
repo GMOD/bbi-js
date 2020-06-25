@@ -37,14 +37,9 @@ export class BigBed extends BBI {
     super(opts)
   }
 
-  public readIndices(opts?: AbortSignal | RequestOptions) {
-    if (opts === undefined) {
-      opts = {}
-    }
-    if ('aborted' in opts) {
-      opts = { signal: opts }
-    }
-    return this.readIndicesCache.get(JSON.stringify(opts), opts, opts.signal)
+  public readIndices(opts: AbortSignal | RequestOptions = {}) {
+    const options = 'aborted' in opts ? { signal: opts } : opts
+    return this.readIndicesCache.get(JSON.stringify(options), options, options.signal)
   }
 
   /*
@@ -134,7 +129,9 @@ export class BigBed extends BBI {
             choices: {
               0: new Parser().array('leafkeys', {
                 length: 'cnt',
-                type: new Parser().string('key', { length: keySize, stripNull: true }).uint64('offset'),
+                type: new Parser()
+                  .string('key', { length: keySize, stripNull: true })
+                  .uint64('offset'),
               }),
               1: new Parser().array('keys', {
                 length: 'cnt',
