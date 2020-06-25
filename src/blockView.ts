@@ -163,7 +163,15 @@ export class BlockView {
 
   private cirTreePromise?: Promise<{ bytesRead: number; buffer: Buffer }>
 
-  private featureCache: any
+  private featureCache = new AbortablePromiseCache({
+    cache: new QuickLRU({ maxSize: 1000 }),
+
+    fill: async (requestData: ReadData, signal: AbortSignal) => {
+      const { length, offset } = requestData
+      const { buffer } = await this.bbi.read(Buffer.alloc(length), 0, length, offset, { signal })
+      return buffer
+    },
+  })
 
   private leafParser: any
 
@@ -174,7 +182,7 @@ export class BlockView {
   private summaryParser: any
 
   public constructor(
-    bbi: any,
+    bbi: GenericFilehandle,
     refsByName: any,
     cirTreeOffset: number,
     cirTreeLength: number,
@@ -193,16 +201,6 @@ export class BlockView {
     this.bbi = bbi
     this.blockType = blockType
     Object.assign(this, getParsers(isBigEndian))
-
-    this.featureCache = new AbortablePromiseCache({
-      cache: new QuickLRU({ maxSize: 1000 }),
-
-      async fill(requestData: ReadData, signal: AbortSignal) {
-        const { length, offset } = requestData
-        const { buffer } = await bbi.read(Buffer.alloc(length), 0, length, offset, { signal })
-        return buffer
-      },
-    })
   }
 
   public async readWigData(
