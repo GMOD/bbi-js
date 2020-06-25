@@ -129,7 +129,13 @@ export abstract class BBI {
    * @param abortSignal - abort the operation, can be null
    * @return a Header object
    */
-  public getHeader(opts: RequestOptions = {}) {
+  public getHeader(opts?: RequestOptions | AbortSignal) {
+    if (opts === undefined) {
+      opts = {}
+    }
+    if (opts instanceof AbortSignal) {
+      opts = { signal: opts }
+    }
     return this.headerCache.get(JSON.stringify(opts), opts, opts.signal)
   }
 

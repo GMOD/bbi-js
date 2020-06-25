@@ -37,7 +37,13 @@ export class BigBed extends BBI {
     super(opts)
   }
 
-  public readIndices(opts: RequestOptions = {}) {
+  public readIndices(opts?: AbortSignal | RequestOptions) {
+    if (opts === undefined) {
+      opts = {}
+    }
+    if (opts instanceof AbortSignal) {
+      opts = { signal: opts }
+    }
     return this.readIndicesCache.get(JSON.stringify(opts), opts, opts.signal)
   }
 
@@ -56,7 +62,7 @@ export class BigBed extends BBI {
    * @param abortSignal to abort operation
    * @return a Promise for an array of Index data structure since there can be multiple extraIndexes in a bigbed, see bedToBigBed documentation
    */
-  public async _readIndices(opts: RequestOptions): Promise<Index[]> {
+  private async _readIndices(opts: RequestOptions): Promise<Index[]> {
     const { extHeaderOffset, isBigEndian } = await this.getHeader(opts)
     const { buffer: data } = await this.bbi.read(Buffer.alloc(64), 0, 64, extHeaderOffset)
     const le = isBigEndian ? 'big' : 'little'
