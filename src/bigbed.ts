@@ -41,7 +41,7 @@ export class BigBed extends BBI {
     if (opts === undefined) {
       opts = {}
     }
-    if (opts instanceof AbortSignal) {
+    if ('aborted' in opts) {
       opts = { signal: opts }
     }
     return this.readIndicesCache.get(JSON.stringify(opts), opts, opts.signal)
