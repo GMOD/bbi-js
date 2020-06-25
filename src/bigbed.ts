@@ -106,7 +106,7 @@ export class BigBed extends BBI {
       return []
     }
     const locs = indices.map(
-      async (index): Promise<Loc | undefined> => {
+      async (index: any): Promise<Loc | undefined> => {
         const { offset, field } = index
         const { buffer: data } = await this.bbi.read(Buffer.alloc(32), 0, 32, offset, opts)
         const p = new Parser()
@@ -128,9 +128,7 @@ export class BigBed extends BBI {
             choices: {
               0: new Parser().array('leafkeys', {
                 length: 'cnt',
-                type: new Parser()
-                  .string('key', { length: keySize, stripNull: true })
-                  .uint64('offset'),
+                type: new Parser().string('key', { length: keySize, stripNull: true }).uint64('offset'),
               }),
               1: new Parser().array('keys', {
                 length: 'cnt',

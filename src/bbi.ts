@@ -176,9 +176,7 @@ export abstract class BBI {
       return this._getMainHeader(opts, requestSize * 2)
     }
     if (header.asOffset) {
-      header.autoSql = buffer
-        .slice(header.asOffset, buffer.indexOf(0, header.asOffset))
-        .toString('utf8')
+      header.autoSql = buffer.slice(header.asOffset, buffer.indexOf(0, header.asOffset)).toString('utf8')
     }
     if (header.totalSummaryOffset > requestSize) {
       return this._getMainHeader(opts, requestSize * 2)
@@ -342,9 +340,7 @@ export abstract class BBI {
     opts: RequestOptions & { scale: number; basesPerSpan?: number } = { scale: 1 },
   ): Promise<Feature[]> {
     const ob = await this.getFeatureStream(refName, start, end, opts)
-    const ret = await ob
-      .pipe(reduce((acc: Feature[], curr: Feature[]): Feature[] => acc.concat(curr)))
-      .toPromise()
+    const ret = await ob.pipe(reduce((acc: Feature[], curr: Feature[]): Feature[] => acc.concat(curr))).toPromise()
     return ret || []
   }
 }
