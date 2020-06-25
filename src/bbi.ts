@@ -2,9 +2,11 @@ import { Parser } from '@gmod/binary-parser'
 import { LocalFile, RemoteFile, GenericFilehandle } from 'generic-filehandle'
 import { Observable, Observer } from 'rxjs'
 import { reduce } from 'rxjs/operators'
+import AbortablePromiseCache from 'abortable-promise-cache'
+import QuickLRU from 'quick-lru'
 
 import { BlockView } from './blockView'
-import { abortBreakPoint, AbortError } from './util'
+import { abortBreakPoint } from './util'
 
 const BIG_WIG_MAGIC = -2003829722
 const BIG_BED_MAGIC = -2021002517
@@ -48,43 +50,6 @@ export interface Header {
   refsByNumber: { [key: number]: RefInfo }
 }
 
-type AbortableCallback = (signal: AbortSignal) => Promise<any>
-
-/* A class that provides memoization for abortable calls */
-class AbortAwareCache {
-  private cache: Map<AbortableCallback, any> = new Map()
-
-  /*
-   * Takes a function that has one argument, abortSignal, that returns a promise
-   * and it works by retrying the function if a previous attempt to initialize the parse cache was aborted
-   * @param fn - an AbortableCallback
-   * @return a memoized version of the AbortableCallback using the AbortAwareCache
-   */
-  public abortableMemoize(fn: (signal?: AbortSignal) => Promise<any>): (signal?: AbortSignal) => Promise<any> {
-    const { cache } = this
-    return function abortableMemoizeFn(signal?: AbortSignal): Promise<any> {
-      if (!cache.has(fn)) {
-        const fnReturn = fn(signal)
-        cache.set(fn, fnReturn)
-        if (signal) {
-          fnReturn.catch((): void => {
-            if (signal.aborted) cache.delete(fn)
-          })
-        }
-        return cache.get(fn)
-      }
-      return cache.get(fn).catch(
-        (e: AbortError | DOMException): Promise<any> => {
-          if (e.code === 'ERR_ABORTED' || e.name === 'AbortError') {
-            return fn(signal)
-          }
-          throw e
-        },
-      )
-    }
-  }
-}
-
 /* get the compiled parsers for different sections of the bigwig file
  *
  * @param isBE - is big endian, typically false
@@ -108,11 +73,7 @@ function getParsers(isBE: boolean): any {
     .uint64('extHeaderOffset') // name index offset, used in bigbed
     .array('zoomLevels', {
       length: 'numZoomLevels',
-      type: new Parser()
-        .uint32('reductionLevel')
-        .uint32('reserved')
-        .uint64('dataOffset')
-        .uint64('indexOffset'),
+      type: new Parser().uint32('reductionLevel').uint32('reserved').uint64('dataOffset').uint64('indexOffset'),
     })
 
   const totalSummaryParser = new Parser()
@@ -131,11 +92,7 @@ function getParsers(isBE: boolean): any {
     .uint32('valSize')
     .uint64('itemCount')
 
-  const isLeafNode = new Parser()
-    .endianess(le)
-    .uint8('isLeafNode')
-    .skip(1)
-    .uint16('cnt')
+  const isLeafNode = new Parser().endianess(le).uint8('isLeafNode').skip(1).uint16('cnt')
 
   return {
     chromTreeParser,
@@ -145,10 +102,20 @@ function getParsers(isBE: boolean): any {
   }
 }
 
+interface RequestOptions {
+  signal?: AbortSignal
+  headers?: Record<string, string>
+}
+
 export abstract class BBI {
   protected bbi: GenericFilehandle
 
-  protected headerCache: AbortAwareCache
+  protected headerCache = new AbortablePromiseCache({
+    cache: new QuickLRU({ maxSize: 1 }),
+    fill: async (params: any, signal?: AbortSignal) => {
+      return this._getHeader({ ...params, signal })
+    },
+  })
 
   protected renameRefSeqs: (a: string) => string
 
@@ -156,7 +123,9 @@ export abstract class BBI {
    * @param abortSignal - abort the operation, can be null
    * @return a Header object
    */
-  public getHeader: (abortSignal?: AbortSignal) => Promise<Header>
+  public getHeader(opts: RequestOptions) {
+    this.headerCache.get(JSON.stringify(opts), opts, opts.signal)
+  }
 
   /*
    * @param filehandle - a filehandle from generic-filehandle or implementing something similar to the node10 fs.promises API
@@ -174,7 +143,6 @@ export abstract class BBI {
   ) {
     const { filehandle, renameRefSeqs, path, url } = options
     this.renameRefSeqs = renameRefSeqs || ((s: string): string => s)
-    this.headerCache = new AbortAwareCache()
     if (filehandle) {
       this.bbi = filehandle
     } else if (url) {
@@ -184,29 +152,28 @@ export abstract class BBI {
     } else {
       throw new Error('no file given')
     }
-    this.getHeader = this.headerCache.abortableMemoize(this._getHeader.bind(this))
   }
 
-  private async _getHeader(abortSignal?: AbortSignal) {
-    const header = await this._getMainHeader(abortSignal)
-    const chroms = await this._readChromTree(header, abortSignal)
+  private async _getHeader(opts: RequestOptions) {
+    const header = await this._getMainHeader(opts)
+    const chroms = await this._readChromTree(header, opts)
     return { ...header, ...chroms }
   }
 
-  private async _getMainHeader(abortSignal?: AbortSignal, requestSize = 2000): Promise<Header> {
-    const { buffer } = await this.bbi.read(Buffer.alloc(requestSize), 0, requestSize, 0, { signal: abortSignal })
+  private async _getMainHeader(opts: RequestOptions, requestSize = 2000): Promise<Header> {
+    const { buffer } = await this.bbi.read(Buffer.alloc(requestSize), 0, requestSize, 0, opts)
     const isBigEndian = this._isBigEndian(buffer)
     const ret = getParsers(isBigEndian)
     const header = ret.headerParser.parse(buffer).result
     header.fileType = header.magic === BIG_BED_MAGIC ? 'bigbed' : 'bigwig'
     if (header.asOffset > requestSize || header.totalSummaryOffset > requestSize) {
-      return this._getMainHeader(abortSignal, requestSize * 2)
+      return this._getMainHeader(opts, requestSize * 2)
     }
     if (header.asOffset) {
       header.autoSql = buffer.slice(header.asOffset, buffer.indexOf(0, header.asOffset)).toString('utf8')
     }
     if (header.totalSummaryOffset > requestSize) {
-      return this._getMainHeader(abortSignal, requestSize * 2)
+      return this._getMainHeader(opts, requestSize * 2)
     }
     if (header.totalSummaryOffset) {
       const tail = buffer.slice(header.totalSummaryOffset)
@@ -228,7 +195,7 @@ export abstract class BBI {
   }
 
   // todo: add progress if long running
-  private async _readChromTree(header: Header, abortSignal?: AbortSignal) {
+  private async _readChromTree(header: Header, opts: { signal?: AbortSignal }) {
     const isBE = header.isBigEndian
     const le = isBE ? 'big' : 'little'
     const refsByNumber: { [key: number]: { name: string; id: number; length: number } } = []
@@ -255,10 +222,7 @@ export abstract class BBI {
       .string('key', { stripNull: true, length: keySize })
       .uint32('refId')
       .uint32('refSize')
-    const nonleafNodeParser = new Parser()
-      .endianess(le)
-      .skip(keySize)
-      .uint64('childOffset')
+    const nonleafNodeParser = new Parser().endianess(le).skip(keySize).uint64('childOffset')
     const rootNodeOffset = 32
     const bptReadNode = async (currentOffset: number): Promise<void> => {
       let offset = currentOffset
