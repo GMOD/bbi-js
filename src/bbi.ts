@@ -73,7 +73,11 @@ function getParsers(isBE: boolean): any {
     .uint64('extHeaderOffset') // name index offset, used in bigbed
     .array('zoomLevels', {
       length: 'numZoomLevels',
-      type: new Parser().uint32('reductionLevel').uint32('reserved').uint64('dataOffset').uint64('indexOffset'),
+      type: new Parser()
+        .uint32('reductionLevel')
+        .uint32('reserved')
+        .uint64('dataOffset')
+        .uint64('indexOffset'),
     })
 
   const totalSummaryParser = new Parser()
@@ -92,7 +96,11 @@ function getParsers(isBE: boolean): any {
     .uint32('valSize')
     .uint64('itemCount')
 
-  const isLeafNode = new Parser().endianess(le).uint8('isLeafNode').skip(1).uint16('cnt')
+  const isLeafNode = new Parser()
+    .endianess(le)
+    .uint8('isLeafNode')
+    .skip(1)
+    .uint16('cnt')
 
   return {
     chromTreeParser,
@@ -222,7 +230,10 @@ export abstract class BBI {
       .string('key', { stripNull: true, length: keySize })
       .uint32('refId')
       .uint32('refSize')
-    const nonleafNodeParser = new Parser().endianess(le).skip(keySize).uint64('childOffset')
+    const nonleafNodeParser = new Parser()
+      .endianess(le)
+      .skip(keySize)
+      .uint64('childOffset')
     const rootNodeOffset = 32
     const bptReadNode = async (currentOffset: number): Promise<void> => {
       let offset = currentOffset
