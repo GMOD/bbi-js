@@ -1,8 +1,10 @@
 import { Parser } from '@gmod/binary-parser'
 import { Observable, Observer, merge } from 'rxjs'
 import { map, reduce } from 'rxjs/operators'
+import AbortablePromiseCache from 'abortable-promise-cache'
+import QuickLRU from 'quick-lru'
 
-import { BBI, Feature } from './bbi'
+import { BBI, Feature, RequestOptions } from './bbi'
 import { BlockView } from './blockView'
 
 interface Loc {
@@ -11,9 +13,7 @@ interface Loc {
   length: number
   field?: number
 }
-interface SearchOptions {
-  signal?: AbortSignal
-}
+
 interface Index {
   type: number
   fieldcount: number
@@ -26,11 +26,19 @@ export function filterUndef<T>(ts: (T | undefined)[]): T[] {
 }
 
 export class BigBed extends BBI {
-  public readIndices: (abortSignal?: AbortSignal) => Promise<Index[]>
+  public readIndicesCache = new AbortablePromiseCache({
+    cache: new QuickLRU({ maxSize: 1 }),
+    fill: async (args: any, signal?: AbortSignal) => {
+      return this._readIndices({ ...args, signal })
+    },
+  })
 
   public constructor(opts: any) {
     super(opts)
-    this.readIndices = this.headerCache.abortableMemoize(this._readIndices.bind(this))
+  }
+
+  public readIndices(opts: RequestOptions = {}) {
+    return this.readIndicesCache.get(JSON.stringify(opts), opts, opts.signal)
   }
 
   /*
@@ -39,8 +47,8 @@ export class BigBed extends BBI {
    * @param abortSignal - an optional AbortSignal to kill operation
    * @return promise for a BlockView
    */
-  protected async getView(scale: number, abortSignal: AbortSignal): Promise<BlockView> {
-    return this.getUnzoomedView(abortSignal)
+  protected async getView(scale: number, opts: RequestOptions): Promise<BlockView> {
+    return this.getUnzoomedView(opts)
   }
 
   /*
@@ -48,8 +56,8 @@ export class BigBed extends BBI {
    * @param abortSignal to abort operation
    * @return a Promise for an array of Index data structure since there can be multiple extraIndexes in a bigbed, see bedToBigBed documentation
    */
-  public async _readIndices(abortSignal?: AbortSignal): Promise<Index[]> {
-    const { extHeaderOffset, isBigEndian } = await this.getHeader(abortSignal)
+  public async _readIndices(opts: RequestOptions): Promise<Index[]> {
+    const { extHeaderOffset, isBigEndian } = await this.getHeader(opts)
     const { buffer: data } = await this.bbi.read(Buffer.alloc(64), 0, 64, extHeaderOffset)
     const le = isBigEndian ? 'big' : 'little'
     const ret = new Parser()
@@ -91,17 +99,16 @@ export class BigBed extends BBI {
    * @param opts - a SearchOptions argument with optional signal
    * @return a Promise for an array of bigbed block Loc entries
    */
-  private async searchExtraIndexBlocks(name: string, opts: SearchOptions = {}): Promise<Loc[]> {
-    const { signal } = opts
-    const { isBigEndian } = await this.getHeader(signal)
-    const indices = await this.readIndices(signal)
+  private async searchExtraIndexBlocks(name: string, opts: RequestOptions = {}): Promise<Loc[]> {
+    const { isBigEndian } = await this.getHeader(opts)
+    const indices = await this.readIndices(opts)
     if (!indices.length) {
       return []
     }
     const locs = indices.map(
       async (index): Promise<Loc | undefined> => {
         const { offset, field } = index
-        const { buffer: data } = await this.bbi.read(Buffer.alloc(32), 0, 32, offset, { signal })
+        const { buffer: data } = await this.bbi.read(Buffer.alloc(32), 0, 32, offset, opts)
         const p = new Parser()
           .endianess(isBigEndian ? 'big' : 'little')
           .int32('magic')
@@ -121,7 +128,9 @@ export class BigBed extends BBI {
             choices: {
               0: new Parser().array('leafkeys', {
                 length: 'cnt',
-                type: new Parser().string('key', { length: keySize, stripNull: true }).uint64('offset'),
+                type: new Parser()
+                  .string('key', { length: keySize, stripNull: true })
+                  .uint64('offset'),
               }),
               1: new Parser().array('keys', {
                 length: 'cnt',
@@ -136,7 +145,7 @@ export class BigBed extends BBI {
 
         const bptReadNode = async (nodeOffset: number): Promise<Loc | undefined> => {
           const len = 4 + blockSize * (keySize + valSize)
-          const { buffer } = await this.bbi.read(Buffer.alloc(len), 0, len, nodeOffset, { signal })
+          const { buffer } = await this.bbi.read(Buffer.alloc(len), 0, len, nodeOffset, opts)
           const node = bpt.parse(buffer).result
           if (node.leafkeys) {
             let lastOffset
@@ -172,10 +181,10 @@ export class BigBed extends BBI {
    * @param opts - a SearchOptions argument with optional signal
    * @return a Promise for an array of Feature
    */
-  public async searchExtraIndex(name: string, opts: SearchOptions = {}): Promise<Feature[]> {
+  public async searchExtraIndex(name: string, opts: RequestOptions = {}): Promise<Feature[]> {
     const blocks = await this.searchExtraIndexBlocks(name, opts)
     if (!blocks.length) return []
-    const view = await this.getUnzoomedView()
+    const view = await this.getUnzoomedView(opts)
     const res = blocks.map(block => {
       return new Observable((observer: Observer<Feature[]>) => {
         view.readFeatures(observer, [block], opts)

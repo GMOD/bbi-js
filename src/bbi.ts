@@ -4,9 +4,7 @@ import { Observable, Observer } from 'rxjs'
 import { reduce } from 'rxjs/operators'
 import AbortablePromiseCache from 'abortable-promise-cache'
 import QuickLRU from 'quick-lru'
-
 import { BlockView } from './blockView'
-import { abortBreakPoint } from './util'
 
 const BIG_WIG_MAGIC = -2003829722
 const BIG_BED_MAGIC = -2021002517
@@ -110,7 +108,7 @@ function getParsers(isBE: boolean): any {
   }
 }
 
-interface RequestOptions {
+export interface RequestOptions {
   signal?: AbortSignal
   headers?: Record<string, string>
 }
@@ -131,8 +129,8 @@ export abstract class BBI {
    * @param abortSignal - abort the operation, can be null
    * @return a Header object
    */
-  public getHeader(opts: RequestOptions) {
-    this.headerCache.get(JSON.stringify(opts), opts, opts.signal)
+  public getHeader(opts: RequestOptions = {}) {
+    return this.headerCache.get(JSON.stringify(opts), opts, opts.signal)
   }
 
   /*
@@ -178,7 +176,9 @@ export abstract class BBI {
       return this._getMainHeader(opts, requestSize * 2)
     }
     if (header.asOffset) {
-      header.autoSql = buffer.slice(header.asOffset, buffer.indexOf(0, header.asOffset)).toString('utf8')
+      header.autoSql = buffer
+        .slice(header.asOffset, buffer.indexOf(0, header.asOffset))
+        .toString('utf8')
     }
     if (header.totalSummaryOffset > requestSize) {
       return this._getMainHeader(opts, requestSize * 2)
@@ -220,7 +220,7 @@ export abstract class BBI {
       0,
       unzoomedDataOffset - chromTreeOffset,
       chromTreeOffset,
-      { signal: abortSignal },
+      opts,
     )
 
     const p = getParsers(isBE)
@@ -241,7 +241,6 @@ export abstract class BBI {
       const ret = p.isLeafNode.parse(data.slice(offset))
       const { isLeafNode, cnt } = ret.result
       offset += ret.offset
-      await abortBreakPoint(abortSignal)
       if (isLeafNode) {
         for (let n = 0; n < cnt; n += 1) {
           const leafRet = leafNodeParser.parse(data.slice(offset))
@@ -275,7 +274,7 @@ export abstract class BBI {
    * fetches the "unzoomed" view of the bigwig data. this is the default for bigbed
    * @param abortSignal - a signal to optionally abort this operation
    */
-  protected async getUnzoomedView(abortSignal?: AbortSignal): Promise<BlockView> {
+  protected async getUnzoomedView(opts: RequestOptions): Promise<BlockView> {
     const {
       unzoomedIndexOffset,
       zoomLevels,
@@ -283,7 +282,7 @@ export abstract class BBI {
       uncompressBufSize,
       isBigEndian,
       fileType,
-    } = await this.getHeader(abortSignal)
+    } = await this.getHeader(opts)
     const nzl = zoomLevels[0]
     const cirLen = nzl ? nzl.dataOffset - unzoomedIndexOffset : 4000
     return new BlockView(
@@ -300,7 +299,7 @@ export abstract class BBI {
   /*
    * abstract method - get the view for a given scale
    */
-  protected abstract async getView(scale: number, abortSignal?: AbortSignal): Promise<BlockView>
+  protected abstract async getView(scale: number, opts: RequestOptions): Promise<BlockView>
 
   /**
    * Gets features from a BigWig file
@@ -314,18 +313,18 @@ export abstract class BBI {
     refName: string,
     start: number,
     end: number,
-    opts: { basesPerSpan?: number; scale?: number; signal?: AbortSignal } = { scale: 1 },
+    opts: RequestOptions & { scale: number; basesPerSpan?: number } = { scale: 1 },
   ): Promise<Observable<Feature[]>> {
-    await this.getHeader(opts.signal)
+    await this.getHeader(opts)
     const chrName = this.renameRefSeqs(refName)
     let view: BlockView
 
     if (opts.basesPerSpan) {
-      view = await this.getView(1 / opts.basesPerSpan, opts.signal)
+      view = await this.getView(1 / opts.basesPerSpan, opts)
     } else if (opts.scale) {
-      view = await this.getView(opts.scale, opts.signal)
+      view = await this.getView(opts.scale, opts)
     } else {
-      view = await this.getView(1, opts.signal)
+      view = await this.getView(1, opts)
     }
 
     if (!view) {
@@ -340,10 +339,12 @@ export abstract class BBI {
     refName: string,
     start: number,
     end: number,
-    opts: { basesPerSpan?: number; scale?: number; signal?: AbortSignal } = { scale: 1 },
+    opts: RequestOptions & { scale: number; basesPerSpan?: number } = { scale: 1 },
   ): Promise<Feature[]> {
     const ob = await this.getFeatureStream(refName, start, end, opts)
-    const ret = await ob.pipe(reduce((acc: Feature[], curr: Feature[]): Feature[] => acc.concat(curr))).toPromise()
+    const ret = await ob
+      .pipe(reduce((acc: Feature[], curr: Feature[]): Feature[] => acc.concat(curr)))
+      .toPromise()
     return ret || []
   }
 }
