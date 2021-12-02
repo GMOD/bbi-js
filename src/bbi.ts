@@ -301,7 +301,7 @@ export abstract class BBI {
   /*
    * abstract method - get the view for a given scale
    */
-  protected abstract async getView(scale: number, opts: RequestOptions): Promise<BlockView>
+  protected abstract getView(scale: number, opts: RequestOptions): Promise<BlockView>
 
   /**
    * Gets features from a BigWig file

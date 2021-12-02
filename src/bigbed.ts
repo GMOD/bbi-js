@@ -33,7 +33,7 @@ export class BigBed extends BBI {
     },
   })
 
-  public constructor(opts: any) {
+  public constructor(opts?: any) {
     super(opts)
   }
 
@@ -193,7 +193,7 @@ export class BigBed extends BBI {
         reduce((acc, curr) => acc.concat(curr)),
         map(x => {
           for (let i = 0; i < x.length; i += 1) {
-             x[i].field = block.field // eslint-disable-line
+            x[i].field = block.field // eslint-disable-line
           }
           return x
         }),
