@@ -1,3 +1,5 @@
+- Add esm module builds with less babelification for smaller bundle sizes
+
 ## [1.0.30](https://github.com/GMOD/bbi-js/compare/v1.0.29...v1.0.30) (2020-06-25)
 
 
