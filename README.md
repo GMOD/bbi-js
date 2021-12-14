@@ -1,8 +1,8 @@
 # bbi-js
 
 [![NPM version](https://img.shields.io/npm/v/@gmod/bbi.svg?style=flat-square)](https://npmjs.org/package/@gmod/bbi)
-[![Build Status](https://img.shields.io/travis/GMOD/bbi-js/master.svg?style=flat-square)](https://travis-ci.org/GMOD/bbi-js) [![Coverage Status](https://img.shields.io/codecov/c/github/GMOD/bbi-js/master.svg?style=flat-square)](https://codecov.io/gh/GMOD/bbi-js/branch/master)
-
+[![Coverage Status](https://img.shields.io/codecov/c/github/GMOD/bbi-js/master.svg?style=flat-square)](https://codecov.io/gh/GMOD/bbi-js/branch/master)
+[![Build Status](https://img.shields.io/github/workflow/status/GMOD/bbi-js/Push/master?logo=github&style=flat-query)](https://github.com/GMOD/bbi-js/actions?query=branch%3Amaster+workflow%3APush+)
 
 A parser for bigwig and bigbed file formats
 
@@ -18,7 +18,6 @@ If using locally
       await file.getHeader();
       const feats = await file.getFeatures('chr1', 0, 100, { scale: 1 });
     })();
-
 
 If using remotely, you can use it in combination with generic-filehandle or your own implementation of something like generic-filehandle
 https://github.com/GMOD/generic-filehandle/
@@ -43,30 +42,26 @@ https://github.com/GMOD/generic-filehandle/
       const feats = await file.getFeatures('chr1', 0, 100, { scale: 1 });
     })();
 
-
-
 ## Documentation
 
 ### BigWig/BigBed constructors
 
 Accepts an object containing either
 
-* path - path to a local file
-* url - path to a url
-* filehandle - a filehandle instance that you can implement as a custom class yourself. path and url are based on https://www.npmjs.com/package/generic-filehandle but by implementing a class containing the Filehandle interface specified therein, you can pass it to this module
-
+- path - path to a local file
+- url - path to a url
+- filehandle - a filehandle instance that you can implement as a custom class yourself. path and url are based on https://www.npmjs.com/package/generic-filehandle but by implementing a class containing the Filehandle interface specified therein, you can pass it to this module
 
 ### BigWig
 
 #### getFeatures(refName, start, end, opts)
 
-* refName - a name of a chromosome in the file
-* start - a 0-based half open start coordinate
-* end - a 0-based half open end coordinate
-* opts.scale - indicates zoom level to use, specified as pxPerBp, e.g. being zoomed out, you might have 100bp per pixel so opts.scale would be 1/100. the zoom level that is returned is the one which has reductionLevel<=2/opts.scale (reductionLevel is a property of the zoom level structure in the bigwig file data)
-* opts.basesPerScale - optional, inverse of opts.scale e.g. bpPerPx
-* opts.signal - optional, an AbortSignal to halt processing
-
+- refName - a name of a chromosome in the file
+- start - a 0-based half open start coordinate
+- end - a 0-based half open end coordinate
+- opts.scale - indicates zoom level to use, specified as pxPerBp, e.g. being zoomed out, you might have 100bp per pixel so opts.scale would be 1/100. the zoom level that is returned is the one which has reductionLevel<=2/opts.scale (reductionLevel is a property of the zoom level structure in the bigwig file data)
+- opts.basesPerScale - optional, inverse of opts.scale e.g. bpPerPx
+- opts.signal - optional, an AbortSignal to halt processing
 
 Returns a promise to an array of features. If an incorrect refName or no features are found the result is an empty array.
 
@@ -78,10 +73,9 @@ Example:
     // no conversion to 1-based as in wig is done)
     // note refseq is not returned on the object, it is clearly chr1 from the query though
 
-
 ### Understanding scale and reductionLevel
 
-Here is what the reductionLevel structure looks like in a file. The zoomLevel that is chosen is the first reductionLevel<2*opts.basesPerScale (or reductionLevel<2/opts.scale) when scanning backwards through this list
+Here is what the reductionLevel structure looks like in a file. The zoomLevel that is chosen is the first reductionLevel<2\*opts.basesPerScale (or reductionLevel<2/opts.scale) when scanning backwards through this list
 
       [ { reductionLevel: 40, ... },
         { reductionLevel: 160, ... },
@@ -90,7 +84,6 @@ Here is what the reductionLevel structure looks like in a file. The zoomLevel th
         { reductionLevel: 10240, ... },
         { reductionLevel: 40960, ... },
         { reductionLevel: 163840, ... } ]
-
 
 #### getFeatureStream(refName, start, end, opts)
 
@@ -109,10 +102,10 @@ Same as getFeatures but returns an RxJS observable stream, useful for very large
 
 #### getFeatures(refName, start, end, opts)
 
-* refName - a name of a chromosome in the file
-* start - a 0-based half open start coordinate
-* end - a 0-based half open end coordinate
-* opts.signal - optional, an AbortSignal to halt processing
+- refName - a name of a chromosome in the file
+- start - a 0-based half open start coordinate
+- end - a 0-based half open end coordinate
+- opts.signal - optional, an AbortSignal to halt processing
 
 returns a promise to an array of features. no concept of zoom levels is used with bigwig data
 
@@ -133,8 +126,7 @@ Returns a Promise to an array of Features, with an extra field indicating the fi
 
 ### How to parse BigBed results
 
-The BigBed line contents are returned as a raw text line e.g. {start: 0, end:100, rest: "ENST00000456328.2\t1000\t..."} where "rest" contains tab delimited text for the fields from 4 and on in the BED format.  Since BED files from BigBed format often come with autoSql (a description of all the columns) it can be useful to parse it with BED parser that can handle autoSql. The rest line can be parsed by the @gmod/bed module, which is not by default integrated with this module, but can be combined with it as follows
-
+The BigBed line contents are returned as a raw text line e.g. {start: 0, end:100, rest: "ENST00000456328.2\t1000\t..."} where "rest" contains tab delimited text for the fields from 4 and on in the BED format. Since BED files from BigBed format often come with autoSql (a description of all the columns) it can be useful to parse it with BED parser that can handle autoSql. The rest line can be parsed by the @gmod/bed module, which is not by default integrated with this module, but can be combined with it as follows
 
 ```js
     import {BigBed} from '@gmod/bbi'
@@ -181,7 +173,6 @@ Features after parsing with @gmod/bed:
         spID: 'AL137655' }
 ```
 
-
 ## Academic Use
 
 This package was written with funding from the [NHGRI](http://genome.gov) as part of the [JBrowse](http://jbrowse.org) project. If you use it in an academic project that you publish, please cite the most recent JBrowse paper, which will be linked from [jbrowse.org](http://jbrowse.org).
@@ -189,4 +180,3 @@ This package was written with funding from the [NHGRI](http://genome.gov) as par
 ## License
 
 MIT © [Colin Diesh](https://github.com/cmdcolin)
-

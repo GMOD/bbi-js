@@ -46,7 +46,9 @@ export function groupBlocks(blocks: any[]): any[] {
  * @returns nothing
  */
 export function checkAbortSignal(signal?: AbortSignal): void {
-  if (!signal) return
+  if (!signal) {
+    return
+  }
 
   if (signal.aborted) {
     // console.log('bam aborted!')

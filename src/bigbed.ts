@@ -33,13 +33,17 @@ export class BigBed extends BBI {
     },
   })
 
-  public constructor(opts: any) {
+  public constructor(opts?: any) {
     super(opts)
   }
 
   public readIndices(opts: AbortSignal | RequestOptions = {}) {
     const options = 'aborted' in opts ? { signal: opts } : opts
-    return this.readIndicesCache.get(JSON.stringify(options), options, options.signal)
+    return this.readIndicesCache.get(
+      JSON.stringify(options),
+      options,
+      options.signal,
+    )
   }
 
   /*
@@ -48,7 +52,10 @@ export class BigBed extends BBI {
    * @param abortSignal - an optional AbortSignal to kill operation
    * @return promise for a BlockView
    */
-  protected async getView(scale: number, opts: RequestOptions): Promise<BlockView> {
+  protected async getView(
+    scale: number,
+    opts: RequestOptions,
+  ): Promise<BlockView> {
     return this.getUnzoomedView(opts)
   }
 
@@ -59,7 +66,12 @@ export class BigBed extends BBI {
    */
   private async _readIndices(opts: RequestOptions): Promise<Index[]> {
     const { extHeaderOffset, isBigEndian } = await this.getHeader(opts)
-    const { buffer: data } = await this.bbi.read(Buffer.alloc(64), 0, 64, extHeaderOffset)
+    const { buffer: data } = await this.bbi.read(
+      Buffer.alloc(64),
+      0,
+      64,
+      extHeaderOffset,
+    )
     const le = isBigEndian ? 'big' : 'little'
     const ret = new Parser()
       .endianess(le)
@@ -100,77 +112,92 @@ export class BigBed extends BBI {
    * @param opts - a SearchOptions argument with optional signal
    * @return a Promise for an array of bigbed block Loc entries
    */
-  private async searchExtraIndexBlocks(name: string, opts: RequestOptions = {}): Promise<Loc[]> {
+  private async searchExtraIndexBlocks(
+    name: string,
+    opts: RequestOptions = {},
+  ): Promise<Loc[]> {
     const { isBigEndian } = await this.getHeader(opts)
     const indices = await this.readIndices(opts)
     if (!indices.length) {
       return []
     }
-    const locs = indices.map(
-      async (index: any): Promise<Loc | undefined> => {
-        const { offset, field } = index
-        const { buffer: data } = await this.bbi.read(Buffer.alloc(32), 0, 32, offset, opts)
-        const p = new Parser()
-          .endianess(isBigEndian ? 'big' : 'little')
-          .int32('magic')
-          .int32('blockSize')
-          .int32('keySize')
-          .int32('valSize')
-          .uint64('itemCount')
+    const locs = indices.map(async (index: any): Promise<Loc | undefined> => {
+      const { offset, field } = index
+      const { buffer: data } = await this.bbi.read(
+        Buffer.alloc(32),
+        0,
+        32,
+        offset,
+        opts,
+      )
+      const p = new Parser()
+        .endianess(isBigEndian ? 'big' : 'little')
+        .int32('magic')
+        .int32('blockSize')
+        .int32('keySize')
+        .int32('valSize')
+        .uint64('itemCount')
 
-        const { blockSize, keySize, valSize } = p.parse(data).result
-        const bpt = new Parser()
-          .endianess(isBigEndian ? 'big' : 'little')
-          .int8('nodeType')
-          .skip(1)
-          .int16('cnt')
-          .choice({
-            tag: 'nodeType',
-            choices: {
-              0: new Parser().array('leafkeys', {
-                length: 'cnt',
-                type: new Parser()
-                  .string('key', { length: keySize, stripNull: true })
-                  .uint64('offset'),
-              }),
-              1: new Parser().array('keys', {
-                length: 'cnt',
-                type: new Parser()
-                  .string('key', { length: keySize, stripNull: true })
-                  .uint64('offset')
-                  .uint32('length')
-                  .uint32('reserved'),
-              }),
-            },
-          })
+      const { blockSize, keySize, valSize } = p.parse(data).result
+      const bpt = new Parser()
+        .endianess(isBigEndian ? 'big' : 'little')
+        .int8('nodeType')
+        .skip(1)
+        .int16('cnt')
+        .choice({
+          tag: 'nodeType',
+          choices: {
+            0: new Parser().array('leafkeys', {
+              length: 'cnt',
+              type: new Parser()
+                .string('key', { length: keySize, stripNull: true })
+                .uint64('offset'),
+            }),
+            1: new Parser().array('keys', {
+              length: 'cnt',
+              type: new Parser()
+                .string('key', { length: keySize, stripNull: true })
+                .uint64('offset')
+                .uint32('length')
+                .uint32('reserved'),
+            }),
+          },
+        })
 
-        const bptReadNode = async (nodeOffset: number): Promise<Loc | undefined> => {
-          const len = 4 + blockSize * (keySize + valSize)
-          const { buffer } = await this.bbi.read(Buffer.alloc(len), 0, len, nodeOffset, opts)
-          const node = bpt.parse(buffer).result
-          if (node.leafkeys) {
-            let lastOffset
-            for (let i = 0; i < node.leafkeys.length; i += 1) {
-              const { key } = node.leafkeys[i]
-              if (name.localeCompare(key) < 0 && lastOffset) {
-                return bptReadNode(lastOffset)
-              }
-              lastOffset = node.leafkeys[i].offset
+      const bptReadNode = async (
+        nodeOffset: number,
+      ): Promise<Loc | undefined> => {
+        const len = 4 + blockSize * (keySize + valSize)
+        const { buffer } = await this.bbi.read(
+          Buffer.alloc(len),
+          0,
+          len,
+          nodeOffset,
+          opts,
+        )
+        const node = bpt.parse(buffer).result
+        if (node.leafkeys) {
+          let lastOffset
+          for (let i = 0; i < node.leafkeys.length; i += 1) {
+            const { key } = node.leafkeys[i]
+            if (name.localeCompare(key) < 0 && lastOffset) {
+              return bptReadNode(lastOffset)
             }
-            return bptReadNode(lastOffset)
+            lastOffset = node.leafkeys[i].offset
           }
-          for (let i = 0; i < node.keys.length; i += 1) {
-            if (node.keys[i].key === name) {
-              return { ...node.keys[i], field }
-            }
-          }
-
-          return undefined
+          return bptReadNode(lastOffset)
         }
-        const rootNodeOffset = 32
-        return bptReadNode(offset + rootNodeOffset)
-      },
-    )
+        for (let i = 0; i < node.keys.length; i += 1) {
+          if (node.keys[i].key === name) {
+            return { ...node.keys[i], field }
+          }
+        }
+
+        return undefined
+      }
+      const rootNodeOffset = 32
+      return bptReadNode(offset + rootNodeOffset)
+    })
     return filterUndef(await Promise.all(locs))
   }
 
@@ -182,9 +209,14 @@ export class BigBed extends BBI {
    * @param opts - a SearchOptions argument with optional signal
    * @return a Promise for an array of Feature
    */
-  public async searchExtraIndex(name: string, opts: RequestOptions = {}): Promise<Feature[]> {
+  public async searchExtraIndex(
+    name: string,
+    opts: RequestOptions = {},
+  ): Promise<Feature[]> {
     const blocks = await this.searchExtraIndexBlocks(name, opts)
-    if (!blocks.length) return []
+    if (!blocks.length) {
+      return []
+    }
     const view = await this.getUnzoomedView(opts)
     const res = blocks.map(block => {
       return new Observable((observer: Observer<Feature[]>) => {
@@ -193,7 +225,7 @@ export class BigBed extends BBI {
         reduce((acc, curr) => acc.concat(curr)),
         map(x => {
           for (let i = 0; i < x.length; i += 1) {
-             x[i].field = block.field // eslint-disable-line
+            x[i].field = block.field
           }
           return x
         }),

@@ -10,14 +10,12 @@ export class BigWig extends BBI {
    * @param end - The end of a region
    * @param opts - An object containing basesPerSpan (e.g. pixels per basepair) or scale used to infer the zoomLevel to use
    */
-  protected async getView(scale: number, opts: RequestOptions): Promise<BlockView> {
-    const {
-      zoomLevels,
-      refsByName,
-      fileSize,
-      isBigEndian,
-      uncompressBufSize,
-    } = await this.getHeader(opts)
+  protected async getView(
+    scale: number,
+    opts: RequestOptions,
+  ): Promise<BlockView> {
+    const { zoomLevels, refsByName, fileSize, isBigEndian, uncompressBufSize } =
+      await this.getHeader(opts)
     const basesPerPx = 1 / scale
     let maxLevel = zoomLevels.length
     if (!fileSize) {

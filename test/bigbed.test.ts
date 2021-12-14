@@ -88,7 +88,7 @@ describe('bigbed formats', () => {
     const feats2 = await ti.getFeatures('chr21', 9550000, 10750000)
     const f1 = feats1.find(f => f.start === 9734795)
     const f2 = feats2.find(f => f.start === 9734795)
-    expect(f1.uniqueId).toEqual(f2.uniqueId)
+    expect(f1?.uniqueId).toEqual(f2?.uniqueId)
     const f11 = feats1.filter(f => f.start === 9734795)
     const f22 = feats2.filter(f => f.start === 9734795)
     expect(f11).toEqual(f22)
