@@ -47,9 +47,7 @@ export default class Range {
   }
 
   public union(s1: Range): Range {
-    const ranges = this.getRanges()
-      .concat(s1.getRanges())
-      .sort(this.rangeOrder)
+    const ranges = this.getRanges().concat(s1.getRanges()).sort(this.rangeOrder)
     const oranges = []
     let current = ranges[0]
 

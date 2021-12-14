@@ -14,13 +14,8 @@ export class BigWig extends BBI {
     scale: number,
     opts: RequestOptions,
   ): Promise<BlockView> {
-    const {
-      zoomLevels,
-      refsByName,
-      fileSize,
-      isBigEndian,
-      uncompressBufSize,
-    } = await this.getHeader(opts)
+    const { zoomLevels, refsByName, fileSize, isBigEndian, uncompressBufSize } =
+      await this.getHeader(opts)
     const basesPerPx = 1 / scale
     let maxLevel = zoomLevels.length
     if (!fileSize) {

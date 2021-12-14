@@ -123,10 +123,7 @@ function getParsers(isBigEndian: boolean): any {
         }),
         [BIG_WIG_TYPE_GRAPH]: new Parser().array('items', {
           length: 'itemCount',
-          type: new Parser()
-            .int32('start')
-            .int32('end')
-            .float('score'),
+          type: new Parser().int32('start').int32('end').float('score'),
         }),
       },
     })

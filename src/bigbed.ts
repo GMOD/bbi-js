@@ -121,85 +121,83 @@ export class BigBed extends BBI {
     if (!indices.length) {
       return []
     }
-    const locs = indices.map(
-      async (index: any): Promise<Loc | undefined> => {
-        const { offset, field } = index
-        const { buffer: data } = await this.bbi.read(
-          Buffer.alloc(32),
+    const locs = indices.map(async (index: any): Promise<Loc | undefined> => {
+      const { offset, field } = index
+      const { buffer: data } = await this.bbi.read(
+        Buffer.alloc(32),
+        0,
+        32,
+        offset,
+        opts,
+      )
+      const p = new Parser()
+        .endianess(isBigEndian ? 'big' : 'little')
+        .int32('magic')
+        .int32('blockSize')
+        .int32('keySize')
+        .int32('valSize')
+        .uint64('itemCount')
+
+      const { blockSize, keySize, valSize } = p.parse(data).result
+      const bpt = new Parser()
+        .endianess(isBigEndian ? 'big' : 'little')
+        .int8('nodeType')
+        .skip(1)
+        .int16('cnt')
+        .choice({
+          tag: 'nodeType',
+          choices: {
+            0: new Parser().array('leafkeys', {
+              length: 'cnt',
+              type: new Parser()
+                .string('key', { length: keySize, stripNull: true })
+                .uint64('offset'),
+            }),
+            1: new Parser().array('keys', {
+              length: 'cnt',
+              type: new Parser()
+                .string('key', { length: keySize, stripNull: true })
+                .uint64('offset')
+                .uint32('length')
+                .uint32('reserved'),
+            }),
+          },
+        })
+
+      const bptReadNode = async (
+        nodeOffset: number,
+      ): Promise<Loc | undefined> => {
+        const len = 4 + blockSize * (keySize + valSize)
+        const { buffer } = await this.bbi.read(
+          Buffer.alloc(len),
           0,
-          32,
-          offset,
+          len,
+          nodeOffset,
           opts,
         )
-        const p = new Parser()
-          .endianess(isBigEndian ? 'big' : 'little')
-          .int32('magic')
-          .int32('blockSize')
-          .int32('keySize')
-          .int32('valSize')
-          .uint64('itemCount')
-
-        const { blockSize, keySize, valSize } = p.parse(data).result
-        const bpt = new Parser()
-          .endianess(isBigEndian ? 'big' : 'little')
-          .int8('nodeType')
-          .skip(1)
-          .int16('cnt')
-          .choice({
-            tag: 'nodeType',
-            choices: {
-              0: new Parser().array('leafkeys', {
-                length: 'cnt',
-                type: new Parser()
-                  .string('key', { length: keySize, stripNull: true })
-                  .uint64('offset'),
-              }),
-              1: new Parser().array('keys', {
-                length: 'cnt',
-                type: new Parser()
-                  .string('key', { length: keySize, stripNull: true })
-                  .uint64('offset')
-                  .uint32('length')
-                  .uint32('reserved'),
-              }),
-            },
-          })
-
-        const bptReadNode = async (
-          nodeOffset: number,
-        ): Promise<Loc | undefined> => {
-          const len = 4 + blockSize * (keySize + valSize)
-          const { buffer } = await this.bbi.read(
-            Buffer.alloc(len),
-            0,
-            len,
-            nodeOffset,
-            opts,
-          )
-          const node = bpt.parse(buffer).result
-          if (node.leafkeys) {
-            let lastOffset
-            for (let i = 0; i < node.leafkeys.length; i += 1) {
-              const { key } = node.leafkeys[i]
-              if (name.localeCompare(key) < 0 && lastOffset) {
-                return bptReadNode(lastOffset)
-              }
-              lastOffset = node.leafkeys[i].offset
+        const node = bpt.parse(buffer).result
+        if (node.leafkeys) {
+          let lastOffset
+          for (let i = 0; i < node.leafkeys.length; i += 1) {
+            const { key } = node.leafkeys[i]
+            if (name.localeCompare(key) < 0 && lastOffset) {
+              return bptReadNode(lastOffset)
             }
-            return bptReadNode(lastOffset)
+            lastOffset = node.leafkeys[i].offset
           }
-          for (let i = 0; i < node.keys.length; i += 1) {
-            if (node.keys[i].key === name) {
-              return { ...node.keys[i], field }
-            }
-          }
-
-          return undefined
+          return bptReadNode(lastOffset)
         }
-        const rootNodeOffset = 32
-        return bptReadNode(offset + rootNodeOffset)
-      },
-    )
+        for (let i = 0; i < node.keys.length; i += 1) {
+          if (node.keys[i].key === name) {
+            return { ...node.keys[i], field }
+          }
+        }
+
+        return undefined
+      }
+      const rootNodeOffset = 32
+      return bptReadNode(offset + rootNodeOffset)
+    })
     return filterUndef(await Promise.all(locs))
   }
 
