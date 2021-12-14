@@ -27,7 +27,7 @@
     "build": "tsc --target es2018 --outDir esm && tsc --target es5 --outDir dist",
     "preversion": "npm run lint && npm test && npm run build",
     "version": "standard-changelog && git add CHANGELOG.md",
-    "postpublish": "git push origin master --follow-tags"
+    "postversion": "git push origin master --follow-tags"
   },
   "keywords": [
     "bionode",
