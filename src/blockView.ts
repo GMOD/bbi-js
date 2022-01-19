@@ -216,7 +216,7 @@ export class BlockView {
     end: number,
     observer: Observer<Feature[]>,
     opts: Options,
-  ): Promise<void> {
+  ) {
     try {
       const { refsByName, bbi, cirTreeOffset, isBigEndian } = this
       const { signal } = opts
@@ -237,63 +237,11 @@ export class BlockView {
       let blocksToFetch: any[] = []
       let outstanding = 0
 
-      //eslint-disable-next-line prefer-const
-      let cirFobRecur2: Function
-
-      const filterFeats = (b: DataBlock): boolean =>
-        (b.startChrom < chrId ||
-          (b.startChrom === chrId && b.startBase <= end)) &&
-        (b.endChrom > chrId || (b.endChrom === chrId && b.endBase >= start))
-
-      const cirFobStartFetch = async (
-        off: any,
-        fr: any,
-        level: number,
-      ): Promise<void> => {
-        try {
-          const length = fr.max() - fr.min()
-          const offset = fr.min()
-          const resultBuffer = await this.featureCache.get(
-            `${length}_${offset}`,
-            { length, offset },
-            signal,
-          )
-          for (let i = 0; i < off.length; i += 1) {
-            if (fr.contains(off[i])) {
-              cirFobRecur2(resultBuffer, off[i] - offset, level, observer, opts)
-              outstanding -= 1
-              if (outstanding === 0) {
-                this.readFeatures(observer, blocksToFetch, { ...opts, request })
-              }
-            }
-          }
-        } catch (e) {
-          observer.error(e)
-        }
-      }
-      const cirFobRecur = (offset: any, level: number): void => {
-        try {
-          outstanding += offset.length
-
-          const maxCirBlockSpan = 4 + cirBlockSize * 32 // Upper bound on size, based on a completely full leaf node.
-          let spans = new Range(offset[0], offset[0] + maxCirBlockSpan)
-          for (let i = 1; i < offset.length; i += 1) {
-            const blockSpan = new Range(offset[i], offset[i] + maxCirBlockSpan)
-            spans = spans.union(blockSpan)
-          }
-          spans
-            .getRanges()
-            .map((fr: Range) => cirFobStartFetch(offset, fr, level))
-        } catch (e) {
-          observer.error(e)
-        }
-      }
-
-      cirFobRecur2 = (
+      const cirFobRecur2 = (
         cirBlockData: Buffer,
         offset: number,
         level: number,
-      ): void => {
+      ) => {
         try {
           const data = cirBlockData.slice(offset)
 
@@ -319,6 +267,52 @@ export class BlockView {
         }
       }
 
+      const filterFeats = (b: DataBlock) => {
+        const { startChrom, startBase, endChrom, endBase } = b
+        return (
+          (startChrom < chrId || (startChrom === chrId && startBase <= end)) &&
+          (endChrom > chrId || (endChrom === chrId && endBase >= start))
+        )
+      }
+
+      const cirFobStartFetch = async (off: any, fr: any, level: number) => {
+        try {
+          const length = fr.max() - fr.min()
+          const offset = fr.min()
+          const resultBuffer = await this.featureCache.get(
+            `${length}_${offset}`,
+            { length, offset },
+            signal,
+          )
+          for (let i = 0; i < off.length; i += 1) {
+            if (fr.contains(off[i])) {
+              cirFobRecur2(resultBuffer, off[i] - offset, level)
+              outstanding -= 1
+              if (outstanding === 0) {
+                this.readFeatures(observer, blocksToFetch, { ...opts, request })
+              }
+            }
+          }
+        } catch (e) {
+          observer.error(e)
+        }
+      }
+      const cirFobRecur = (offset: any, level: number) => {
+        try {
+          outstanding += offset.length
+
+          const maxCirBlockSpan = 4 + cirBlockSize * 32 // Upper bound on size, based on a completely full leaf node.
+          let spans = new Range(offset[0], offset[0] + maxCirBlockSpan)
+          for (let i = 1; i < offset.length; i += 1) {
+            const blockSpan = new Range(offset[i], offset[i] + maxCirBlockSpan)
+            spans = spans.union(blockSpan)
+          }
+          spans.getRanges().map(fr => cirFobStartFetch(offset, fr, level))
+        } catch (e) {
+          observer.error(e)
+        }
+      }
+
       return cirFobRecur([cirTreeOffset + 48], 1)
     } catch (e) {
       observer.error(e)
@@ -329,8 +323,8 @@ export class BlockView {
     data: Buffer,
     startOffset: number,
     request?: CoordRequest,
-  ): Feature[] {
-    const features = []
+  ) {
+    const features = [] as SummaryBlock[]
     let currOffset = startOffset
     while (currOffset < data.byteLength) {
       const res = this.summaryParser.parse(data.slice(currOffset))
@@ -339,11 +333,9 @@ export class BlockView {
     }
     let items = features
     if (request) {
-      items = items.filter(
-        (elt: SummaryBlock): boolean => elt.chromId === request.chrId,
-      )
+      items = items.filter(elt => elt.chromId === request.chrId)
     }
-    items = items.map(
+    const feats = items.map(
       (elt: SummaryBlock): Feature => ({
         start: elt.start,
         end: elt.end,
@@ -354,8 +346,8 @@ export class BlockView {
       }),
     )
     return request
-      ? items.filter(f => BlockView.coordFilter(f, request))
-      : items
+      ? feats.filter(f => BlockView.coordFilter(f, request))
+      : feats
   }
 
   private parseBigBedBlock(
@@ -363,8 +355,8 @@ export class BlockView {
     startOffset: number,
     offset: number,
     request?: CoordRequest,
-  ): Feature[] {
-    const items = []
+  ) {
+    const items = [] as Feature[]
     let currOffset = startOffset
     while (currOffset < data.byteLength) {
       const res = this.bigBedParser.parse(data.slice(currOffset))
