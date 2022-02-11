@@ -3,7 +3,7 @@ import { Observer } from 'rxjs'
 import { Parser } from '@gmod/binary-parser'
 import AbortablePromiseCache from 'abortable-promise-cache'
 import { GenericFilehandle } from 'generic-filehandle'
-import { inflate } from 'pako'
+import { unzip } from './unzip'
 import QuickLRU from 'quick-lru'
 import { Feature } from './bbi'
 import Range from './range'
@@ -421,7 +421,7 @@ export class BlockView {
             let blockOffset = block.offset - blockGroup.offset
             let resultData = data
             if (isCompressed) {
-              resultData = Buffer.from(inflate(data.slice(blockOffset)))
+              resultData = unzip(data.slice(blockOffset))
               blockOffset = 0
             }
             checkAbortSignal(signal)
