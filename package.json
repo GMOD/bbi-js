@@ -43,6 +43,7 @@
     "buffer-crc32": "^0.2.13",
     "es6-promisify": "^6.0.1",
     "generic-filehandle": "^2.0.0",
+    "pako": "^1.0.0",
     "quick-lru": "^4.0.0",
     "rxjs": "^6.5.2"
   },
@@ -51,6 +52,7 @@
     "@types/jest": "^27.0.3",
     "@types/long": "^4.0.0",
     "@types/node": "^12.0.2",
+    "@types/pako": "^1.0.3",
     "@typescript-eslint/eslint-plugin": "^5.10.0",
     "@typescript-eslint/parser": "^5.10.0",
     "cross-fetch": "^3.0.2",
