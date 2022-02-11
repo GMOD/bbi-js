@@ -1,2 +1,2 @@
-import { gunzipSync } from 'zlib'
-export { gunzipSync as unzip }
+import { inflateSync } from 'zlib'
+export { inflateSync as unzip }
