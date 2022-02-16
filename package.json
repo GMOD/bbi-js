@@ -24,7 +24,9 @@
     "lint": "eslint --report-unused-disable-directives --max-warnings 0 --ext .js,.ts src",
     "clean": "rimraf dist esm",
     "prebuild": "npm run clean",
-    "build": "tsc --target es2018 --outDir esm && tsc --target es5 --outDir dist",
+    "build:esm": "tsc --target es2018 --outDir esm",
+    "build:es5": "tsc --target es5 --outDir dist",
+    "build": "npm run build:esm && npm run build:es5",
     "preversion": "npm run lint && npm test && npm run build",
     "version": "standard-changelog && git add CHANGELOG.md",
     "postversion": "git push origin master --follow-tags"
@@ -43,6 +45,7 @@
     "buffer-crc32": "^0.2.13",
     "es6-promisify": "^6.0.1",
     "generic-filehandle": "^2.0.0",
+    "pako": "^1.0.0",
     "quick-lru": "^4.0.0",
     "rxjs": "^6.5.2"
   },
@@ -51,21 +54,26 @@
     "@types/jest": "^27.0.3",
     "@types/long": "^4.0.0",
     "@types/node": "^12.0.2",
-    "@typescript-eslint/eslint-plugin": "^2.0.0",
-    "@typescript-eslint/parser": "^2.0.0",
+    "@types/pako": "^1.0.3",
+    "@typescript-eslint/eslint-plugin": "^5.10.0",
+    "@typescript-eslint/parser": "^5.10.0",
     "cross-fetch": "^3.0.2",
-    "eslint": "^7.0.0",
+    "eslint": "^8.7.0",
     "eslint-config-prettier": "^8.3.0",
     "eslint-plugin-import": "^2.25.3",
     "eslint-plugin-prettier": "^4.0.0",
     "jest": "^27.4.3",
     "prettier": "^2.5.1",
-    "rimraf": "^2.6.3",
+    "rimraf": "^3.0.2",
     "standard-changelog": "^2.0.11",
     "ts-jest": "^27.0.7",
     "typescript": "^4.5.2"
   },
   "publishConfig": {
     "access": "public"
+  },
+  "browser": {
+    "./esm/unzip.js": "./esm/unzip-pako.js",
+    "./dist/unzip.js": "./dist/unzip-pako.js"
   }
 }
