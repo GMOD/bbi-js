@@ -1,3 +1,7 @@
+## [1.0.32](https://github.com/GMOD/bbi-js/compare/v1.0.31...v1.0.32) (2022-02-16)
+
+
+
 - Use pako to decode on command line instead of using zlib to avoid need to
   manually polyfill zlib
 
