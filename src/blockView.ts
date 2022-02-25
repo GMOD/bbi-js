@@ -243,7 +243,7 @@ export class BlockView {
         level: number,
       ) => {
         try {
-          const data = cirBlockData.slice(offset)
+          const data = cirBlockData.subarray(offset)
 
           const p = this.leafParser.parse(data).result
           if (p.blocksToFetch) {
@@ -327,7 +327,7 @@ export class BlockView {
     const features = [] as SummaryBlock[]
     let currOffset = startOffset
     while (currOffset < data.byteLength) {
-      const res = this.summaryParser.parse(data.slice(currOffset))
+      const res = this.summaryParser.parse(data.subarray(currOffset))
       features.push(res.result)
       currOffset += res.offset
     }
@@ -359,7 +359,7 @@ export class BlockView {
     const items = [] as Feature[]
     let currOffset = startOffset
     while (currOffset < data.byteLength) {
-      const res = this.bigBedParser.parse(data.slice(currOffset))
+      const res = this.bigBedParser.parse(data.subarray(currOffset))
       res.result.uniqueId = `bb-${offset + currOffset}`
       items.push(res.result)
       currOffset += res.offset
@@ -375,7 +375,7 @@ export class BlockView {
     startOffset: number,
     request?: CoordRequest,
   ): Feature[] {
-    const data = bytes.slice(startOffset)
+    const data = bytes.subarray(startOffset)
     const results = this.bigWigParser.parse(data).result
     const { items, itemSpan, itemStep, blockStart, blockType } = results
     if (blockType === BIG_WIG_TYPE_FSTEP) {
@@ -421,7 +421,7 @@ export class BlockView {
             let blockOffset = block.offset - blockGroup.offset
             let resultData = data
             if (isCompressed) {
-              resultData = unzip(data.slice(blockOffset))
+              resultData = unzip(data.subarray(blockOffset))
               blockOffset = 0
             }
             checkAbortSignal(signal)

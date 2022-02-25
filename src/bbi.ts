@@ -195,14 +195,14 @@ export abstract class BBI {
     }
     if (header.asOffset) {
       header.autoSql = buffer
-        .slice(header.asOffset, buffer.indexOf(0, header.asOffset))
+        .subarray(header.asOffset, buffer.indexOf(0, header.asOffset))
         .toString('utf8')
     }
     if (header.totalSummaryOffset > requestSize) {
       return this._getMainHeader(opts, requestSize * 2)
     }
     if (header.totalSummaryOffset) {
-      const tail = buffer.slice(header.totalSummaryOffset)
+      const tail = buffer.subarray(header.totalSummaryOffset)
       header.totalSummary = ret.totalSummaryParser.parse(tail).result
     }
     return { ...header, isBigEndian }
@@ -260,12 +260,12 @@ export abstract class BBI {
       if (offset >= data.length) {
         throw new Error('reading beyond end of buffer')
       }
-      const ret = p.isLeafNode.parse(data.slice(offset))
+      const ret = p.isLeafNode.parse(data.subarray(offset))
       const { isLeafNode, cnt } = ret.result
       offset += ret.offset
       if (isLeafNode) {
         for (let n = 0; n < cnt; n += 1) {
-          const leafRet = leafNodeParser.parse(data.slice(offset))
+          const leafRet = leafNodeParser.parse(data.subarray(offset))
           offset += leafRet.offset
           const { key, refId, refSize } = leafRet.result
           const refRec = { name: key, id: refId, length: refSize }
@@ -276,7 +276,7 @@ export abstract class BBI {
         // parse index node
         const nextNodes = []
         for (let n = 0; n < cnt; n += 1) {
-          const nonleafRet = nonleafNodeParser.parse(data.slice(offset))
+          const nonleafRet = nonleafNodeParser.parse(data.subarray(offset))
           let { childOffset } = nonleafRet.result
           offset += nonleafRet.offset
           childOffset -= chromTreeOffset
