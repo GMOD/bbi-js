@@ -1,3 +1,6 @@
+- Use subarray instead of slice since slice is deprecated under node xref
+  'https://nodejs.org/api/buffer.html#bufslicestart-end'"
+
 ## [1.0.32](https://github.com/GMOD/bbi-js/compare/v1.0.31...v1.0.32) (2022-02-16)
 
 
