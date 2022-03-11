@@ -1,3 +1,12 @@
+## [1.0.34](https://github.com/GMOD/bbi-js/compare/v1.0.33...v1.0.34) (2022-03-11)
+
+
+### Reverts
+
+* Revert "Use subarray instead of slice since slice is deprecated under node xref 'https://nodejs.org/api/buffer.html#bufslicestart-end'" ([44116cc](https://github.com/GMOD/bbi-js/commit/44116cce54601727d37f1c449bfcc60c1b4e602d))
+
+
+
 - Back to slice instead of subarray, as subarray returned a UInt8Array instead
   of a true Buffer
 
