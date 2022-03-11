@@ -99,7 +99,7 @@ export class BigBed extends BBI {
     const indices = []
 
     for (let i = 0; i < count; i += 1) {
-      indices.push(extParser.parse(buffer.subarray(i * blocklen)).result)
+      indices.push(extParser.parse(buffer.slice(i * blocklen)).result)
     }
     return indices
   }

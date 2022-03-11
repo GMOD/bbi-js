@@ -1,3 +1,6 @@
+- Back to slice instead of subarray, as subarray returned a UInt8Array instead
+  of a true Buffer
+
 ## [1.0.33](https://github.com/GMOD/bbi-js/compare/v1.0.32...v1.0.33) (2022-02-25)
 
 
