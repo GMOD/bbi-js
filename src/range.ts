@@ -121,6 +121,7 @@ export default class Range {
     let b = tmpb
     if (arguments.length < 2) {
       b = a
+      // eslint-disable-next-line @typescript-eslint/no-this-alias
       a = this
     }
 
