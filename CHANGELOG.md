@@ -1,4 +1,5 @@
 - Produce actual ESM module for the "module" field in package.json, was commonJS
+- Add sourceMap:true to tsconfig
 
 ## [1.0.34](https://github.com/GMOD/bbi-js/compare/v1.0.33...v1.0.34) (2022-03-11)
 
