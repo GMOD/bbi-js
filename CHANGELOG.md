@@ -1,25 +1,20 @@
-## [1.0.34](https://github.com/GMOD/bbi-js/compare/v1.0.33...v1.0.34) (2022-03-11)
+- Produce actual ESM module for the "module" field in package.json, was commonJS
 
+## [1.0.34](https://github.com/GMOD/bbi-js/compare/v1.0.33...v1.0.34) (2022-03-11)
 
 ### Reverts
 
-* Revert "Use subarray instead of slice since slice is deprecated under node xref 'https://nodejs.org/api/buffer.html#bufslicestart-end'" ([44116cc](https://github.com/GMOD/bbi-js/commit/44116cce54601727d37f1c449bfcc60c1b4e602d))
+- Revert "Use subarray instead of slice since slice is deprecated under node xref 'https://nodejs.org/api/buffer.html#bufslicestart-end'" ([44116cc](https://github.com/GMOD/bbi-js/commit/44116cce54601727d37f1c449bfcc60c1b4e602d))
 
-
-
-- Back to slice instead of subarray, as subarray returned a UInt8Array instead
+* Back to slice instead of subarray, as subarray returned a UInt8Array instead
   of a true Buffer
 
 ## [1.0.33](https://github.com/GMOD/bbi-js/compare/v1.0.32...v1.0.33) (2022-02-25)
-
-
 
 - Use subarray instead of slice since slice is deprecated under node xref
   'https://nodejs.org/api/buffer.html#bufslicestart-end'"
 
 ## [1.0.32](https://github.com/GMOD/bbi-js/compare/v1.0.31...v1.0.32) (2022-02-16)
-
-
 
 - Use pako to decode on command line instead of using zlib to avoid need to
   manually polyfill zlib
