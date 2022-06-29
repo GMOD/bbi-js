@@ -61,6 +61,7 @@ function getParsers(isBigEndian: boolean) {
     .floatle('maxScore')
     .floatle('sumData')
     .floatle('sumSqData')
+    .saveOffset('offset')
 
   const leafParser = new Parser()
     .endianess(le)
@@ -70,9 +71,10 @@ function getParsers(isBigEndian: boolean) {
     .choice({
       tag: 'isLeaf',
       choices: {
-        1: new Parser().array('blocksToFetch', {
+        1: new Parser().endianess(le).array('blocksToFetch', {
           length: 'cnt',
           type: new Parser()
+            .endianess(le)
             .uint32('startChrom')
             .uint32('startBase')
             .uint32('endChrom')
@@ -84,6 +86,7 @@ function getParsers(isBigEndian: boolean) {
         0: new Parser().array('recurOffsets', {
           length: 'cnt',
           type: new Parser()
+            .endianess(le)
             .uint32('startChrom')
             .uint32('startBase')
             .uint32('endChrom')
@@ -122,11 +125,15 @@ function getParsers(isBigEndian: boolean) {
         }),
         [BIG_WIG_TYPE_VSTEP]: new Parser().array('items', {
           length: 'itemCount',
-          type: new Parser().int32('start').floatle('score'),
+          type: new Parser().endianess(le).int32('start').floatle('score'),
         }),
         [BIG_WIG_TYPE_GRAPH]: new Parser().array('items', {
           length: 'itemCount',
-          type: new Parser().int32('start').int32('end').floatle('score'),
+          type: new Parser()
+            .endianess(le)
+            .int32('start')
+            .int32('end')
+            .floatle('score'),
         }),
       },
     })
@@ -167,15 +174,11 @@ export class BlockView {
     cache: new QuickLRU({ maxSize: 1000 }),
 
     fill: async (requestData: ReadData, signal: AbortSignal) => {
-      const { length, offset } = requestData
-      console.log({ requestData })
-      const { buffer } = await this.bbi.read(
-        Buffer.alloc(length),
-        0,
-        length,
-        offset,
-        { signal },
-      )
+      const len = Number(requestData.length)
+      const off = Number(requestData.offset)
+      const { buffer } = await this.bbi.read(Buffer.alloc(len), 0, len, off, {
+        signal,
+      })
       return buffer
     },
   })
@@ -228,22 +231,14 @@ export class BlockView {
   ) {
     try {
       const { refsByName, bbi, cirTreeOffset, isBigEndian } = this
-      const { signal } = opts
       const chrId = refsByName[chrName]
       if (chrId === undefined) {
         observer.complete()
       }
       const request = { chrId, start, end }
       if (!this.cirTreePromise) {
-        this.cirTreePromise = bbi.read(
-          Buffer.alloc(48),
-          0,
-          48,
-          Number(cirTreeOffset),
-          {
-            signal,
-          },
-        )
+        const off = Number(cirTreeOffset)
+        this.cirTreePromise = bbi.read(Buffer.alloc(48), 0, 48, off, opts)
       }
       const { buffer } = await this.cirTreePromise
       const cirBlockSize = isBigEndian
@@ -263,16 +258,18 @@ export class BlockView {
           const p = this.leafParser.parse(data)
           if (p.blocksToFetch) {
             blocksToFetch = blocksToFetch.concat(
-              p.blocksToFetch.filter(filterFeats).map((l: any): any => ({
-                offset: l.blockOffset,
-                length: l.blockSize,
-              })),
+              p.blocksToFetch
+                .filter(filterFeats)
+                .map((l: { blockOffset: BigInt; blockSize: BigInt }) => ({
+                  offset: l.blockOffset,
+                  length: l.blockSize,
+                })),
             )
           }
           if (p.recurOffsets) {
             const recurOffsets = p.recurOffsets
               .filter(filterFeats)
-              .map((l: any): any => l.blockOffset)
+              .map((l: { blockOffset: BigInt }) => Number(l.blockOffset))
             if (recurOffsets.length > 0) {
               cirFobRecur(recurOffsets, level + 1)
             }
@@ -297,7 +294,7 @@ export class BlockView {
           const resultBuffer = await this.featureCache.get(
             `${length}_${offset}`,
             { length, offset },
-            signal,
+            opts.signal,
           )
           for (let i = 0; i < off.length; i += 1) {
             if (fr.contains(off[i])) {
@@ -312,11 +309,11 @@ export class BlockView {
           observer.error(e)
         }
       }
-      const cirFobRecur = (offset: any, level: number) => {
+      const cirFobRecur = (offset: number[], level: number) => {
         try {
           outstanding += offset.length
 
-          const maxCirBlockSpan = 4 + cirBlockSize * 32 // Upper bound on size, based on a completely full leaf node.
+          const maxCirBlockSpan = 4 + Number(cirBlockSize) * 32 // Upper bound on size, based on a completely full leaf node.
           let spans = new Range(offset[0], offset[0] + maxCirBlockSpan)
           for (let i = 1; i < offset.length; i += 1) {
             const blockSpan = new Range(offset[i], offset[i] + maxCirBlockSpan)
@@ -350,16 +347,14 @@ export class BlockView {
     if (request) {
       items = items.filter(elt => elt.chromId === request.chrId)
     }
-    const feats = items.map(
-      (elt: SummaryBlock): Feature => ({
-        start: elt.start,
-        end: elt.end,
-        maxScore: elt.maxScore,
-        minScore: elt.minScore,
-        score: elt.sumData / (elt.validCnt || 1),
-        summary: true,
-      }),
-    )
+    const feats = items.map(elt => ({
+      start: elt.start,
+      end: elt.end,
+      maxScore: elt.maxScore,
+      minScore: elt.minScore,
+      score: elt.sumData / (elt.validCnt || 1),
+      summary: true,
+    }))
     return request
       ? feats.filter(f => BlockView.coordFilter(f, request))
       : feats
@@ -392,7 +387,6 @@ export class BlockView {
     const data = bytes.slice(startOffset)
     const results = this.bigWigParser.parse(data)
     const { items, itemSpan, itemStep, blockStart, blockType } = results
-    console.log({ items })
     if (blockType === BIG_WIG_TYPE_FSTEP) {
       for (let i = 0; i < items.length; i++) {
         items[i].start = blockStart + i * itemStep
@@ -433,7 +427,7 @@ export class BlockView {
           )
           blockGroup.blocks.forEach((block: any) => {
             checkAbortSignal(signal)
-            let blockOffset = block.offset - blockGroup.offset
+            let blockOffset = Number(block.offset - blockGroup.offset)
             let resultData = data
             if (isCompressed) {
               resultData = unzip(data.slice(blockOffset))
@@ -457,8 +451,7 @@ export class BlockView {
                   this.parseBigBedBlock(
                     resultData,
                     blockOffset,
-                    // eslint-disable-next-line no-bitwise
-                    block.offset * (1 << 8),
+                    Number(block.offset) * (1 << 8),
                     request,
                   ),
                 )

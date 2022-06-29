@@ -72,6 +72,7 @@ function getParsers(isBE: boolean): any {
     .array('zoomLevels', {
       length: 'numZoomLevels',
       type: new Parser()
+        .endianess(le)
         .uint32('reductionLevel')
         .uint32('reserved')
         .uint64('dataOffset')
@@ -170,7 +171,6 @@ export abstract class BBI {
   private async _getHeader(opts: RequestOptions) {
     const header = await this._getMainHeader(opts)
     const chroms = await this._readChromTree(header, opts)
-    console.log({ header, chroms })
     return { ...header, ...chroms }
   }
 
@@ -265,12 +265,10 @@ export abstract class BBI {
       }
       const ret = p.isLeafNode.parse(buffer.slice(offset))
       const { isLeafNode, cnt } = ret
-      console.log({ ret })
       offset += ret.offset
       if (isLeafNode) {
         for (let n = 0; n < cnt; n += 1) {
           const leafRet = leafNodeParser.parse(buffer.slice(offset))
-          console.log({ leafRet })
           offset += leafRet.offset
           const { key, refId, refSize } = leafRet
           const refRec = { name: key, id: refId, length: refSize }
@@ -284,8 +282,9 @@ export abstract class BBI {
           const nonleafRet = nonleafNodeParser.parse(buffer.slice(offset))
           let { childOffset } = nonleafRet
           offset += nonleafRet.offset
-          childOffset -= Number(chromTreeOffset)
-          nextNodes.push(bptReadNode(childOffset))
+          nextNodes.push(
+            bptReadNode(Number(childOffset) - Number(chromTreeOffset)),
+          )
         }
         await Promise.all(nextNodes)
       }
@@ -312,7 +311,6 @@ export abstract class BBI {
     } = await this.getHeader(opts)
     const nzl = zoomLevels[0]
     const cirLen = nzl ? nzl.dataOffset - unzoomedIndexOffset : 4000
-    console.log({ cirLen, nzl, unzoomedIndexOffset })
     return new BlockView(
       this.bbi,
       refsByName,

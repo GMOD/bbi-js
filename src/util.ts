@@ -9,16 +9,24 @@ export class AbortError extends Error {
 }
 // sort blocks by file offset and
 // group blocks that are within 2KB of eachother
-export function groupBlocks(blocks: any[]): any[] {
-  console.log({ blocks })
-  blocks.sort((b0, b1) => (b0.offset | 0) - (b1.offset | 0))
+export function groupBlocks(blocks: { offset: BigInt; length: BigInt }[]) {
+  blocks.sort((b0, b1) => Number(b0.offset) - Number(b1.offset))
 
   const blockGroups = []
   let lastBlock
   let lastBlockEnd
   for (let i = 0; i < blocks.length; i += 1) {
-    if (lastBlock && blocks[i].offset - lastBlockEnd <= 2000) {
-      lastBlock.length += blocks[i].length - lastBlockEnd + blocks[i].offset
+    if (
+      lastBlock &&
+      lastBlockEnd &&
+      Number(blocks[i].offset) - lastBlockEnd <= 2000
+    ) {
+      lastBlock.length = BigInt(
+        Number(lastBlock.length) +
+          Number(blocks[i].length) -
+          lastBlockEnd +
+          Number(blocks[i].offset),
+      )
       lastBlock.blocks.push(blocks[i])
     } else {
       blockGroups.push(
@@ -29,7 +37,7 @@ export function groupBlocks(blocks: any[]): any[] {
         }),
       )
     }
-    lastBlockEnd = lastBlock.offset + lastBlock.length
+    lastBlockEnd = Number(lastBlock.offset) + Number(lastBlock.length)
   }
 
   return blockGroups

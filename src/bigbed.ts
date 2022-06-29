@@ -128,11 +128,12 @@ export class BigBed extends BBI {
         Buffer.alloc(32),
         0,
         32,
-        offset,
+        Number(offset),
         opts,
       )
+      const le = isBigEndian ? 'big' : 'little'
       const p = new Parser()
-        .endianess(isBigEndian ? 'big' : 'little')
+        .endianess(le)
         .int32('magic')
         .int32('blockSize')
         .int32('keySize')
@@ -141,7 +142,7 @@ export class BigBed extends BBI {
 
       const { blockSize, keySize, valSize } = p.parse(data)
       const bpt = new Parser()
-        .endianess(isBigEndian ? 'big' : 'little')
+        .endianess(le)
         .int8('nodeType')
         .skip(1)
         .int16('cnt')
@@ -151,12 +152,14 @@ export class BigBed extends BBI {
             0: new Parser().array('leafkeys', {
               length: 'cnt',
               type: new Parser()
+                .endianess(le)
                 .string('key', { length: keySize, stripNull: true })
                 .uint64('offset'),
             }),
             1: new Parser().array('keys', {
               length: 'cnt',
               type: new Parser()
+                .endianess(le)
                 .string('key', { length: keySize, stripNull: true })
                 .uint64('offset')
                 .uint32('length')
@@ -170,11 +173,12 @@ export class BigBed extends BBI {
         nodeOffset: number,
       ): Promise<Loc | undefined> => {
         const len = 4 + blockSize * (keySize + valSize)
+        console.log({ len, blockSize, keySize, valSize })
         const { buffer } = await this.bbi.read(
           Buffer.alloc(len),
           0,
           len,
-          nodeOffset,
+          Number(nodeOffset),
           opts,
         )
         const node = bpt.parse(buffer)
@@ -198,7 +202,7 @@ export class BigBed extends BBI {
         return undefined
       }
       const rootNodeOffset = 32
-      return bptReadNode(offset + rootNodeOffset)
+      return bptReadNode(Number(offset) + rootNodeOffset)
     })
     return filterUndef(await Promise.all(locs))
   }
@@ -234,8 +238,6 @@ export class BigBed extends BBI {
       )
     })
     const ret = await merge(...res).toPromise()
-    return ret.filter((f: any) => {
-      return f.rest.split('\t')[f.field - 3] === name
-    })
+    return ret.filter(f => f.rest?.split('\t')[(f.field || 0) - 3] === name)
   }
 }
