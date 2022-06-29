@@ -1,5 +1,6 @@
 /* eslint @typescript-eslint/explicit-function-return-type: 0 */
 import { BigWig, Header } from '../src/'
+window.TextDecoder = require('util').TextDecoder
 
 class HalfAbortController {
   public signal: any
@@ -214,7 +215,9 @@ describe('bigwig formats', () => {
       path: require.resolve('./data/volvox.bw'),
     })
     const aborter = new HalfAbortController()
-    const ob = await ti.getFeatureStream('ctgA', 0, 100, { signal: aborter.signal })
+    const ob = await ti.getFeatureStream('ctgA', 0, 100, {
+      signal: aborter.signal,
+    })
     aborter.abort()
     await expect(ob.toPromise()).rejects.toThrow(/aborted/)
   })

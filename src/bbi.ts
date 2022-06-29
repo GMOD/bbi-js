@@ -1,4 +1,4 @@
-import { Parser } from '@gmod/binary-parser'
+import { Parser } from 'binary-parser'
 import { LocalFile, RemoteFile, GenericFilehandle } from 'generic-filehandle'
 import { Observable, Observer } from 'rxjs'
 import { reduce } from 'rxjs/operators'
@@ -81,10 +81,10 @@ function getParsers(isBE: boolean): any {
   const totalSummaryParser = new Parser()
     .endianess(le)
     .uint64('basesCovered')
-    .double('scoreMin')
-    .double('scoreMax')
-    .double('scoreSum')
-    .double('scoreSumSquares')
+    .doublele('scoreMin')
+    .doublele('scoreMax')
+    .doublele('scoreSum')
+    .doublele('scoreSumSquares')
 
   const chromTreeParser = new Parser()
     .endianess(le)
@@ -99,6 +99,7 @@ function getParsers(isBE: boolean): any {
     .uint8('isLeafNode')
     .skip(1)
     .uint16('cnt')
+    .saveOffset('offset')
 
   return {
     chromTreeParser,
@@ -169,6 +170,7 @@ export abstract class BBI {
   private async _getHeader(opts: RequestOptions) {
     const header = await this._getMainHeader(opts)
     const chroms = await this._readChromTree(header, opts)
+    console.log({ header, chroms })
     return { ...header, ...chroms }
   }
 
@@ -185,25 +187,24 @@ export abstract class BBI {
     )
     const isBigEndian = this._isBigEndian(buffer)
     const ret = getParsers(isBigEndian)
-    const header = ret.headerParser.parse(buffer).result
-    header.fileType = header.magic === BIG_BED_MAGIC ? 'bigbed' : 'bigwig'
-    if (
-      header.asOffset > requestSize ||
-      header.totalSummaryOffset > requestSize
-    ) {
+    const header = ret.headerParser.parse(buffer)
+    const { magic, asOffset, totalSummaryOffset } = header
+    header.fileType = magic === BIG_BED_MAGIC ? 'bigbed' : 'bigwig'
+    if (asOffset > requestSize || totalSummaryOffset > requestSize) {
       return this._getMainHeader(opts, requestSize * 2)
     }
-    if (header.asOffset) {
+    if (asOffset) {
+      const off = Number(header.asOffset)
       header.autoSql = buffer
-        .slice(header.asOffset, buffer.indexOf(0, header.asOffset))
+        .slice(off, buffer.indexOf(0, off))
         .toString('utf8')
     }
     if (header.totalSummaryOffset > requestSize) {
       return this._getMainHeader(opts, requestSize * 2)
     }
     if (header.totalSummaryOffset) {
-      const tail = buffer.slice(header.totalSummaryOffset)
-      header.totalSummary = ret.totalSummaryParser.parse(tail).result
+      const tail = buffer.slice(Number(header.totalSummaryOffset))
+      header.totalSummary = ret.totalSummaryParser.parse(tail)
     }
     return { ...header, isBigEndian }
   }
@@ -228,46 +229,50 @@ export abstract class BBI {
       [key: number]: { name: string; id: number; length: number }
     } = []
     const refsByName: { [key: string]: number } = {}
-    const { chromTreeOffset } = header
-    let { unzoomedDataOffset } = header
 
+    let unzoomedDataOffset = Number(header.unzoomedDataOffset)
+    const chromTreeOffset = Number(header.chromTreeOffset)
     while (unzoomedDataOffset % 4 !== 0) {
       unzoomedDataOffset += 1
     }
-
-    const { buffer: data } = await this.bbi.read(
-      Buffer.alloc(unzoomedDataOffset - chromTreeOffset),
+    const off = unzoomedDataOffset - chromTreeOffset
+    const { buffer } = await this.bbi.read(
+      Buffer.alloc(off),
       0,
-      unzoomedDataOffset - chromTreeOffset,
-      chromTreeOffset,
+      off,
+      Number(chromTreeOffset),
       opts,
     )
 
     const p = getParsers(isBE)
-    const { keySize } = p.chromTreeParser.parse(data).result
+    const { keySize } = p.chromTreeParser.parse(buffer)
     const leafNodeParser = new Parser()
       .endianess(le)
       .string('key', { stripNull: true, length: keySize })
       .uint32('refId')
       .uint32('refSize')
+      .saveOffset('offset')
     const nonleafNodeParser = new Parser()
       .endianess(le)
       .skip(keySize)
       .uint64('childOffset')
+      .saveOffset('offset')
     const rootNodeOffset = 32
-    const bptReadNode = async (currentOffset: number): Promise<void> => {
+    const bptReadNode = async (currentOffset: number) => {
       let offset = currentOffset
-      if (offset >= data.length) {
+      if (offset >= buffer.length) {
         throw new Error('reading beyond end of buffer')
       }
-      const ret = p.isLeafNode.parse(data.slice(offset))
-      const { isLeafNode, cnt } = ret.result
+      const ret = p.isLeafNode.parse(buffer.slice(offset))
+      const { isLeafNode, cnt } = ret
+      console.log({ ret })
       offset += ret.offset
       if (isLeafNode) {
         for (let n = 0; n < cnt; n += 1) {
-          const leafRet = leafNodeParser.parse(data.slice(offset))
+          const leafRet = leafNodeParser.parse(buffer.slice(offset))
+          console.log({ leafRet })
           offset += leafRet.offset
-          const { key, refId, refSize } = leafRet.result
+          const { key, refId, refSize } = leafRet
           const refRec = { name: key, id: refId, length: refSize }
           refsByName[this.renameRefSeqs(key)] = refId
           refsByNumber[refId] = refRec
@@ -276,10 +281,10 @@ export abstract class BBI {
         // parse index node
         const nextNodes = []
         for (let n = 0; n < cnt; n += 1) {
-          const nonleafRet = nonleafNodeParser.parse(data.slice(offset))
-          let { childOffset } = nonleafRet.result
+          const nonleafRet = nonleafNodeParser.parse(buffer.slice(offset))
+          let { childOffset } = nonleafRet
           offset += nonleafRet.offset
-          childOffset -= chromTreeOffset
+          childOffset -= Number(chromTreeOffset)
           nextNodes.push(bptReadNode(childOffset))
         }
         await Promise.all(nextNodes)
@@ -307,6 +312,7 @@ export abstract class BBI {
     } = await this.getHeader(opts)
     const nzl = zoomLevels[0]
     const cirLen = nzl ? nzl.dataOffset - unzoomedIndexOffset : 4000
+    console.log({ cirLen, nzl, unzoomedIndexOffset })
     return new BlockView(
       this.bbi,
       refsByName,

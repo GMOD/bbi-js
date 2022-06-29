@@ -2,6 +2,7 @@
 import BED from '@gmod/bed'
 import { BigBed } from '../src/'
 import { LocalFile } from 'generic-filehandle'
+window.TextDecoder = require('util').TextDecoder
 
 describe('bigbed formats', () => {
   it('loads small bigbed file', async () => {

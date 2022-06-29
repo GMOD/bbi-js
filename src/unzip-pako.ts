@@ -1,5 +1,5 @@
-import { inflate } from 'pako'
+import { unzlibSync } from 'fflate'
 
 export function unzip(input: Buffer) {
-  return Buffer.from(inflate(input))
+  return Buffer.from(unzlibSync(input))
 }

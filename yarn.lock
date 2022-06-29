@@ -1016,6 +1016,11 @@ balanced-match@^1.0.0:
   resolved "https://registry.yarnpkg.com/balanced-match/-/balanced-match-1.0.2.tgz#e83e3a7e3f300b34cb9d87f615fa0cbf357690ee"
   integrity sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==
 
+binary-parser@^2.1.0:
+  version "2.1.0"
+  resolved "https://registry.yarnpkg.com/binary-parser/-/binary-parser-2.1.0.tgz#425776c870c64ddb555d7cc0010ccbf9d9278234"
+  integrity sha512-R6WS2W7a7UHAFYLm0vWlk5M2aTayOjiyBZp+bvUZPUteuU5hI9BaREHKAFLgpq/nKheMgSxZOzpe/x3NxddqiQ==
+
 brace-expansion@^1.1.7:
   version "1.1.11"
   resolved "https://registry.yarnpkg.com/brace-expansion/-/brace-expansion-1.1.11.tgz#3c7fcbf529d87226f3d2f52b966ff5271eb441dd"
@@ -1781,6 +1786,11 @@ fb-watchman@^2.0.0:
   integrity sha512-DkPJKQeY6kKwmuMretBhr7G6Vodr7bFwDYTXIkfG1gjvNpaxBTQV3PbXg6bR1c1UP4jPOX0jHUbbHANL9vRjVg==
   dependencies:
     bser "2.1.1"
+
+fflate@^0.7.3:
+  version "0.7.3"
+  resolved "https://registry.yarnpkg.com/fflate/-/fflate-0.7.3.tgz#288b034ff0e9c380eaa2feff48c787b8371b7fa5"
+  integrity sha512-0Zz1jOzJWERhyhsimS54VTqOteCNwRtIlh8isdL0AXLo0g7xNTfTL7oWrkmCnPhZGocKIkWHBistBrrpoNH3aw==
 
 figures@^3.0.0:
   version "3.2.0"
@@ -4164,6 +4174,11 @@ walker@^1.0.7:
   integrity sha512-ts/8E8l5b7kY0vlWLewOkDXMmPdLcVV4GmOQLyxuSswIJsweeFZtAsMF7k1Nszz+TYBQrlYRmzOnr398y1JemQ==
   dependencies:
     makeerror "1.0.12"
+
+wasm-flate@^1.0.2-browser:
+  version "1.0.2-browser"
+  resolved "https://registry.yarnpkg.com/wasm-flate/-/wasm-flate-1.0.2-browser.tgz#e10e758b37c3d38829b54809fa2fef853b48131c"
+  integrity sha512-qpqOzvbKtgG/2Mb0DYXVPQ2nOrkKYoAQtpr4QZzgO8SMfKieeODUy2vomMnimQjH/K2RGWnw+kZmO8yf+Yh9qA==
 
 webidl-conversions@^3.0.0:
   version "3.0.1"

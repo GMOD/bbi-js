@@ -41,14 +41,15 @@
     "genomics"
   ],
   "dependencies": {
-    "@gmod/binary-parser": "^1.4.0",
     "abortable-promise-cache": "^1.4.1",
+    "binary-parser": "^2.1.0",
     "buffer-crc32": "^0.2.13",
     "es6-promisify": "^6.0.1",
+    "fflate": "^0.7.3",
     "generic-filehandle": "^2.0.0",
-    "pako": "^1.0.0",
     "quick-lru": "^4.0.0",
-    "rxjs": "^6.5.2"
+    "rxjs": "^6.5.2",
+    "wasm-flate": "^1.0.2-browser"
   },
   "devDependencies": {
     "@gmod/bed": "^2.0.0",

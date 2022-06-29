@@ -1,6 +1,6 @@
 /* eslint no-bitwise: ["error", { "allow": ["|"] }] */
 import { Observer } from 'rxjs'
-import { Parser } from '@gmod/binary-parser'
+import { Parser } from 'binary-parser'
 import AbortablePromiseCache from 'abortable-promise-cache'
 import { GenericFilehandle } from 'generic-filehandle'
 import { unzip } from './unzip'
@@ -49,7 +49,7 @@ const BIG_WIG_TYPE_GRAPH = 1
 const BIG_WIG_TYPE_VSTEP = 2
 const BIG_WIG_TYPE_FSTEP = 3
 
-function getParsers(isBigEndian: boolean): any {
+function getParsers(isBigEndian: boolean) {
   const le = isBigEndian ? 'big' : 'little'
   const summaryParser = new Parser()
     .endianess(le)
@@ -57,10 +57,10 @@ function getParsers(isBigEndian: boolean): any {
     .uint32('start')
     .uint32('end')
     .uint32('validCnt')
-    .float('minScore')
-    .float('maxScore')
-    .float('sumData')
-    .float('sumSqData')
+    .floatle('minScore')
+    .floatle('maxScore')
+    .floatle('sumData')
+    .floatle('sumSqData')
 
   const leafParser = new Parser()
     .endianess(le)
@@ -78,7 +78,8 @@ function getParsers(isBigEndian: boolean): any {
             .uint32('endChrom')
             .uint32('endBase')
             .uint64('blockOffset')
-            .uint64('blockSize'),
+            .uint64('blockSize')
+            .saveOffset('offset'),
         }),
         0: new Parser().array('recurOffsets', {
           length: 'cnt',
@@ -87,7 +88,8 @@ function getParsers(isBigEndian: boolean): any {
             .uint32('startBase')
             .uint32('endChrom')
             .uint32('endBase')
-            .uint64('blockOffset'),
+            .uint64('blockOffset')
+            .saveOffset('offset'),
         }),
       },
     })
@@ -99,6 +101,7 @@ function getParsers(isBigEndian: boolean): any {
     .string('rest', {
       zeroTerminated: true,
     })
+    .saveOffset('offset')
 
   const bigWigParser = new Parser()
     .endianess(le)
@@ -115,15 +118,15 @@ function getParsers(isBigEndian: boolean): any {
       choices: {
         [BIG_WIG_TYPE_FSTEP]: new Parser().array('items', {
           length: 'itemCount',
-          type: new Parser().float('score'),
+          type: new Parser().floatle('score'),
         }),
         [BIG_WIG_TYPE_VSTEP]: new Parser().array('items', {
           length: 'itemCount',
-          type: new Parser().int32('start').float('score'),
+          type: new Parser().int32('start').floatle('score'),
         }),
         [BIG_WIG_TYPE_GRAPH]: new Parser().array('items', {
           length: 'itemCount',
-          type: new Parser().int32('start').int32('end').float('score'),
+          type: new Parser().int32('start').int32('end').floatle('score'),
         }),
       },
     })
@@ -146,8 +149,6 @@ function getParsers(isBigEndian: boolean): any {
 export class BlockView {
   private cirTreeOffset: number
 
-  private cirTreeLength: number
-
   private bbi: GenericFilehandle
 
   private isCompressed: boolean
@@ -158,6 +159,8 @@ export class BlockView {
 
   private blockType: string
 
+  private cirTreeLength: number
+
   private cirTreePromise?: Promise<{ bytesRead: number; buffer: Buffer }>
 
   private featureCache = new AbortablePromiseCache({
@@ -165,6 +168,7 @@ export class BlockView {
 
     fill: async (requestData: ReadData, signal: AbortSignal) => {
       const { length, offset } = requestData
+      console.log({ requestData })
       const { buffer } = await this.bbi.read(
         Buffer.alloc(length),
         0,
@@ -176,13 +180,13 @@ export class BlockView {
     },
   })
 
-  private leafParser: any
+  private leafParser: ReturnType<typeof getParsers>['leafParser']
 
-  private bigWigParser: any
+  private bigWigParser: ReturnType<typeof getParsers>['bigWigParser']
 
-  private bigBedParser: any
+  private bigBedParser: ReturnType<typeof getParsers>['bigBedParser']
 
-  private summaryParser: any
+  private summaryParser: ReturnType<typeof getParsers>['summaryParser']
 
   public constructor(
     bbi: GenericFilehandle,
@@ -207,7 +211,12 @@ export class BlockView {
     this.isBigEndian = isBigEndian
     this.bbi = bbi
     this.blockType = blockType
-    Object.assign(this, getParsers(isBigEndian))
+
+    const parsers = getParsers(isBigEndian)
+    this.leafParser = parsers.leafParser
+    this.bigWigParser = parsers.bigWigParser
+    this.bigBedParser = parsers.bigBedParser
+    this.summaryParser = parsers.summaryParser
   }
 
   public async readWigData(
@@ -226,9 +235,15 @@ export class BlockView {
       }
       const request = { chrId, start, end }
       if (!this.cirTreePromise) {
-        this.cirTreePromise = bbi.read(Buffer.alloc(48), 0, 48, cirTreeOffset, {
-          signal,
-        })
+        this.cirTreePromise = bbi.read(
+          Buffer.alloc(48),
+          0,
+          48,
+          Number(cirTreeOffset),
+          {
+            signal,
+          },
+        )
       }
       const { buffer } = await this.cirTreePromise
       const cirBlockSize = isBigEndian
@@ -245,7 +260,7 @@ export class BlockView {
         try {
           const data = cirBlockData.slice(offset)
 
-          const p = this.leafParser.parse(data).result
+          const p = this.leafParser.parse(data)
           if (p.blocksToFetch) {
             blocksToFetch = blocksToFetch.concat(
               p.blocksToFetch.filter(filterFeats).map((l: any): any => ({
@@ -313,7 +328,7 @@ export class BlockView {
         }
       }
 
-      return cirFobRecur([cirTreeOffset + 48], 1)
+      return cirFobRecur([Number(cirTreeOffset) + 48], 1)
     } catch (e) {
       observer.error(e)
     }
@@ -328,7 +343,7 @@ export class BlockView {
     let currOffset = startOffset
     while (currOffset < data.byteLength) {
       const res = this.summaryParser.parse(data.slice(currOffset))
-      features.push(res.result)
+      features.push(res)
       currOffset += res.offset
     }
     let items = features
@@ -360,8 +375,7 @@ export class BlockView {
     let currOffset = startOffset
     while (currOffset < data.byteLength) {
       const res = this.bigBedParser.parse(data.slice(currOffset))
-      res.result.uniqueId = `bb-${offset + currOffset}`
-      items.push(res.result)
+      items.push({ ...res, uniqueId: `bb-${offset + currOffset}` })
       currOffset += res.offset
     }
 
@@ -376,8 +390,9 @@ export class BlockView {
     request?: CoordRequest,
   ): Feature[] {
     const data = bytes.slice(startOffset)
-    const results = this.bigWigParser.parse(data).result
+    const results = this.bigWigParser.parse(data)
     const { items, itemSpan, itemStep, blockStart, blockType } = results
+    console.log({ items })
     if (blockType === BIG_WIG_TYPE_FSTEP) {
       for (let i = 0; i < items.length; i++) {
         items[i].start = blockStart + i * itemStep

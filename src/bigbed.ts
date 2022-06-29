@@ -1,4 +1,4 @@
-import { Parser } from '@gmod/binary-parser'
+import { Parser } from 'binary-parser'
 import { Observable, Observer, merge } from 'rxjs'
 import { map, reduce } from 'rxjs/operators'
 import AbortablePromiseCache from 'abortable-promise-cache'
@@ -78,7 +78,8 @@ export class BigBed extends BBI {
       .uint16('size')
       .uint16('count')
       .uint64('offset')
-      .parse(data).result
+      .saveOffset('offset')
+      .parse(data)
     const { count, offset } = ret
 
     // no extra index is defined if count==0
@@ -99,7 +100,7 @@ export class BigBed extends BBI {
     const indices = []
 
     for (let i = 0; i < count; i += 1) {
-      indices.push(extParser.parse(buffer.slice(i * blocklen)).result)
+      indices.push(extParser.parse(buffer.slice(i * blocklen)))
     }
     return indices
   }
@@ -138,7 +139,7 @@ export class BigBed extends BBI {
         .int32('valSize')
         .uint64('itemCount')
 
-      const { blockSize, keySize, valSize } = p.parse(data).result
+      const { blockSize, keySize, valSize } = p.parse(data)
       const bpt = new Parser()
         .endianess(isBigEndian ? 'big' : 'little')
         .int8('nodeType')
@@ -163,6 +164,7 @@ export class BigBed extends BBI {
             }),
           },
         })
+        .saveOffset('offset')
 
       const bptReadNode = async (
         nodeOffset: number,
@@ -175,7 +177,7 @@ export class BigBed extends BBI {
           nodeOffset,
           opts,
         )
-        const node = bpt.parse(buffer).result
+        const node = bpt.parse(buffer)
         if (node.leafkeys) {
           let lastOffset
           for (let i = 0; i < node.leafkeys.length; i += 1) {
