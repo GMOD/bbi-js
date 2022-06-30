@@ -48,8 +48,7 @@
     "fflate": "^0.7.3",
     "generic-filehandle": "^2.0.0",
     "quick-lru": "^4.0.0",
-    "rxjs": "^6.5.2",
-    "wasm-flate": "^1.0.2-browser"
+    "rxjs": "^6.5.2"
   },
   "devDependencies": {
     "@gmod/bed": "^2.0.0",

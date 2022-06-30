@@ -305,13 +305,6 @@
   resolved "https://registry.yarnpkg.com/@gmod/bed/-/bed-2.0.8.tgz#883928505bd27f868fb3cfb8cd1c6ea0a1ec6ab7"
   integrity sha512-aSMpHRcJaJ19dA5pzOlVykr3cNthBAR5JFiLUtWik1/+RqsO3co8V/34C4EegBJ+77IjW7AcnOYJJuBPSjQddg==
 
-"@gmod/binary-parser@^1.4.0":
-  version "1.4.1"
-  resolved "https://registry.yarnpkg.com/@gmod/binary-parser/-/binary-parser-1.4.1.tgz#2235dda7ed479dc6b11af0f07b509f291ea9f12a"
-  integrity sha512-288CLUbiZ/4N71LT9hmZkhZ2UpPMNDD28x8R7bJ+jS8Fd06ly5LOpbIBwsWgIgWDLB4fng18wCUq+FR55QCCJg==
-  dependencies:
-    long "^4.0.0"
-
 "@humanwhocodes/config-array@^0.9.2":
   version "0.9.5"
   resolved "https://registry.yarnpkg.com/@humanwhocodes/config-array/-/config-array-0.9.5.tgz#2cbaf9a89460da24b5ca6531b8bbfc23e1df50c7"
@@ -2979,11 +2972,6 @@ lodash@^4.17.15, lodash@^4.7.0:
   resolved "https://registry.yarnpkg.com/lodash/-/lodash-4.17.21.tgz#679591c564c3bffaae8454cf0b3df370c3d6911c"
   integrity sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg==
 
-long@^4.0.0:
-  version "4.0.0"
-  resolved "https://registry.yarnpkg.com/long/-/long-4.0.0.tgz#9a7b71cfb7d361a194ea555241c92f7468d5bf28"
-  integrity sha512-XsP+KhQif4bjX1kbuSiySJFNAehNxgLb6hPRGJ9QsUr8ajHkuXGdrHmFUTUUXhDwVX2R5bY4JNZEwbUiMhV+MA==
-
 lru-cache@^6.0.0:
   version "6.0.0"
   resolved "https://registry.yarnpkg.com/lru-cache/-/lru-cache-6.0.0.tgz#6d6fe6570ebd96aaf90fcad1dafa3b2566db3a94"
@@ -3291,11 +3279,6 @@ p-try@^2.0.0:
   version "2.2.0"
   resolved "https://registry.yarnpkg.com/p-try/-/p-try-2.2.0.tgz#cb2868540e313d61de58fafbe35ce9004d5540e6"
   integrity sha512-R4nPAVTAU0B9D35/Gk3uJf/7XYbQcyohSKdvAxIRSNghFl4e71hVoGnBNQz9cWaXxO2I10KTC+3jMdvvoKw6dQ==
-
-pako@^1.0.0:
-  version "1.0.11"
-  resolved "https://registry.yarnpkg.com/pako/-/pako-1.0.11.tgz#6c9599d340d54dfd3946380252a35705a6b992bf"
-  integrity sha512-4hLB8Py4zZce5s4yd9XzopqwVv/yGNhV1Bl8NTmCq1763HeK2+EwVTv+leGeL13Dnh2wfbqowVPXCIO0z4taYw==
 
 parent-module@^1.0.0:
   version "1.0.1"
@@ -4174,11 +4157,6 @@ walker@^1.0.7:
   integrity sha512-ts/8E8l5b7kY0vlWLewOkDXMmPdLcVV4GmOQLyxuSswIJsweeFZtAsMF7k1Nszz+TYBQrlYRmzOnr398y1JemQ==
   dependencies:
     makeerror "1.0.12"
-
-wasm-flate@^1.0.2-browser:
-  version "1.0.2-browser"
-  resolved "https://registry.yarnpkg.com/wasm-flate/-/wasm-flate-1.0.2-browser.tgz#e10e758b37c3d38829b54809fa2fef853b48131c"
-  integrity sha512-qpqOzvbKtgG/2Mb0DYXVPQ2nOrkKYoAQtpr4QZzgO8SMfKieeODUy2vomMnimQjH/K2RGWnw+kZmO8yf+Yh9qA==
 
 webidl-conversions@^3.0.0:
   version "3.0.1"

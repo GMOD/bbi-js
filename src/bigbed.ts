@@ -173,7 +173,6 @@ export class BigBed extends BBI {
         nodeOffset: number,
       ): Promise<Loc | undefined> => {
         const len = 4 + blockSize * (keySize + valSize)
-        console.log({ len, blockSize, keySize, valSize })
         const { buffer } = await this.bbi.read(
           Buffer.alloc(len),
           0,
