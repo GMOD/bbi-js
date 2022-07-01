@@ -280,7 +280,7 @@ export abstract class BBI {
         const nextNodes = []
         for (let n = 0; n < cnt; n += 1) {
           const nonleafRet = nonleafNodeParser.parse(buffer.subarray(offset))
-          let { childOffset } = nonleafRet
+          const { childOffset } = nonleafRet
           offset += nonleafRet.offset
           nextNodes.push(
             bptReadNode(Number(childOffset) - Number(chromTreeOffset)),

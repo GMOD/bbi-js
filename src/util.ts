@@ -9,7 +9,7 @@ export class AbortError extends Error {
 }
 // sort blocks by file offset and
 // group blocks that are within 2KB of eachother
-export function groupBlocks(blocks: { offset: BigInt; length: BigInt }[]) {
+export function groupBlocks(blocks: { offset: bigint; length: bigint }[]) {
   blocks.sort((b0, b1) => Number(b0.offset) - Number(b1.offset))
 
   const blockGroups = []

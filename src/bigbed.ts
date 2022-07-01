@@ -9,8 +9,8 @@ import { BlockView } from './blockView'
 
 interface Loc {
   key: string
-  offset: BigInt
-  length: BigInt
+  offset: bigint
+  length: bigint
   field?: number
 }
 
