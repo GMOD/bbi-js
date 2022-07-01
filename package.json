@@ -43,7 +43,7 @@
   "dependencies": {
     "abortable-promise-cache": "^1.4.1",
     "binary-parser": "^2.1.0",
-    "pako": "^1.0.0",
+    "pako": "^2.0.0",
     "generic-filehandle": "^2.0.0",
     "quick-lru": "^4.0.0",
     "rxjs": "^6.5.2"
@@ -53,7 +53,7 @@
     "@types/jest": "^28.1.4",
     "@types/long": "^4.0.0",
     "@types/node": "^18.0.0",
-    "@types/pako": "^1.0.3",
+    "@types/pako": "^2.0.0",
     "@typescript-eslint/eslint-plugin": "^5.10.0",
     "@typescript-eslint/parser": "^5.10.0",
     "cross-fetch": "^3.0.2",
