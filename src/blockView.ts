@@ -166,8 +166,6 @@ export class BlockView {
 
   private blockType: string
 
-  private cirTreeLength: number
-
   private cirTreePromise?: Promise<{ bytesRead: number; buffer: Buffer }>
 
   private featureCache = new AbortablePromiseCache({
@@ -195,7 +193,6 @@ export class BlockView {
     bbi: GenericFilehandle,
     refsByName: any,
     cirTreeOffset: number,
-    cirTreeLength: number,
     isBigEndian: boolean,
     isCompressed: boolean,
     blockType: string,
@@ -203,12 +200,8 @@ export class BlockView {
     if (!(cirTreeOffset >= 0)) {
       throw new Error('invalid cirTreeOffset!')
     }
-    if (!(cirTreeLength > 0)) {
-      throw new Error('invalid cirTreeLength!')
-    }
 
     this.cirTreeOffset = cirTreeOffset
-    this.cirTreeLength = cirTreeLength
     this.isCompressed = isCompressed
     this.refsByName = refsByName
     this.isBigEndian = isBigEndian

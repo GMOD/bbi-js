@@ -25,15 +25,11 @@ export class BigWig extends BBI {
       const zh = zoomLevels[i]
       if (zh && zh.reductionLevel <= 2 * basesPerPx) {
         const indexOffset = Number(zh.indexOffset)
-        const indexLength =
-          i < zoomLevels.length - 1
-            ? Number(zoomLevels[i + 1].dataOffset) - indexOffset
-            : fileSize - 4 - indexOffset
+
         return new BlockView(
           this.bbi,
           refsByName,
           indexOffset,
-          indexLength,
           isBigEndian,
           uncompressBufSize > 0,
           'summary',

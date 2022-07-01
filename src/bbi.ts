@@ -303,19 +303,15 @@ export abstract class BBI {
   protected async getUnzoomedView(opts: RequestOptions): Promise<BlockView> {
     const {
       unzoomedIndexOffset,
-      zoomLevels,
       refsByName,
       uncompressBufSize,
       isBigEndian,
       fileType,
     } = await this.getHeader(opts)
-    const nzl = zoomLevels[0]
-    const cirLen = nzl ? nzl.dataOffset - unzoomedIndexOffset : 4000
     return new BlockView(
       this.bbi,
       refsByName,
       unzoomedIndexOffset,
-      cirLen,
       isBigEndian,
       uncompressBufSize > 0,
       fileType,

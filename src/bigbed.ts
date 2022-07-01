@@ -53,7 +53,7 @@ export class BigBed extends BBI {
    * @return promise for a BlockView
    */
   protected async getView(
-    scale: number,
+    _scale: number,
     opts: RequestOptions,
   ): Promise<BlockView> {
     return this.getUnzoomedView(opts)
@@ -78,7 +78,6 @@ export class BigBed extends BBI {
       .uint16('size')
       .uint16('count')
       .uint64('offset')
-      .saveOffset('offset')
       .parse(data)
     const { count, offset } = ret
 
