@@ -66,7 +66,7 @@ export class BigBed extends BBI {
       Buffer.alloc(64),
       0,
       64,
-      extHeaderOffset,
+      Number(extHeaderOffset),
     )
     const le = isBigEndian ? 'big' : 'little'
     const ret = new Parser()
@@ -75,6 +75,7 @@ export class BigBed extends BBI {
       .uint16('count')
       .uint64('offset')
       .parse(data)
+
     const { count, offset } = ret
 
     // no extra index is defined if count==0
@@ -84,7 +85,12 @@ export class BigBed extends BBI {
 
     const blocklen = 20
     const len = blocklen * count
-    const { buffer } = await this.bbi.read(Buffer.alloc(len), 0, len, offset)
+    const { buffer } = await this.bbi.read(
+      Buffer.alloc(len),
+      0,
+      len,
+      Number(offset),
+    )
     const extParser = new Parser()
       .endianess(le)
       .int16('type')
@@ -136,6 +142,7 @@ export class BigBed extends BBI {
         .uint64('itemCount')
 
       const { blockSize, keySize, valSize } = p.parse(data)
+      // console.log({blockSize,keySize,valSize})
       const bpt = new Parser()
         .endianess(le)
         .int8('nodeType')
@@ -166,12 +173,13 @@ export class BigBed extends BBI {
       const bptReadNode = async (
         nodeOffset: number,
       ): Promise<Loc | undefined> => {
+        const val = Number(nodeOffset)
         const len = 4 + blockSize * (keySize + valSize)
         const { buffer } = await this.bbi.read(
           Buffer.alloc(len),
           0,
           len,
-          Number(nodeOffset),
+          val,
           opts,
         )
         const node = bpt.parse(buffer)
