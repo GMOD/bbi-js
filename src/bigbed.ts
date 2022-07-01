@@ -33,10 +33,6 @@ export class BigBed extends BBI {
     },
   })
 
-  public constructor(opts?: any) {
-    super(opts)
-  }
-
   public readIndices(opts: AbortSignal | RequestOptions = {}) {
     const options = 'aborted' in opts ? { signal: opts } : opts
     return this.readIndicesCache.get(

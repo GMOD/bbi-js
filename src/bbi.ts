@@ -155,8 +155,8 @@ export abstract class BBI {
       renameRefSeqs?: (a: string) => string
     } = {},
   ) {
-    const { filehandle, renameRefSeqs, path, url } = options
-    this.renameRefSeqs = renameRefSeqs || ((s: string): string => s)
+    const { filehandle, renameRefSeqs = s => s, path, url } = options
+    this.renameRefSeqs = renameRefSeqs
     if (filehandle) {
       this.bbi = filehandle
     } else if (url) {
