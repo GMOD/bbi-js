@@ -53,7 +53,7 @@ export interface Header {
  * @param isBE - is big endian, typically false
  * @return an object with compiled parsers
  */
-function getParsers(isBE: boolean): any {
+function getParsers(isBE: boolean) {
   const le = isBE ? 'big' : 'little'
   const headerParser = new Parser()
     .endianess(le)
@@ -196,14 +196,14 @@ export abstract class BBI {
     if (asOffset) {
       const off = Number(header.asOffset)
       header.autoSql = buffer
-        .slice(off, buffer.indexOf(0, off))
+        .subarray(off, buffer.indexOf(0, off))
         .toString('utf8')
     }
     if (header.totalSummaryOffset > requestSize) {
       return this._getMainHeader(opts, requestSize * 2)
     }
     if (header.totalSummaryOffset) {
-      const tail = buffer.slice(Number(header.totalSummaryOffset))
+      const tail = buffer.subarray(Number(header.totalSummaryOffset))
       header.totalSummary = ret.totalSummaryParser.parse(tail)
     }
     return { ...header, isBigEndian }
@@ -263,12 +263,12 @@ export abstract class BBI {
       if (offset >= buffer.length) {
         throw new Error('reading beyond end of buffer')
       }
-      const ret = p.isLeafNode.parse(buffer.slice(offset))
+      const ret = p.isLeafNode.parse(buffer.subarray(offset))
       const { isLeafNode, cnt } = ret
       offset += ret.offset
       if (isLeafNode) {
         for (let n = 0; n < cnt; n += 1) {
-          const leafRet = leafNodeParser.parse(buffer.slice(offset))
+          const leafRet = leafNodeParser.parse(buffer.subarray(offset))
           offset += leafRet.offset
           const { key, refId, refSize } = leafRet
           const refRec = { name: key, id: refId, length: refSize }
@@ -279,7 +279,7 @@ export abstract class BBI {
         // parse index node
         const nextNodes = []
         for (let n = 0; n < cnt; n += 1) {
-          const nonleafRet = nonleafNodeParser.parse(buffer.slice(offset))
+          const nonleafRet = nonleafNodeParser.parse(buffer.subarray(offset))
           let { childOffset } = nonleafRet
           offset += nonleafRet.offset
           nextNodes.push(

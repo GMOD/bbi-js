@@ -1,5 +1,5 @@
 import { Parser } from 'binary-parser'
-import { Observable, Observer, merge } from 'rxjs'
+import { Observable, merge } from 'rxjs'
 import { map, reduce } from 'rxjs/operators'
 import AbortablePromiseCache from 'abortable-promise-cache'
 import QuickLRU from 'quick-lru'
@@ -9,8 +9,8 @@ import { BlockView } from './blockView'
 
 interface Loc {
   key: string
-  offset: number
-  length: number
+  offset: BigInt
+  length: BigInt
   field?: number
 }
 
@@ -64,7 +64,7 @@ export class BigBed extends BBI {
    * @param abortSignal to abort operation
    * @return a Promise for an array of Index data structure since there can be multiple extraIndexes in a bigbed, see bedToBigBed documentation
    */
-  private async _readIndices(opts: RequestOptions): Promise<Index[]> {
+  private async _readIndices(opts: RequestOptions) {
     const { extHeaderOffset, isBigEndian } = await this.getHeader(opts)
     const { buffer: data } = await this.bbi.read(
       Buffer.alloc(64),
@@ -96,10 +96,10 @@ export class BigBed extends BBI {
       .uint64('offset')
       .skip(4)
       .int16('field')
-    const indices = []
+    const indices = [] as Index[]
 
     for (let i = 0; i < count; i += 1) {
-      indices.push(extParser.parse(buffer.slice(i * blocklen)))
+      indices.push(extParser.parse(buffer.subarray(i * blocklen)))
     }
     return indices
   }
@@ -166,7 +166,6 @@ export class BigBed extends BBI {
             }),
           },
         })
-        .saveOffset('offset')
 
       const bptReadNode = async (
         nodeOffset: number,
@@ -223,7 +222,7 @@ export class BigBed extends BBI {
     }
     const view = await this.getUnzoomedView(opts)
     const res = blocks.map(block => {
-      return new Observable((observer: Observer<Feature[]>) => {
+      return new Observable<Feature[]>(observer => {
         view.readFeatures(observer, [block], opts)
       }).pipe(
         reduce((acc, curr) => acc.concat(curr)),

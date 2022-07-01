@@ -1,12 +1,13 @@
-/* eslint no-bitwise: ["error", { "allow": ["|"] }] */
 import { Observer } from 'rxjs'
 import { Parser } from 'binary-parser'
 import AbortablePromiseCache from 'abortable-promise-cache'
 import { GenericFilehandle } from 'generic-filehandle'
-import { unzip } from './unzip'
 import QuickLRU from 'quick-lru'
-import { Feature } from './bbi'
+
+// locals
 import Range from './range'
+import { unzip } from './unzip'
+import { Feature } from './bbi'
 import { groupBlocks, checkAbortSignal } from './util'
 
 interface CoordRequest {
@@ -246,7 +247,7 @@ export class BlockView {
         level: number,
       ) => {
         try {
-          const data = cirBlockData.slice(offset)
+          const data = cirBlockData.subarray(offset)
 
           const p = this.leafParser.parse(data)
           if (p.blocksToFetch) {
@@ -362,7 +363,7 @@ export class BlockView {
     const items = [] as Feature[]
     let currOffset = startOffset
     while (currOffset < data.byteLength) {
-      const res = this.bigBedParser.parse(data.slice(currOffset))
+      const res = this.bigBedParser.parse(data.subarray(currOffset))
       items.push({ ...res, uniqueId: `bb-${offset + currOffset}` })
       currOffset += res.offset
     }
@@ -377,9 +378,8 @@ export class BlockView {
     startOffset: number,
     request?: CoordRequest,
   ): Feature[] {
-    const data = bytes.slice(startOffset)
-    const results = this.bigWigParser.parse(data)
-    const { items, itemSpan, itemStep, blockStart, blockType } = results
+    const { items, itemSpan, itemStep, blockStart, blockType } =
+      this.bigWigParser.parse(bytes.subarray(startOffset))
     if (blockType === BIG_WIG_TYPE_FSTEP) {
       for (let i = 0; i < items.length; i++) {
         items[i].start = blockStart + i * itemStep
@@ -401,16 +401,16 @@ export class BlockView {
 
   public async readFeatures(
     observer: Observer<Feature[]>,
-    blocks: any,
+    blocks: { offset: BigInt; length: BigInt }[],
     opts: Options = {},
-  ): Promise<void> {
+  ) {
     try {
       const { blockType, isCompressed } = this
       const { signal, request } = opts
       const blockGroupsToFetch = groupBlocks(blocks)
       checkAbortSignal(signal)
       await Promise.all(
-        blockGroupsToFetch.map(async (blockGroup: any) => {
+        blockGroupsToFetch.map(async blockGroup => {
           checkAbortSignal(signal)
           const { length, offset } = blockGroup
           const data = await this.featureCache.get(
@@ -418,9 +418,9 @@ export class BlockView {
             blockGroup,
             signal,
           )
-          blockGroup.blocks.forEach((block: any) => {
+          blockGroup.blocks.forEach(block => {
             checkAbortSignal(signal)
-            let blockOffset = Number(block.offset - blockGroup.offset)
+            let blockOffset = Number(block.offset) - Number(blockGroup.offset)
             let resultData = data
             if (isCompressed) {
               resultData = unzip(data.slice(blockOffset))
