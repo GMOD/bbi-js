@@ -2,8 +2,6 @@ import { Parser } from 'binary-parser'
 import { LocalFile, RemoteFile, GenericFilehandle } from 'generic-filehandle'
 import { Observable, Observer } from 'rxjs'
 import { reduce } from 'rxjs/operators'
-import AbortablePromiseCache from 'abortable-promise-cache'
-import QuickLRU from 'quick-lru'
 import { BlockView } from './blockView'
 
 const BIG_WIG_MAGIC = -2003829722
@@ -119,12 +117,7 @@ export interface RequestOptions {
 export abstract class BBI {
   protected bbi: GenericFilehandle
 
-  protected headerCache = new AbortablePromiseCache({
-    cache: new QuickLRU({ maxSize: 1 }),
-    fill: async (params: any, signal?: AbortSignal) => {
-      return this._getHeader({ ...params, signal })
-    },
-  })
+  private headerP?: Promise<Header>
 
   protected renameRefSeqs: (a: string) => string
 
@@ -133,12 +126,14 @@ export abstract class BBI {
    * @return a Header object
    */
   public getHeader(opts: RequestOptions | AbortSignal = {}) {
-    const options = 'aborted' in opts ? { signal: opts } : opts
-    return this.headerCache.get(
-      JSON.stringify(options),
-      options,
-      options.signal,
-    )
+    const options = 'aborted' in opts ? { signal: opts as AbortSignal } : opts
+    if (!this.headerP) {
+      this.headerP = this._getHeader(options).catch(e => {
+        this.headerP = undefined
+        throw e
+      })
+    }
+    return this.headerP
   }
 
   /*
