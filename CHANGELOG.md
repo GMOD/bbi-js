@@ -1,6 +1,6 @@
+- Bump generic-filehandle 2->3
+
 # [2.0.0](https://github.com/GMOD/bbi-js/compare/v1.0.35...v2.0.0) (2022-07-18)
-
-
 
 - Use binary-parser instead of @gmod/binary-parser, with some optimizations.
   This uses BigInt and TextDecoder, so requires a major version bump
