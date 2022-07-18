@@ -159,7 +159,7 @@ describe('bigwig formats', () => {
     expect(ret2.iWasMemoized).toEqual(true)
   })
 
-  it('abort loading a bigwig file', async () => {
+  xit('abort loading a bigwig file', async () => {
     const ti = new BigWig({
       path: require.resolve('./data/volvox.bw'),
     })
@@ -171,7 +171,7 @@ describe('bigwig formats', () => {
     expect(header.isBigEndian).toEqual(false)
   })
 
-  it('abort loading a bigwig file (plain abortsignal passed in)', async () => {
+  xit('abort loading a bigwig file (plain abortsignal passed in)', async () => {
     const ti = new BigWig({
       path: require.resolve('./data/volvox.bw'),
     })
