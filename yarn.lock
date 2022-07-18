@@ -1855,11 +1855,6 @@ file-entry-cache@^6.0.1:
   dependencies:
     flat-cache "^3.0.4"
 
-file-uri-to-path@^2.0.0:
-  version "2.0.0"
-  resolved "https://registry.yarnpkg.com/file-uri-to-path/-/file-uri-to-path-2.0.0.tgz#7b415aeba227d575851e0a5b0c640d7656403fba"
-  integrity sha512-hjPFI8oE/2iQPVe4gbrJ73Pp+Xfub2+WI2LlXDbsaJBwT5wuMh35WNWVYYTpnz895shtwfyutMFLFywpQAFdLg==
-
 fill-range@^7.0.1:
   version "7.0.1"
   resolved "https://registry.yarnpkg.com/fill-range/-/fill-range-7.0.1.tgz#1919a6a7c75fe38b2c7c77e5198535da9acdda40"
@@ -1946,13 +1941,12 @@ functions-have-names@^1.2.2:
   resolved "https://registry.yarnpkg.com/functions-have-names/-/functions-have-names-1.2.3.tgz#0404fe4ee2ba2f607f0e0ec3c80bae994133b834"
   integrity sha512-xckBUXyTIqT97tq2x2AMb+g163b5JFysYk0x4qxNFwbfQkmNZoiRHb6sPzI9/QV33WeuvVYBUIiD4NzNIyqaRQ==
 
-generic-filehandle@^2.0.0:
-  version "2.2.3"
-  resolved "https://registry.yarnpkg.com/generic-filehandle/-/generic-filehandle-2.2.3.tgz#1383c72721ff7d0887508e770fe2aef41d15d0b7"
-  integrity sha512-sF8SglBUoWnYp+4ZhTbNczHmwd8ybxSj/xe2veXlmd+UM0W9VRd16alg7haoyvSfqseQcNx8wFt8zBmfR8wLhQ==
+generic-filehandle@^3.0.0:
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/generic-filehandle/-/generic-filehandle-3.0.0.tgz#10d5ddc4adf105de616224dba58370f3dcc3877c"
+  integrity sha512-THrFJ1fq7wjwMmSN7sdp0JnQKZDVE7aooVwHTWREKHrCGVJGKKiD5BSaboNHiFU84RIzJ+oBOqQsN//ISWj1ZQ==
   dependencies:
     es6-promisify "^6.1.1"
-    file-uri-to-path "^2.0.0"
 
 gensync@^1.0.0-beta.2:
   version "1.0.0-beta.2"
