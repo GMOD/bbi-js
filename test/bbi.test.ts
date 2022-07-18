@@ -4,6 +4,8 @@ import { LocalFile } from 'generic-filehandle'
 import { BigBed, BigWig } from '../src/index'
 import 'cross-fetch/polyfill'
 
+window.TextDecoder = require('util').TextDecoder
+
 describe('index formats', () => {
   it('loads small bigwig header', async () => {
     const ti = new BigWig({

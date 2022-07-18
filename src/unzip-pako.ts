@@ -1,5 +1,5 @@
-import { inflate } from 'pako'
+import { inflateRaw } from 'pako'
 
 export function unzip(input: Buffer) {
-  return Buffer.from(inflate(input))
+  return inflateRaw(input.subarray(2))
 }

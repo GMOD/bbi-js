@@ -5,15 +5,10 @@ export class BigWig extends BBI {
   /**
    * Retrieves a BlockView of a specific zoomLevel
    *
-   * @param refName - The chromosome name
-   * @param start - The start of a region
-   * @param end - The end of a region
+   * @param scale - number
    * @param opts - An object containing basesPerSpan (e.g. pixels per basepair) or scale used to infer the zoomLevel to use
    */
-  protected async getView(
-    scale: number,
-    opts: RequestOptions,
-  ): Promise<BlockView> {
+  protected async getView(scale: number, opts: RequestOptions) {
     const { zoomLevels, refsByName, fileSize, isBigEndian, uncompressBufSize } =
       await this.getHeader(opts)
     const basesPerPx = 1 / scale
@@ -26,15 +21,12 @@ export class BigWig extends BBI {
     for (let i = maxLevel; i >= 0; i -= 1) {
       const zh = zoomLevels[i]
       if (zh && zh.reductionLevel <= 2 * basesPerPx) {
-        const indexLength =
-          i < zoomLevels.length - 1
-            ? zoomLevels[i + 1].dataOffset - zh.indexOffset
-            : fileSize - 4 - zh.indexOffset
+        const indexOffset = Number(zh.indexOffset)
+
         return new BlockView(
           this.bbi,
           refsByName,
-          zh.indexOffset,
-          indexLength,
+          indexOffset,
           isBigEndian,
           uncompressBufSize > 0,
           'summary',

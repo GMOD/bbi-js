@@ -1,5 +1,5 @@
-import { Parser } from '@gmod/binary-parser'
-import { Observable, Observer, merge } from 'rxjs'
+import { Parser } from 'binary-parser'
+import { Observable, merge } from 'rxjs'
 import { map, reduce } from 'rxjs/operators'
 import AbortablePromiseCache from 'abortable-promise-cache'
 import QuickLRU from 'quick-lru'
@@ -9,8 +9,8 @@ import { BlockView } from './blockView'
 
 interface Loc {
   key: string
-  offset: number
-  length: number
+  offset: bigint
+  length: bigint
   field?: number
 }
 
@@ -33,10 +33,6 @@ export class BigBed extends BBI {
     },
   })
 
-  public constructor(opts?: any) {
-    super(opts)
-  }
-
   public readIndices(opts: AbortSignal | RequestOptions = {}) {
     const options = 'aborted' in opts ? { signal: opts } : opts
     return this.readIndicesCache.get(
@@ -53,7 +49,7 @@ export class BigBed extends BBI {
    * @return promise for a BlockView
    */
   protected async getView(
-    scale: number,
+    _scale: number,
     opts: RequestOptions,
   ): Promise<BlockView> {
     return this.getUnzoomedView(opts)
@@ -64,13 +60,13 @@ export class BigBed extends BBI {
    * @param abortSignal to abort operation
    * @return a Promise for an array of Index data structure since there can be multiple extraIndexes in a bigbed, see bedToBigBed documentation
    */
-  private async _readIndices(opts: RequestOptions): Promise<Index[]> {
+  private async _readIndices(opts: RequestOptions) {
     const { extHeaderOffset, isBigEndian } = await this.getHeader(opts)
     const { buffer: data } = await this.bbi.read(
       Buffer.alloc(64),
       0,
       64,
-      extHeaderOffset,
+      Number(extHeaderOffset),
     )
     const le = isBigEndian ? 'big' : 'little'
     const ret = new Parser()
@@ -78,7 +74,8 @@ export class BigBed extends BBI {
       .uint16('size')
       .uint16('count')
       .uint64('offset')
-      .parse(data).result
+      .parse(data)
+
     const { count, offset } = ret
 
     // no extra index is defined if count==0
@@ -88,7 +85,12 @@ export class BigBed extends BBI {
 
     const blocklen = 20
     const len = blocklen * count
-    const { buffer } = await this.bbi.read(Buffer.alloc(len), 0, len, offset)
+    const { buffer } = await this.bbi.read(
+      Buffer.alloc(len),
+      0,
+      len,
+      Number(offset),
+    )
     const extParser = new Parser()
       .endianess(le)
       .int16('type')
@@ -96,10 +98,10 @@ export class BigBed extends BBI {
       .uint64('offset')
       .skip(4)
       .int16('field')
-    const indices = []
+    const indices = [] as Index[]
 
     for (let i = 0; i < count; i += 1) {
-      indices.push(extParser.parse(buffer.slice(i * blocklen)).result)
+      indices.push(extParser.parse(buffer.subarray(i * blocklen)))
     }
     return indices
   }
@@ -127,20 +129,22 @@ export class BigBed extends BBI {
         Buffer.alloc(32),
         0,
         32,
-        offset,
+        Number(offset),
         opts,
       )
+      const le = isBigEndian ? 'big' : 'little'
       const p = new Parser()
-        .endianess(isBigEndian ? 'big' : 'little')
+        .endianess(le)
         .int32('magic')
         .int32('blockSize')
         .int32('keySize')
         .int32('valSize')
         .uint64('itemCount')
 
-      const { blockSize, keySize, valSize } = p.parse(data).result
+      const { blockSize, keySize, valSize } = p.parse(data)
+      // console.log({blockSize,keySize,valSize})
       const bpt = new Parser()
-        .endianess(isBigEndian ? 'big' : 'little')
+        .endianess(le)
         .int8('nodeType')
         .skip(1)
         .int16('cnt')
@@ -150,12 +154,14 @@ export class BigBed extends BBI {
             0: new Parser().array('leafkeys', {
               length: 'cnt',
               type: new Parser()
+                .endianess(le)
                 .string('key', { length: keySize, stripNull: true })
                 .uint64('offset'),
             }),
             1: new Parser().array('keys', {
               length: 'cnt',
               type: new Parser()
+                .endianess(le)
                 .string('key', { length: keySize, stripNull: true })
                 .uint64('offset')
                 .uint32('length')
@@ -167,15 +173,16 @@ export class BigBed extends BBI {
       const bptReadNode = async (
         nodeOffset: number,
       ): Promise<Loc | undefined> => {
+        const val = Number(nodeOffset)
         const len = 4 + blockSize * (keySize + valSize)
         const { buffer } = await this.bbi.read(
           Buffer.alloc(len),
           0,
           len,
-          nodeOffset,
+          val,
           opts,
         )
-        const node = bpt.parse(buffer).result
+        const node = bpt.parse(buffer)
         if (node.leafkeys) {
           let lastOffset
           for (let i = 0; i < node.leafkeys.length; i += 1) {
@@ -196,7 +203,7 @@ export class BigBed extends BBI {
         return undefined
       }
       const rootNodeOffset = 32
-      return bptReadNode(offset + rootNodeOffset)
+      return bptReadNode(Number(offset) + rootNodeOffset)
     })
     return filterUndef(await Promise.all(locs))
   }
@@ -219,7 +226,7 @@ export class BigBed extends BBI {
     }
     const view = await this.getUnzoomedView(opts)
     const res = blocks.map(block => {
-      return new Observable((observer: Observer<Feature[]>) => {
+      return new Observable<Feature[]>(observer => {
         view.readFeatures(observer, [block], opts)
       }).pipe(
         reduce((acc, curr) => acc.concat(curr)),
@@ -232,8 +239,6 @@ export class BigBed extends BBI {
       )
     })
     const ret = await merge(...res).toPromise()
-    return ret.filter((f: any) => {
-      return f.rest.split('\t')[f.field - 3] === name
-    })
+    return ret.filter(f => f.rest?.split('\t')[(f.field || 0) - 3] === name)
   }
 }
