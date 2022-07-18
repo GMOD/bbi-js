@@ -199,7 +199,8 @@ export abstract class BBI {
     }
     if (header.totalSummaryOffset) {
       const tail = buffer.subarray(Number(header.totalSummaryOffset))
-      header.totalSummary = ret.totalSummaryParser.parse(tail)
+      const sum = ret.totalSummaryParser.parse(tail)
+      header.totalSummary = { ...sum, basesCovered: Number(sum.basesCovered) }
     }
     return { ...header, isBigEndian }
   }

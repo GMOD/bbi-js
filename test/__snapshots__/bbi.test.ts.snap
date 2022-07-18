@@ -38,7 +38,7 @@ string  spID;		\\"SWISS-PROT protein Accession number\\"
     },
   ],
   "totalSummary": Object {
-    "basesCovered": 76490855n,
+    "basesCovered": 76490855,
     "scoreMax": 36,
     "scoreMin": 1,
     "scoreSum": 220873875,
@@ -118,7 +118,7 @@ Object {
     },
   ],
   "totalSummary": Object {
-    "basesCovered": 49984n,
+    "basesCovered": 49984,
     "scoreMax": 38,
     "scoreMin": 1,
     "scoreSum": 959592,
@@ -214,7 +214,7 @@ string  spID;		\\"SWISS-PROT protein Accession number\\"
     },
   ],
   "totalSummary": Object {
-    "basesCovered": 76490855n,
+    "basesCovered": 76490855,
     "scoreMax": 36,
     "scoreMin": 1,
     "scoreSum": 220873875,
