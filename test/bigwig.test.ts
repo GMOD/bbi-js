@@ -1,18 +1,5 @@
-/* eslint @typescript-eslint/explicit-function-return-type: 0 */
 import { BigWig, Header } from '../src/'
 window.TextDecoder = require('util').TextDecoder
-
-class HalfAbortController {
-  public signal: any
-
-  public constructor() {
-    this.signal = { aborted: false }
-  }
-
-  public abort(): void {
-    this.signal.aborted = true
-  }
-}
 
 interface ExtendedHeader extends Header {
   iWasMemoized: boolean
@@ -163,7 +150,7 @@ describe('bigwig formats', () => {
     const ti = new BigWig({
       path: require.resolve('./data/volvox.bw'),
     })
-    const aborter = new HalfAbortController()
+    const aborter = new AbortController()
     const indexDataP = ti.getHeader({ signal: aborter.signal })
     aborter.abort()
     await expect(indexDataP).rejects.toThrow(/aborted/)
@@ -175,7 +162,7 @@ describe('bigwig formats', () => {
     const ti = new BigWig({
       path: require.resolve('./data/volvox.bw'),
     })
-    const aborter = new HalfAbortController()
+    const aborter = new AbortController()
     const indexDataP = ti.getHeader(aborter.signal)
     aborter.abort()
     await expect(indexDataP).rejects.toThrow(/aborted/)
@@ -205,7 +192,7 @@ describe('bigwig formats', () => {
     const ti = new BigWig({
       path: require.resolve('./data/volvox.bw'),
     })
-    const aborter = new HalfAbortController()
+    const aborter = new AbortController()
     const ob = ti.getFeatures('ctgA', 0, 100, { signal: aborter.signal })
     aborter.abort()
     await expect(ob).rejects.toThrow(/aborted/)
@@ -214,7 +201,7 @@ describe('bigwig formats', () => {
     const ti = new BigWig({
       path: require.resolve('./data/volvox.bw'),
     })
-    const aborter = new HalfAbortController()
+    const aborter = new AbortController()
     const ob = await ti.getFeatureStream('ctgA', 0, 100, {
       signal: aborter.signal,
     })
