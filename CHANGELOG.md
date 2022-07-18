@@ -1,6 +1,7 @@
+- Use binary-parser instead of @gmod/binary-parser, with some optimizations.
+  This uses BigInt and TextDecoder, so requires a major version bump
+
 ## [1.0.35](https://github.com/GMOD/bbi-js/compare/v1.0.34...v1.0.35) (2022-04-22)
-
-
 
 - Produce actual ESM module for the "module" field in package.json, was commonJS
 - Add sourceMap:true to tsconfig
