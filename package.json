@@ -1,6 +1,6 @@
 {
   "name": "@gmod/bbi",
-  "version": "1.0.35",
+  "version": "2.0.0",
   "description": "Parser for BigWig/BigBed files",
   "license": "MIT",
   "repository": "GMOD/bbi-js",
@@ -43,8 +43,8 @@
   "dependencies": {
     "abortable-promise-cache": "^1.4.1",
     "binary-parser": "^2.1.0",
-    "pako": "^2.0.0",
     "generic-filehandle": "^2.0.0",
+    "pako": "^2.0.0",
     "quick-lru": "^4.0.0",
     "rxjs": "^6.5.2"
   },
