@@ -1,3 +1,7 @@
+## [2.0.1](https://github.com/GMOD/bbi-js/compare/v2.0.0...v2.0.1) (2022-07-18)
+
+
+
 - Bump generic-filehandle 2->3
 
 # [2.0.0](https://github.com/GMOD/bbi-js/compare/v1.0.35...v2.0.0) (2022-07-18)
