@@ -1,3 +1,7 @@
+## [2.0.3](https://github.com/GMOD/bbi-js/compare/v2.0.2...v2.0.3) (2022-10-10)
+
+
+
 - Add BigInt64 polyfill for older safari
 
 ## [2.0.2](https://github.com/GMOD/bbi-js/compare/v2.0.1...v2.0.2) (2022-07-18)
