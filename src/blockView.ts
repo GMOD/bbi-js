@@ -16,6 +16,8 @@ interface CoordRequest {
   end: number
 }
 interface DataBlock {
+  blockOffset: bigint
+  blockSize: bigint
   startChrom: number
   endChrom: number
   startBase: number
@@ -200,8 +202,13 @@ export class BlockView {
       }
       const request = { chrId, start, end }
       if (!this.cirTreePromise) {
-        const off = Number(cirTreeOffset)
-        this.cirTreePromise = bbi.read(Buffer.alloc(48), 0, 48, off, opts)
+        this.cirTreePromise = bbi.read(
+          Buffer.alloc(48),
+          0,
+          48,
+          Number(cirTreeOffset),
+          opts,
+        )
       }
       const { buffer } = await this.cirTreePromise
       const cirBlockSize = isBigEndian
@@ -218,7 +225,10 @@ export class BlockView {
         try {
           const data = cirBlockData.subarray(offset)
 
-          const p = this.leafParser.parse(data)
+          const p = this.leafParser.parse(data) as {
+            blocksToFetch: DataBlock[]
+            recurOffsets: DataBlock[]
+          }
           if (p.blocksToFetch) {
             blocksToFetch = blocksToFetch.concat(
               p.blocksToFetch
@@ -232,7 +242,7 @@ export class BlockView {
           if (p.recurOffsets) {
             const recurOffsets = p.recurOffsets
               .filter(filterFeats)
-              .map((l: { blockOffset: bigint }) => Number(l.blockOffset))
+              .map(l => Number(l.blockOffset))
             if (recurOffsets.length > 0) {
               cirFobRecur(recurOffsets, level + 1)
             }
