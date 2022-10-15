@@ -1,8 +1,8 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`bigbed formats loads small bigbed file 1`] = `
-Array [
-  Object {
+[
+  {
     "chrom": "chr7",
     "chromEnd": 73584,
     "chromStart": 54028,
@@ -15,7 +15,7 @@ Array [
     "thickStart": 54028,
     "uniqueId": "bb-277248",
   },
-  Object {
+  {
     "chrom": "chr7",
     "chromEnd": 61569,
     "chromStart": 60328,
@@ -28,7 +28,7 @@ Array [
     "thickStart": 60328,
     "uniqueId": "bb-277306",
   },
-  Object {
+  {
     "chrom": "chr7",
     "chromEnd": 63529,
     "chromStart": 62967,
@@ -41,7 +41,7 @@ Array [
     "thickStart": 62967,
     "uniqueId": "bb-277361",
   },
-  Object {
+  {
     "chrom": "chr7",
     "chromEnd": 64107,
     "chromStart": 64068,
@@ -54,7 +54,7 @@ Array [
     "thickStart": 64068,
     "uniqueId": "bb-277419",
   },
-  Object {
+  {
     "chrom": "chr7",
     "chromEnd": 65220,
     "chromStart": 65159,
@@ -71,8 +71,8 @@ Array [
 `;
 
 exports[`bigbed formats searchExtraIdex returns null on file with no extra index 1`] = `
-Array [
-  Object {
+[
+  {
     "chromId": 0,
     "end": 9000,
     "field": 3,
@@ -85,8 +85,8 @@ Array [
 `;
 
 exports[`bigbed formats searchExtraIndex in bigbed with multiple extra indexes on the gene name index 1`] = `
-Array [
-  Object {
+[
+  {
     "chromId": 0,
     "end": 50562905,
     "field": 13,
@@ -95,7 +95,7 @@ Array [
     "start": 50551111,
     "uniqueId": "bb-49149691",
   },
-  Object {
+  {
     "chromId": 0,
     "end": 50556432,
     "field": 13,
@@ -108,8 +108,8 @@ Array [
 `;
 
 exports[`bigbed formats searchExtraIndex name in gencode 1`] = `
-Array [
-  Object {
+[
+  {
     "chromId": 0,
     "end": 50799305,
     "field": 3,

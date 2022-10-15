@@ -1,22 +1,22 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`index formats loads small bigbed header 1`] = `
-Object {
+{
   "asOffset": 304n,
   "autoSql": "table hg18KGchr7
-\\"UCSC Genes for chr7 with color plus GeneSymbol and SwissProtID\\"
+"UCSC Genes for chr7 with color plus GeneSymbol and SwissProtID"
 (
-string  chrom;		\\"Reference sequence chromosome or scaffold\\"
-uint    chromStart;	\\"Start position of feature on chromosome\\"
-uint    chromEnd;	\\"End position of feature on chromosome\\"
-string  name;		\\"Name of gene\\"
-uint    score;		\\"Score\\"
-char[1] strand;		\\"+ or - for strand\\"
-uint    thickStart;	\\"Coding region start\\"
-uint    thickEnd;	\\"Coding region end\\"
-uint  	reserved;	\\"Green on + strand, Red on - strand\\"
-string  geneSymbol;	\\"Gene Symbol\\"
-string  spID;		\\"SWISS-PROT protein Accession number\\"
+string  chrom;		"Reference sequence chromosome or scaffold"
+uint    chromStart;	"Start position of feature on chromosome"
+uint    chromEnd;	"End position of feature on chromosome"
+string  name;		"Name of gene"
+uint    score;		"Score"
+char[1] strand;		"+ or - for strand"
+uint    thickStart;	"Coding region start"
+uint    thickEnd;	"Coding region end"
+uint  	reserved;	"Green on + strand, Red on - strand"
+string  geneSymbol;	"Gene Symbol"
+string  spID;		"SWISS-PROT protein Accession number"
 )
 ",
   "chromTreeOffset": 1027n,
@@ -27,17 +27,17 @@ string  spID;		\\"SWISS-PROT protein Accession number\\"
   "isBigEndian": false,
   "magic": -2021002517,
   "numZoomLevels": 7,
-  "refsByName": Object {
+  "refsByName": {
     "chr7": 0,
   },
-  "refsByNumber": Array [
-    Object {
+  "refsByNumber": [
+    {
       "id": 0,
       "length": 158821424,
       "name": "chr7",
     },
   ],
-  "totalSummary": Object {
+  "totalSummary": {
     "basesCovered": 76490855,
     "scoreMax": 36,
     "scoreMin": 1,
@@ -49,44 +49,44 @@ string  spID;		\\"SWISS-PROT protein Accession number\\"
   "unzoomedDataOffset": 1075n,
   "unzoomedIndexOffset": 70408n,
   "version": 4,
-  "zoomLevels": Array [
-    Object {
+  "zoomLevels": [
+    {
       "dataOffset": 76660n,
       "indexOffset": 97731n,
       "reductionLevel": 63500,
       "reserved": 0,
     },
-    Object {
+    {
       "dataOffset": 103951n,
       "indexOffset": 113070n,
       "reductionLevel": 254000,
       "reserved": 0,
     },
-    Object {
+    {
       "dataOffset": 119274n,
       "indexOffset": 122263n,
       "reductionLevel": 1016000,
       "reserved": 0,
     },
-    Object {
+    {
       "dataOffset": 128467n,
       "indexOffset": 129423n,
       "reductionLevel": 4064000,
       "reserved": 0,
     },
-    Object {
+    {
       "dataOffset": 135627n,
       "indexOffset": 135906n,
       "reductionLevel": 16256000,
       "reserved": 0,
     },
-    Object {
+    {
       "dataOffset": 142110n,
       "indexOffset": 142204n,
       "reductionLevel": 65024000,
       "reserved": 0,
     },
-    Object {
+    {
       "dataOffset": 148408n,
       "indexOffset": 148452n,
       "reductionLevel": 260096000,
@@ -97,7 +97,7 @@ string  spID;		\\"SWISS-PROT protein Accession number\\"
 `;
 
 exports[`index formats loads small bigwig header 1`] = `
-Object {
+{
   "asOffset": 0n,
   "chromTreeOffset": 344n,
   "definedFieldCount": 0,
@@ -107,17 +107,17 @@ Object {
   "isBigEndian": false,
   "magic": -2003829722,
   "numZoomLevels": 7,
-  "refsByName": Object {
+  "refsByName": {
     "ctgA": 0,
   },
-  "refsByNumber": Array [
-    Object {
+  "refsByNumber": [
+    {
       "id": 0,
       "length": 50001,
       "name": "ctgA",
     },
   ],
-  "totalSummary": Object {
+  "totalSummary": {
     "basesCovered": 49984,
     "scoreMax": 38,
     "scoreMin": 1,
@@ -129,44 +129,44 @@ Object {
   "unzoomedDataOffset": 392n,
   "unzoomedIndexOffset": 142735n,
   "version": 4,
-  "zoomLevels": Array [
-    Object {
+  "zoomLevels": [
+    {
       "dataOffset": 149323n,
       "indexOffset": 164492n,
       "reductionLevel": 40,
       "reserved": 0,
     },
-    Object {
+    {
       "dataOffset": 170704n,
       "indexOffset": 174823n,
       "reductionLevel": 160,
       "reserved": 0,
     },
-    Object {
+    {
       "dataOffset": 181027n,
       "indexOffset": 182156n,
       "reductionLevel": 640,
       "reserved": 0,
     },
-    Object {
+    {
       "dataOffset": 188360n,
       "indexOffset": 188711n,
       "reductionLevel": 2560,
       "reserved": 0,
     },
-    Object {
+    {
       "dataOffset": 194915n,
       "indexOffset": 195031n,
       "reductionLevel": 10240,
       "reserved": 0,
     },
-    Object {
+    {
       "dataOffset": 201235n,
       "indexOffset": 201297n,
       "reductionLevel": 40960,
       "reserved": 0,
     },
-    Object {
+    {
       "dataOffset": 207501n,
       "indexOffset": 207542n,
       "reductionLevel": 163840,
@@ -177,22 +177,22 @@ Object {
 `;
 
 exports[`index formats uses filehandle argument 1`] = `
-Object {
+{
   "asOffset": 304n,
   "autoSql": "table hg18KGchr7
-\\"UCSC Genes for chr7 with color plus GeneSymbol and SwissProtID\\"
+"UCSC Genes for chr7 with color plus GeneSymbol and SwissProtID"
 (
-string  chrom;		\\"Reference sequence chromosome or scaffold\\"
-uint    chromStart;	\\"Start position of feature on chromosome\\"
-uint    chromEnd;	\\"End position of feature on chromosome\\"
-string  name;		\\"Name of gene\\"
-uint    score;		\\"Score\\"
-char[1] strand;		\\"+ or - for strand\\"
-uint    thickStart;	\\"Coding region start\\"
-uint    thickEnd;	\\"Coding region end\\"
-uint  	reserved;	\\"Green on + strand, Red on - strand\\"
-string  geneSymbol;	\\"Gene Symbol\\"
-string  spID;		\\"SWISS-PROT protein Accession number\\"
+string  chrom;		"Reference sequence chromosome or scaffold"
+uint    chromStart;	"Start position of feature on chromosome"
+uint    chromEnd;	"End position of feature on chromosome"
+string  name;		"Name of gene"
+uint    score;		"Score"
+char[1] strand;		"+ or - for strand"
+uint    thickStart;	"Coding region start"
+uint    thickEnd;	"Coding region end"
+uint  	reserved;	"Green on + strand, Red on - strand"
+string  geneSymbol;	"Gene Symbol"
+string  spID;		"SWISS-PROT protein Accession number"
 )
 ",
   "chromTreeOffset": 1027n,
@@ -203,17 +203,17 @@ string  spID;		\\"SWISS-PROT protein Accession number\\"
   "isBigEndian": false,
   "magic": -2021002517,
   "numZoomLevels": 7,
-  "refsByName": Object {
+  "refsByName": {
     "chr7": 0,
   },
-  "refsByNumber": Array [
-    Object {
+  "refsByNumber": [
+    {
       "id": 0,
       "length": 158821424,
       "name": "chr7",
     },
   ],
-  "totalSummary": Object {
+  "totalSummary": {
     "basesCovered": 76490855,
     "scoreMax": 36,
     "scoreMin": 1,
@@ -225,44 +225,44 @@ string  spID;		\\"SWISS-PROT protein Accession number\\"
   "unzoomedDataOffset": 1075n,
   "unzoomedIndexOffset": 70408n,
   "version": 4,
-  "zoomLevels": Array [
-    Object {
+  "zoomLevels": [
+    {
       "dataOffset": 76660n,
       "indexOffset": 97731n,
       "reductionLevel": 63500,
       "reserved": 0,
     },
-    Object {
+    {
       "dataOffset": 103951n,
       "indexOffset": 113070n,
       "reductionLevel": 254000,
       "reserved": 0,
     },
-    Object {
+    {
       "dataOffset": 119274n,
       "indexOffset": 122263n,
       "reductionLevel": 1016000,
       "reserved": 0,
     },
-    Object {
+    {
       "dataOffset": 128467n,
       "indexOffset": 129423n,
       "reductionLevel": 4064000,
       "reserved": 0,
     },
-    Object {
+    {
       "dataOffset": 135627n,
       "indexOffset": 135906n,
       "reductionLevel": 16256000,
       "reserved": 0,
     },
-    Object {
+    {
       "dataOffset": 142110n,
       "indexOffset": 142204n,
       "reductionLevel": 65024000,
       "reserved": 0,
     },
-    Object {
+    {
       "dataOffset": 148408n,
       "indexOffset": 148452n,
       "reductionLevel": 260096000,
