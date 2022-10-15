@@ -7,6 +7,10 @@ import { BlockView } from './blockView'
 const BIG_WIG_MAGIC = -2003829722
 const BIG_BED_MAGIC = -2021002517
 
+function toString(arr: Uint8Array) {
+  return new TextDecoder().decode(arr)
+}
+
 export interface Feature {
   start: number
   end: number
@@ -190,9 +194,7 @@ export abstract class BBI {
     }
     if (asOffset) {
       const off = Number(header.asOffset)
-      header.autoSql = buffer
-        .subarray(off, buffer.indexOf(0, off))
-        .toString('utf8')
+      header.autoSql = toString(buffer.subarray(off, buffer.indexOf(0, off)))
     }
     if (header.totalSummaryOffset > requestSize) {
       return this._getMainHeader(opts, requestSize * 2)
