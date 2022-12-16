@@ -2,7 +2,7 @@
 
 [![NPM version](https://img.shields.io/npm/v/@gmod/bbi.svg?style=flat-square)](https://npmjs.org/package/@gmod/bbi)
 [![Coverage Status](https://img.shields.io/codecov/c/github/GMOD/bbi-js/master.svg?style=flat-square)](https://codecov.io/gh/GMOD/bbi-js/branch/master)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/GMOD/bbi-js/push.yml?branch=main)](https://github.com/GMOD/bbi-js/actions?query=branch%3Amaster+workflow%3APush+)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/GMOD/bbi-js/push.yml?branch=master)](https://github.com/GMOD/bbi-js/actions?query=branch%3Amaster+workflow%3APush+)
 
 A parser for bigwig and bigbed file formats
 
