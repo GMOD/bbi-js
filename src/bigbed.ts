@@ -1,5 +1,5 @@
 import { Parser } from 'binary-parser'
-import { Observable, merge } from 'rxjs'
+import { Observable, merge, firstValueFrom } from 'rxjs'
 import { map, reduce } from 'rxjs/operators'
 import AbortablePromiseCache from 'abortable-promise-cache'
 import QuickLRU from 'quick-lru'
@@ -216,10 +216,7 @@ export class BigBed extends BBI {
    * @param opts - a SearchOptions argument with optional signal
    * @return a Promise for an array of Feature
    */
-  public async searchExtraIndex(
-    name: string,
-    opts: RequestOptions = {},
-  ): Promise<Feature[]> {
+  public async searchExtraIndex(name: string, opts: RequestOptions = {}) {
     const blocks = await this.searchExtraIndexBlocks(name, opts)
     if (!blocks.length) {
       return []
@@ -238,7 +235,7 @@ export class BigBed extends BBI {
         }),
       )
     })
-    const ret = await merge(...res).toPromise()
+    const ret = await firstValueFrom(merge(...res))
     return ret.filter(f => f.rest?.split('\t')[(f.field || 0) - 3] === name)
   }
 }
