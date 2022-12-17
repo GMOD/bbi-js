@@ -1,3 +1,5 @@
+- Cleanup package.json and README
+
 ## [2.0.4](https://github.com/GMOD/bbi-js/compare/v2.0.3...v2.0.4) (2022-10-15)
 
 
