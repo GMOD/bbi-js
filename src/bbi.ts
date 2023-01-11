@@ -1,7 +1,7 @@
 import { Parser } from 'binary-parser'
 import { LocalFile, RemoteFile, GenericFilehandle } from 'generic-filehandle'
-import { Observable, Observer } from 'rxjs'
-import { reduce } from 'rxjs/operators'
+import { firstValueFrom, Observable, Observer } from 'rxjs'
+import { toArray } from 'rxjs/operators'
 import { BlockView } from './blockView'
 
 const BIG_WIG_MAGIC = -2003829722
@@ -367,12 +367,10 @@ export abstract class BBI {
     opts: RequestOptions & { scale?: number; basesPerSpan?: number } = {
       scale: 1,
     },
-  ): Promise<Feature[]> {
+  ) {
     const ob = await this.getFeatureStream(refName, start, end, opts)
 
-    const ret = await ob
-      .pipe(reduce((acc, curr) => acc.concat(curr)))
-      .toPromise()
-    return ret || []
+    const ret = await firstValueFrom(ob.pipe(toArray()))
+    return ret.flat()
   }
 }
