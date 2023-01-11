@@ -1,7 +1,5 @@
 # [3.0.0](https://github.com/GMOD/bbi-js/compare/v2.0.5...v3.0.0) (2023-01-11)
 
-
-
 - Update to rxjs 7
 
 ## [2.0.5](https://github.com/GMOD/bbi-js/compare/v2.0.4...v2.0.5) (2022-12-17)
@@ -38,7 +36,9 @@
 
 ### Reverts
 
-- Revert "Use subarray instead of slice since slice is deprecated under node xref 'https://nodejs.org/api/buffer.html#bufslicestart-end'" ([44116cc](https://github.com/GMOD/bbi-js/commit/44116cce54601727d37f1c449bfcc60c1b4e602d))
+- Revert "Use subarray instead of slice since slice is deprecated under node
+  xref 'https://nodejs.org/api/buffer.html#bufslicestart-end'"
+  ([44116cc](https://github.com/GMOD/bbi-js/commit/44116cce54601727d37f1c449bfcc60c1b4e602d))
 
 * Back to slice instead of subarray, as subarray returned a UInt8Array instead
   of a true Buffer
@@ -64,11 +64,13 @@
 
 ## [1.0.29](https://github.com/GMOD/bbi-js/compare/v1.0.28...v1.0.29) (2020-01-28)
 
-- Accidentally made the package include itself as dependency in 1.0.28, republish
+- Accidentally made the package include itself as dependency in 1.0.28,
+  republish
 
 ## [1.0.28](https://github.com/GMOD/bbi-js/compare/v1.0.27...v1.0.28) (2020-01-28)
 
-- Change typescript interface to use object keys instead of Map type for refsByName, refsById
+- Change typescript interface to use object keys instead of Map type for
+  refsByName, refsById
 - Typescript only release change
 
 ## [1.0.27](https://github.com/GMOD/bbi-js/compare/v1.0.26...v1.0.27) (2020-01-10)
@@ -80,11 +82,13 @@ Thanks to @skinner for both of these contributions!
 
 ## [1.0.26](https://github.com/GMOD/bbi-js/compare/v1.0.25...v1.0.26) (2019-11-10)
 
-- Fix important bug with fixed step bigwig files not using the proper start coordinate
+- Fix important bug with fixed step bigwig files not using the proper start
+  coordinate
 
 ## [1.0.25](https://github.com/GMOD/bbi-js/compare/v1.0.24...v1.0.25) (2019-11-03)
 
-- Add fix for files with a large header, if autoSql is large in a bigbed file would be likely scenario
+- Add fix for files with a large header, if autoSql is large in a bigbed file
+  would be likely scenario
 
 ## [1.0.24](https://github.com/GMOD/bbi-js/compare/v1.0.23...v1.0.24) (2019-10-29)
 
@@ -109,22 +113,26 @@ Thanks to @skinner for both of these contributions!
 
 ## [1.0.19](https://github.com/GMOD/bbi-js/compare/v1.0.18...v1.0.19) (2019-05-02)
 
-- Add regression fix since 1.0.16 for uncompressed files. Thanks to @lidaof for reporting!
+- Add regression fix since 1.0.16 for uncompressed files. Thanks to @lidaof for
+  reporting!
 
 ## [1.0.18](https://github.com/GMOD/bbi-js/compare/v1.0.17...v1.0.18) (2019-05-02)
 
 - Improve error handling of the observables (issue #20, pull #21)
-- Bump generic-filehandle to 1.0.9 to fix compatibility with native browser fetch
+- Bump generic-filehandle to 1.0.9 to fix compatibility with native browser
+  fetch
 
 ## [1.0.17](https://github.com/GMOD/bbi-js/compare/v1.0.16...v1.0.17) (2019-04-30)
 
 - Use some standard rxjs notions for combining operator results
-- Add parsing of the extraIndex data in BigBed, allowing you to call bigbed.searchExtraIndex(name[,opts])
+- Add parsing of the extraIndex data in BigBed, allowing you to call
+  bigbed.searchExtraIndex(name[,opts])
 
 ## [1.0.16](https://github.com/GMOD/bbi-js/compare/v1.0.15...v1.0.16) (2019-04-23)
 
 - Pre-compile binary-parser instances for faster
-- Important: fixed bug that caused bigwig summary blocks to not be returned in output
+- Important: fixed bug that caused bigwig summary blocks to not be returned in
+  output
 
 ## [1.0.15](https://github.com/GMOD/bbi-js/compare/v1.0.14...v1.0.15) (2019-04-18)
 
@@ -149,12 +157,15 @@ Thanks to @skinner for both of these contributions!
 
 ## [1.0.10](https://github.com/GMOD/bbi-js/compare/v1.0.9...v1.0.10) (2019-04-09)
 
-- Fix misinterpretation of variable step wig files in this module (the span is not variable in variable step files, only the step, use bedGraphToBigWig for variable span)
+- Fix misinterpretation of variable step wig files in this module (the span is
+  not variable in variable step files, only the step, use bedGraphToBigWig for
+  variable span)
 - Improved docs
 
 ## [1.0.9](https://github.com/GMOD/bbi-js/compare/v1.0.8...v1.0.9) (2019-04-05)
 
-- Added caching of networking requests (thanks @rbuels for the abortable-promise-cache module!)
+- Added caching of networking requests (thanks @rbuels for the
+  abortable-promise-cache module!)
 - Fix some type errors on the range class
 - Correct using span on fixed size wiggle types
 
@@ -166,7 +177,8 @@ Thanks to @skinner for both of these contributions!
 ## [1.0.7](https://github.com/GMOD/bbi-js/compare/v1.0.6...v1.0.7) (2019-04-01)
 
 - Added getFeatureStream which returns an Observable from rxjs
-- Added url option to BigWig and BigBed constructors to allow usage of RemoteFile filehandle
+- Added url option to BigWig and BigBed constructors to allow usage of
+  RemoteFile filehandle
 - Added typescript backend for better processing
 
 ## [1.0.6](https://github.com/GMOD/bbi-js/compare/v1.0.5...v1.0.6) (2019-03-15)
@@ -179,7 +191,8 @@ Thanks to @skinner for both of these contributions!
 
 ## [1.0.4](https://github.com/GMOD/bbi-js/compare/v1.0.3...v1.0.4) (2019-01-28)
 
-- Add renameRefSeqs functionality where you can apply a callback to the refseq names
+- Add renameRefSeqs functionality where you can apply a callback to the refseq
+  names
 - Consistently apply start/end coordinate filters at different zoom levels
 
 ## [1.0.3](https://github.com/GMOD/bbi-js/compare/v1.0.2...v1.0.3) (2019-01-27)
@@ -192,7 +205,8 @@ Thanks to @skinner for both of these contributions!
 
 ## [1.0.1](https://github.com/GMOD/bbi-js/compare/v1.0.0...v1.0.1) (2019-01-24)
 
-- Added exports for BigWig and BigBed. const {BigWig, BigBed} = require('@gmod/bbi')
+- Added exports for BigWig and BigBed. const {BigWig, BigBed} =
+  require('@gmod/bbi')
 
 # 1.0.0 (2019-01-23)
 

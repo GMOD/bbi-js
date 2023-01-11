@@ -10,7 +10,7 @@ A parser for bigwig and bigbed file formats
 
 If using locally
 
-```ts
+```typescript
 const { BigWig } = require('@gmod/bbi')
 const file = new BigWig({
   path: 'volvox.bw',
@@ -21,10 +21,11 @@ const file = new BigWig({
 })()
 ```
 
-If using remotely, you can use it in combination with generic-filehandle or your own implementation of something like generic-filehandle
+If using remotely, you can use it in combination with generic-filehandle or your
+own implementation of something like generic-filehandle
 https://github.com/GMOD/generic-filehandle/
 
-```ts
+```typescript
 const { BigWig } = require('@gmod/bbi')
 const { RemoteFile } = require('generic-filehandle')
 
@@ -53,7 +54,11 @@ Accepts an object containing either
 
 - path - path to a local file
 - url - path to a url
-- filehandle - a filehandle instance that you can implement as a custom class yourself. path and url are based on https://www.npmjs.com/package/generic-filehandle but by implementing a class containing the Filehandle interface specified therein, you can pass it to this module
+- filehandle - a filehandle instance that you can implement as a custom class
+  yourself. path and url are based on
+  https://www.npmjs.com/package/generic-filehandle but by implementing a class
+  containing the Filehandle interface specified therein, you can pass it to this
+  module
 
 ### BigWig
 
@@ -62,15 +67,20 @@ Accepts an object containing either
 - refName - a name of a chromosome in the file
 - start - a 0-based half open start coordinate
 - end - a 0-based half open end coordinate
-- opts.scale - indicates zoom level to use, specified as pxPerBp, e.g. being zoomed out, you might have 100bp per pixel so opts.scale would be 1/100. the zoom level that is returned is the one which has reductionLevel<=2/opts.scale (reductionLevel is a property of the zoom level structure in the bigwig file data)
+- opts.scale - indicates zoom level to use, specified as pxPerBp, e.g. being
+  zoomed out, you might have 100bp per pixel so opts.scale would be 1/100. the
+  zoom level that is returned is the one which has reductionLevel<=2/opts.scale
+  (reductionLevel is a property of the zoom level structure in the bigwig file
+  data)
 - opts.basesPerScale - optional, inverse of opts.scale e.g. bpPerPx
 - opts.signal - optional, an AbortSignal to halt processing
 
-Returns a promise to an array of features. If an incorrect refName or no features are found the result is an empty array.
+Returns a promise to an array of features. If an incorrect refName or no
+features are found the result is an empty array.
 
 Example:
 
-```ts
+```typescript
 const feats = await bigwig.getFeatures('chr1', 0, 100)
 // returns array of features with start, end, score
 // coordinates on returned data are are 0-based half open
@@ -80,7 +90,9 @@ const feats = await bigwig.getFeatures('chr1', 0, 100)
 
 ### Understanding scale and reductionLevel
 
-Here is what the reductionLevel structure looks like in a file. The zoomLevel that is chosen is the first reductionLevel<2\*opts.basesPerScale (or reductionLevel<2/opts.scale) when scanning backwards through this list
+Here is what the reductionLevel structure looks like in a file. The zoomLevel
+that is chosen is the first reductionLevel<2\*opts.basesPerScale (or
+reductionLevel<2/opts.scale) when scanning backwards through this list
 
       [ { reductionLevel: 40, ... },
         { reductionLevel: 160, ... },
@@ -92,9 +104,10 @@ Here is what the reductionLevel structure looks like in a file. The zoomLevel th
 
 #### getFeatureStream(refName, start, end, opts)
 
-Same as getFeatures but returns an RxJS observable stream, useful for very large queries
+Same as getFeatures but returns an RxJS observable stream, useful for very large
+queries
 
-```ts
+```typescript
 const observer = await bigwig.getFeatureStream('chr1', 0, 100)
 observer.subscribe(
   chunk => {
@@ -118,7 +131,8 @@ observer.subscribe(
 - end - a 0-based half open end coordinate
 - opts.signal - optional, an AbortSignal to halt processing
 
-returns a promise to an array of features. no concept of zoom levels is used with bigwig data
+returns a promise to an array of features. no concept of zoom levels is used
+with bigwig data
 
 #### getFeatureStream(refName, start, end, opts)
 
@@ -126,20 +140,30 @@ Similar to BigWig, returns an RxJS observable for a observable stream
 
 #### searchExtraIndex(name, opts)
 
-Specific, to bigbed files, this method searches the bigBed "extra indexes", there can be multiple indexes e.g. for the gene ID and gene name columns. See the usage of -extraIndex in bedToBigBed here https://genome.ucsc.edu/goldenpath/help/bigBed.html
+Specific, to bigbed files, this method searches the bigBed "extra indexes",
+there can be multiple indexes e.g. for the gene ID and gene name columns. See
+the usage of -extraIndex in bedToBigBed here
+https://genome.ucsc.edu/goldenpath/help/bigBed.html
 
 This function accepts two arguments
 
 - name: a string to search for in the BigBed extra indices
 - opts: an opject that can optionally contain opts.signal, an abort signal
 
-Returns a Promise to an array of Features, with an extra field indicating the field that was matched
+Returns a Promise to an array of Features, with an extra field indicating the
+field that was matched
 
 ### How to parse BigBed results
 
-The BigBed line contents are returned as a raw text line e.g. {start: 0, end:100, rest: "ENST00000456328.2\t1000\t..."} where "rest" contains tab delimited text for the fields from 4 and on in the BED format. Since BED files from BigBed format often come with autoSql (a description of all the columns) it can be useful to parse it with BED parser that can handle autoSql. The rest line can be parsed by the @gmod/bed module, which is not by default integrated with this module, but can be combined with it as follows
+The BigBed line contents are returned as a raw text line e.g. {start: 0,
+end:100, rest: "ENST00000456328.2\t1000\t..."} where "rest" contains tab
+delimited text for the fields from 4 and on in the BED format. Since BED files
+from BigBed format often come with autoSql (a description of all the columns) it
+can be useful to parse it with BED parser that can handle autoSql. The rest line
+can be parsed by the @gmod/bed module, which is not by default integrated with
+this module, but can be combined with it as follows
 
-```ts
+```typescript
 import {BigBed} from '@gmod/bbi'
 import BED from '@gmod/bed'
 
@@ -190,7 +214,10 @@ Features after parsing with @gmod/bed:
 
 ## Academic Use
 
-This package was written with funding from the [NHGRI](http://genome.gov) as part of the [JBrowse](http://jbrowse.org) project. If you use it in an academic project that you publish, please cite the most recent JBrowse paper, which will be linked from [jbrowse.org](http://jbrowse.org).
+This package was written with funding from the [NHGRI](http://genome.gov) as
+part of the [JBrowse](http://jbrowse.org) project. If you use it in an academic
+project that you publish, please cite the most recent JBrowse paper, which will
+be linked from [jbrowse.org](http://jbrowse.org).
 
 ## License
 
