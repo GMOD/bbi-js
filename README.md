@@ -10,37 +10,40 @@ A parser for bigwig and bigbed file formats
 
 If using locally
 
-    const {BigWig} = require('@gmod/bbi');
-    const file = new BigWig({
-      path: 'volvox.bw'
-    });
-    (async () => {
-      await file.getHeader();
-      const feats = await file.getFeatures('chr1', 0, 100, { scale: 1 });
-    })();
+```ts
+const { BigWig } = require('@gmod/bbi')
+const file = new BigWig({
+  path: 'volvox.bw',
+})
+;(async () => {
+  await file.getHeader()
+  const feats = await file.getFeatures('chr1', 0, 100, { scale: 1 })
+})()
+```
 
 If using remotely, you can use it in combination with generic-filehandle or your own implementation of something like generic-filehandle
 https://github.com/GMOD/generic-filehandle/
 
-    const {BigWig} = require('@gmod/bbi');
-    const {RemoteFile} = require('generic-filehandle')
+```ts
+const { BigWig } = require('@gmod/bbi')
+const { RemoteFile } = require('generic-filehandle')
 
-    // if running in the browser, RemoteFile will use the the global fetch
-    const file = new BigWig({
-      filehandle: new RemoteFile('volvox.bw')
-    });
+// if running in the browser, RemoteFile will use the the global fetch
+const file = new BigWig({
+  filehandle: new RemoteFile('volvox.bw'),
+})
 
+// if running under node.js you must supply the fetch function to RemoteFile
+const fetch = require('node-fetch')
+const file = new BigWig({
+  filehandle: new RemoteFile('volvox.bw', { fetch }),
+})
 
-    // if running under node.js you must supply the fetch function to RemoteFile
-    const fetch = require('node-fetch')
-    const file = new BigWig({
-      filehandle: new RemoteFile('volvox.bw', {fetch})
-    });
-
-    (async () => {
-      await file.getHeader();
-      const feats = await file.getFeatures('chr1', 0, 100, { scale: 1 });
-    })();
+;(async () => {
+  await file.getHeader()
+  const feats = await file.getFeatures('chr1', 0, 100, { scale: 1 })
+})()
+```
 
 ## Documentation
 
@@ -67,11 +70,13 @@ Returns a promise to an array of features. If an incorrect refName or no feature
 
 Example:
 
-    const feats = await bigwig.getFeatures('chr1', 0, 100)
-    // returns array of features with start, end, score
-    // coordinates on returned data are are 0-based half open
-    // no conversion to 1-based as in wig is done)
-    // note refseq is not returned on the object, it is clearly chr1 from the query though
+```ts
+const feats = await bigwig.getFeatures('chr1', 0, 100)
+// returns array of features with start, end, score
+// coordinates on returned data are are 0-based half open
+// no conversion to 1-based as in wig is done)
+// note refseq is not returned on the object, it is clearly chr1 from the query though
+```
 
 ### Understanding scale and reductionLevel
 
@@ -89,14 +94,20 @@ Here is what the reductionLevel structure looks like in a file. The zoomLevel th
 
 Same as getFeatures but returns an RxJS observable stream, useful for very large queries
 
-    const observer = await bigwig.getFeatureStream('chr1', 0, 100)
-    observer.subscribe(chunk => {
-       /* chunk contains array of features with start, end, score */
-    }, error => {
-       /* process error */
-    }, () => {
-       /* completed */
-    })
+```ts
+const observer = await bigwig.getFeatureStream('chr1', 0, 100)
+observer.subscribe(
+  chunk => {
+    /* chunk contains array of features with start, end, score */
+  },
+  error => {
+    /* process error */
+  },
+  () => {
+    /* completed */
+  },
+)
+```
 
 ### BigBed
 
@@ -128,49 +139,53 @@ Returns a Promise to an array of Features, with an extra field indicating the fi
 
 The BigBed line contents are returned as a raw text line e.g. {start: 0, end:100, rest: "ENST00000456328.2\t1000\t..."} where "rest" contains tab delimited text for the fields from 4 and on in the BED format. Since BED files from BigBed format often come with autoSql (a description of all the columns) it can be useful to parse it with BED parser that can handle autoSql. The rest line can be parsed by the @gmod/bed module, which is not by default integrated with this module, but can be combined with it as follows
 
-```js
-    import {BigBed} from '@gmod/bbi'
-    import BED from '@gmod/bed'
+```ts
+import {BigBed} from '@gmod/bbi'
+import BED from '@gmod/bed'
 
-    const ti = new BigBed({
-      filehandle: new LocalFile(require.resolve('./data/hg18.bb')),
-    })
-    const {autoSql} = await ti.getHeader()
-    const feats = await ti.getFeatures('chr7', 0, 100000)
-    const parser = new BED({autoSql})
-    const lines = feats.map(f => {
-        const { start, end, rest, uniqueId } = f
-        return parser.parseLine(`chr7\t${start}\t${end}\t${rest}, { uniqueId })\
-    })
-    // @gmod/bbi returns features with {uniqueId, start, end, rest}
-    // we reconstitute this as a line for @gmod/bed with a template string
-    // note: the uniqueId is based on file offsets and helps to deduplicate exact feature copies if they exist
+const ti = new BigBed({
+  filehandle: new LocalFile(require.resolve('./data/hg18.bb')),
+})
+const {autoSql} = await ti.getHeader()
+const feats = await ti.getFeatures('chr7', 0, 100000)
+const parser = new BED({autoSql})
+const lines = feats.map(f => {
+    const { start, end, rest, uniqueId } = f
+    return parser.parseLine(`chr7\t${start}\t${end}\t${rest}, { uniqueId })\
+})
+// @gmod/bbi returns features with {uniqueId, start, end, rest}
+// we reconstitute this as a line for @gmod/bed with a template string
+// note: the uniqueId is based on file offsets and helps to deduplicate exact feature copies if they exist
 ```
 
 Features before parsing with @gmod/bed:
 
-```
-      { chromId: 0,
-        start: 64068,
-        end: 64107,
-        rest: 'uc003sil.1\t0\t-\t64068\t64068\t255,0,0\t.\tDQ584609',
-        uniqueId: 'bb-171' }
+```json
+{
+  "chromId": 0,
+  "start": 64068,
+  "end": 64107,
+  "rest": "uc003sil.1\t0\t-\t64068\t64068\t255,0,0\t.\tDQ584609",
+  "uniqueId": "bb-171"
+}
 ```
 
 Features after parsing with @gmod/bed:
 
-```
-      { uniqueId: 'bb-0',
-        chrom: 'chr7',
-        chromStart: 54028,
-        chromEnd: 73584,
-        name: 'uc003sii.2',
-        score: 0,
-        strand: -1,
-        thickStart: 54028,
-        thickEnd: 54028,
-        reserved: '255,0,0',
-        spID: 'AL137655' }
+```json
+{
+  "uniqueId": "bb-0",
+  "chrom": "chr7",
+  "chromStart": 54028,
+  "chromEnd": 73584,
+  "name": "uc003sii.2",
+  "score": 0,
+  "strand": -1,
+  "thickStart": 54028,
+  "thickEnd": 54028,
+  "reserved": "255,0,0",
+  "spID": "AL137655"
+}
 ```
 
 ## Academic Use
