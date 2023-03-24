@@ -6,7 +6,6 @@ import AbortablePromiseCache from 'abortable-promise-cache'
 import QuickLRU from 'quick-lru'
 
 import { BBI, Feature, RequestOptions } from './bbi'
-import { BlockView } from './blockView'
 
 interface Loc {
   key: string
@@ -27,20 +26,15 @@ export function filterUndef<T>(ts: (T | undefined)[]): T[] {
 }
 
 export class BigBed extends BBI {
-  public readIndicesCache = new AbortablePromiseCache({
+  public readIndicesCache = new AbortablePromiseCache<RequestOptions, Index[]>({
     cache: new QuickLRU({ maxSize: 1 }),
-    fill: async (args: any, signal?: AbortSignal) => {
-      return this._readIndices({ ...args, signal })
-    },
+    fill: (args: RequestOptions, signal?: AbortSignal) =>
+      this._readIndices({ ...args, signal }),
   })
 
-  public readIndices(opts: AbortSignal | RequestOptions = {}) {
-    const options = 'aborted' in opts ? { signal: opts } : opts
-    return this.readIndicesCache.get(
-      JSON.stringify(options),
-      options,
-      options.signal,
-    )
+  public readIndices(opts: RequestOptions = {}) {
+    const { signal, ...rest } = opts
+    return this.readIndicesCache.get(JSON.stringify(rest), opts, signal)
   }
 
   /*
@@ -49,10 +43,7 @@ export class BigBed extends BBI {
    * @param abortSignal - an optional AbortSignal to kill operation
    * @return promise for a BlockView
    */
-  protected async getView(
-    _scale: number,
-    opts: RequestOptions,
-  ): Promise<BlockView> {
+  protected async getView(_scale: number, opts: RequestOptions) {
     return this.getUnzoomedView(opts)
   }
 

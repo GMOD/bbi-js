@@ -29,9 +29,10 @@ interface DataBlock {
   sumData: number
   sumSqData: number
 }
+
 interface ReadData {
-  offset: number
-  length: number
+  offset: bigint | number
+  length: bigint | number
 }
 
 interface Options {
@@ -154,10 +155,10 @@ function getParsers(isBigEndian: boolean) {
 export class BlockView {
   private cirTreePromise?: Promise<{ bytesRead: number; buffer: Buffer }>
 
-  private featureCache = new AbortablePromiseCache({
+  private featureCache = new AbortablePromiseCache<ReadData, Buffer>({
     cache: new QuickLRU({ maxSize: 1000 }),
 
-    fill: async (requestData: ReadData, signal: AbortSignal) => {
+    fill: async (requestData, signal) => {
       const len = Number(requestData.length)
       const off = Number(requestData.offset)
       const { buffer } = await this.bbi.read(Buffer.alloc(len), 0, len, off, {
@@ -291,7 +292,8 @@ export class BlockView {
         try {
           outstanding += offset.length
 
-          const maxCirBlockSpan = 4 + Number(cirBlockSize) * 32 // Upper bound on size, based on a completely full leaf node.
+          // Upper bound on size, based on a completely full leaf node.
+          const maxCirBlockSpan = 4 + Number(cirBlockSize) * 32
           let spans = new Range(offset[0], offset[0] + maxCirBlockSpan)
           for (let i = 1; i < offset.length; i += 1) {
             const blockSpan = new Range(offset[i], offset[i] + maxCirBlockSpan)
