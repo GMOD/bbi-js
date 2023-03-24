@@ -112,7 +112,7 @@ export class BigBed extends BBI {
   ): Promise<Loc[]> {
     const { isBigEndian } = await this.getHeader(opts)
     const indices = await this.readIndices(opts)
-    if (!indices.length) {
+    if (indices.length === 0) {
       return []
     }
     const locs = indices.map(async (index: any): Promise<Loc | undefined> => {
@@ -210,7 +210,7 @@ export class BigBed extends BBI {
    */
   public async searchExtraIndex(name: string, opts: RequestOptions = {}) {
     const blocks = await this.searchExtraIndexBlocks(name, opts)
-    if (!blocks.length) {
+    if (blocks.length === 0) {
       return []
     }
     const view = await this.getUnzoomedView(opts)
@@ -220,8 +220,8 @@ export class BigBed extends BBI {
       }).pipe(
         reduce((acc, curr) => acc.concat(curr)),
         map(x => {
-          for (let i = 0; i < x.length; i += 1) {
-            x[i].field = block.field
+          for (const element of x) {
+            element.field = block.field
           }
           return x
         }),

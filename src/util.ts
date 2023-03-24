@@ -15,25 +15,25 @@ export function groupBlocks(blocks: { offset: bigint; length: bigint }[]) {
   const blockGroups = []
   let lastBlock
   let lastBlockEnd
-  for (let i = 0; i < blocks.length; i += 1) {
+  for (const block of blocks) {
     if (
       lastBlock &&
       lastBlockEnd &&
-      Number(blocks[i].offset) - lastBlockEnd <= 2000
+      Number(block.offset) - lastBlockEnd <= 2000
     ) {
       lastBlock.length = BigInt(
         Number(lastBlock.length) +
-          Number(blocks[i].length) -
+          Number(block.length) -
           lastBlockEnd +
-          Number(blocks[i].offset),
+          Number(block.offset),
       )
-      lastBlock.blocks.push(blocks[i])
+      lastBlock.blocks.push(block)
     } else {
       blockGroups.push(
         (lastBlock = {
-          blocks: [blocks[i]],
-          length: blocks[i].length,
-          offset: blocks[i].offset,
+          blocks: [block],
+          length: block.length,
+          offset: block.offset,
         }),
       )
     }
@@ -61,12 +61,12 @@ export function checkAbortSignal(signal?: AbortSignal): void {
 
   if (signal.aborted) {
     // console.log('bam aborted!')
-    if (typeof DOMException !== 'undefined') {
-      throw new DOMException('aborted', 'AbortError')
-    } else {
+    if (typeof DOMException === 'undefined') {
       const e = new AbortError('aborted')
       e.code = 'ERR_ABORTED'
       throw e
+    } else {
+      throw new DOMException('aborted', 'AbortError')
     }
   }
 }

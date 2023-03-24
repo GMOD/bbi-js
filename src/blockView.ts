@@ -275,9 +275,9 @@ export class BlockView {
             { length, offset },
             opts.signal,
           )
-          for (let i = 0; i < off.length; i += 1) {
-            if (fr.contains(off[i])) {
-              cirFobRecur2(resultBuffer, off[i] - offset, level)
+          for (const element of off) {
+            if (fr.contains(element)) {
+              cirFobRecur2(resultBuffer, element - offset, level)
               outstanding -= 1
               if (outstanding === 0) {
                 this.readFeatures(observer, blocksToFetch, { ...opts, request })
@@ -408,7 +408,7 @@ export class BlockView {
     offset += 2
     const items = new Array(itemCount)
     switch (blockType) {
-      case 1:
+      case 1: {
         for (let i = 0; i < itemCount; i++) {
           const start = dataView.getInt32(offset, true)
           offset += 4
@@ -419,7 +419,8 @@ export class BlockView {
           items[i] = { start, end, score }
         }
         break
-      case 2:
+      }
+      case 2: {
         for (let i = 0; i < itemCount; i++) {
           const start = dataView.getInt32(offset, true)
           offset += 4
@@ -428,7 +429,8 @@ export class BlockView {
           items[i] = { score, start, end: start + itemSpan }
         }
         break
-      case 3:
+      }
+      case 3: {
         for (let i = 0; i < itemCount; i++) {
           const score = dataView.getFloat32(offset, true)
           offset += 4
@@ -436,6 +438,7 @@ export class BlockView {
           items[i] = { score, start, end: start + itemSpan }
         }
         break
+      }
     }
 
     return request
@@ -464,7 +467,7 @@ export class BlockView {
             blockGroup,
             signal,
           )
-          blockGroup.blocks.forEach(block => {
+          for (const block of blockGroup.blocks) {
             checkAbortSignal(signal)
             let blockOffset = Number(block.offset) - Number(blockGroup.offset)
             let resultData = data
@@ -475,17 +478,19 @@ export class BlockView {
             checkAbortSignal(signal)
 
             switch (blockType) {
-              case 'summary':
+              case 'summary': {
                 observer.next(
                   this.parseSummaryBlock(resultData, blockOffset, request),
                 )
                 break
-              case 'bigwig':
+              }
+              case 'bigwig': {
                 observer.next(
                   this.parseBigWigBlock(resultData, blockOffset, request),
                 )
                 break
-              case 'bigbed':
+              }
+              case 'bigbed': {
                 observer.next(
                   this.parseBigBedBlock(
                     resultData,
@@ -495,10 +500,12 @@ export class BlockView {
                   ),
                 )
                 break
-              default:
+              }
+              default: {
                 console.warn(`Don't know what to do with ${blockType}`)
+              }
             }
-          })
+          }
         }),
       )
       observer.complete()
