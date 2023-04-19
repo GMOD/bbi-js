@@ -1,3 +1,4 @@
+import { Buffer } from 'buffer'
 import { Parser } from 'binary-parser'
 import { Observable, merge, firstValueFrom } from 'rxjs'
 import { map, reduce } from 'rxjs/operators'

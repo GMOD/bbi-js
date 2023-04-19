@@ -1,3 +1,4 @@
+import { Buffer } from 'buffer'
 import { Observer } from 'rxjs'
 import { Parser } from 'binary-parser'
 import AbortablePromiseCache from 'abortable-promise-cache'
