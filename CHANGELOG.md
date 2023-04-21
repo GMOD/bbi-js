@@ -1,3 +1,12 @@
+## [3.0.1](https://github.com/GMOD/bbi-js/compare/v3.0.0...v3.0.1) (2023-04-21)
+
+
+### Features
+
+* explicit buffer import ([#53](https://github.com/GMOD/bbi-js/issues/53)) ([2699c98](https://github.com/GMOD/bbi-js/commit/2699c983dea380bbb56773058ba3f233c833d9c8))
+
+
+
 - Add explicit Buffer import
 
 # [3.0.0](https://github.com/GMOD/bbi-js/compare/v2.0.5...v3.0.0) (2023-01-11)
