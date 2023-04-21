@@ -1,3 +1,5 @@
+- Add explicit Buffer import
+
 # [3.0.0](https://github.com/GMOD/bbi-js/compare/v2.0.5...v3.0.0) (2023-01-11)
 
 - Update to rxjs 7
