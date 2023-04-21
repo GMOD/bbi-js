@@ -1,4 +1,4 @@
-import { BlockView } from './blockView'
+import { BlockView } from './block-view'
 import { BBI, RequestOptions } from './bbi'
 
 export class BigWig extends BBI {

@@ -69,7 +69,7 @@ export default class Range {
   }
 
   public intersection(arg: Range): Range {
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    // eslint-disable-next-line @typescript-eslint/no-this-alias,unicorn/no-this-assignment
     let s0 = this
     let s1 = arg
     const r0 = this.ranges()

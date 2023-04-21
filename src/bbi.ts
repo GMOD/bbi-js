@@ -3,7 +3,7 @@ import { Parser } from 'binary-parser'
 import { LocalFile, RemoteFile, GenericFilehandle } from 'generic-filehandle'
 import { firstValueFrom, Observable, Observer } from 'rxjs'
 import { toArray } from 'rxjs/operators'
-import { BlockView } from './blockView'
+import { BlockView } from './block-view'
 
 const BIG_WIG_MAGIC = -2003829722
 const BIG_BED_MAGIC = -2021002517
@@ -322,7 +322,7 @@ export abstract class BBI {
    */
   protected abstract getView(
     scale: number,
-    opts: RequestOptions,
+    opts?: RequestOptions,
   ): Promise<BlockView>
 
   /**
@@ -337,18 +337,17 @@ export abstract class BBI {
     refName: string,
     start: number,
     end: number,
-    opts: RequestOptions & { scale?: number; basesPerSpan?: number } = {
-      scale: 1,
-    },
+    opts?: RequestOptions & { scale?: number; basesPerSpan?: number },
   ): Promise<Observable<Feature[]>> {
     await this.getHeader(opts)
     const chrName = this.renameRefSeqs(refName)
     let view: BlockView
+    const { basesPerSpan, scale } = opts || {}
 
-    if (opts.basesPerSpan) {
-      view = await this.getView(1 / opts.basesPerSpan, opts)
-    } else if (opts.scale) {
-      view = await this.getView(opts.scale, opts)
+    if (basesPerSpan) {
+      view = await this.getView(1 / basesPerSpan, opts)
+    } else if (scale) {
+      view = await this.getView(scale, opts)
     } else {
       view = await this.getView(1, opts)
     }

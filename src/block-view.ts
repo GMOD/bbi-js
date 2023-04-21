@@ -194,7 +194,7 @@ export class BlockView {
     start: number,
     end: number,
     observer: Observer<Feature[]>,
-    opts: Options,
+    opts?: Options,
   ) {
     try {
       const { refsByName, bbi, cirTreeOffset, isBigEndian } = this
@@ -234,7 +234,7 @@ export class BlockView {
           if (p.blocksToFetch) {
             blocksToFetch = blocksToFetch.concat(
               p.blocksToFetch
-                .filter(filterFeats)
+                .filter(f => filterFeats(f))
                 .map((l: { blockOffset: bigint; blockSize: bigint }) => ({
                   offset: l.blockOffset,
                   length: l.blockSize,
@@ -243,7 +243,7 @@ export class BlockView {
           }
           if (p.recurOffsets) {
             const recurOffsets = p.recurOffsets
-              .filter(filterFeats)
+              .filter(f => filterFeats(f))
               .map(l => Number(l.blockOffset))
             if (recurOffsets.length > 0) {
               cirFobRecur(recurOffsets, level + 1)
@@ -273,7 +273,7 @@ export class BlockView {
           const resultBuffer: Buffer = await this.featureCache.get(
             `${length}_${offset}`,
             { length, offset },
-            opts.signal,
+            opts?.signal,
           )
           for (const element of off) {
             if (fr.contains(element)) {
