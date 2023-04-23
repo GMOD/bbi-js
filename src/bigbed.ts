@@ -39,11 +39,8 @@ export class BigBed extends BBI {
 
   /*
    * retrieve unzoomed view for any scale
-   * @param scale - unused
-   * @param abortSignal - an optional AbortSignal to kill operation
-   * @return promise for a BlockView
    */
-  protected async getView(_scale: number, opts: RequestOptions) {
+  protected async getView(_scale: number, opts?: RequestOptions) {
     return this.getUnzoomedView(opts)
   }
 

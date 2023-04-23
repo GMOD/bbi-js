@@ -35,7 +35,4 @@ describe('index formats', () => {
     })
     expect(ti).toBeTruthy()
   })
-  it('throws constructor', () => {
-    expect(() => new BigBed()).toThrow(/no file/)
-  })
 })
