@@ -1,7 +1,7 @@
 import { Buffer } from 'buffer'
 import { Parser } from 'binary-parser'
 import { LocalFile, RemoteFile, GenericFilehandle } from 'generic-filehandle'
-import { firstValueFrom, Observable, Observer } from 'rxjs'
+import { firstValueFrom, Observable } from 'rxjs'
 import { toArray } from 'rxjs/operators'
 import { BlockView } from './block-view'
 

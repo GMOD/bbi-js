@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`bigwig formats inside file deeply 1`] = `
+exports[`inside file deeply 1`] = `
 [
   {
     "end": 20010,
@@ -55,7 +55,7 @@ exports[`bigwig formats inside file deeply 1`] = `
 ]
 `;
 
-exports[`bigwig formats loads a larger bigwig file at different scales 1`] = `
+exports[`loads a larger bigwig file at different scales 1`] = `
 [
   {
     "end": 2068352,
@@ -76,7 +76,7 @@ exports[`bigwig formats loads a larger bigwig file at different scales 1`] = `
 ]
 `;
 
-exports[`bigwig formats loads a larger bigwig file at different scales 2`] = `
+exports[`loads a larger bigwig file at different scales 2`] = `
 [
   {
     "end": 2073477,
@@ -131,7 +131,7 @@ exports[`bigwig formats loads a larger bigwig file at different scales 2`] = `
 ]
 `;
 
-exports[`bigwig formats loads a larger bigwig file at different scales 3`] = `
+exports[`loads a larger bigwig file at different scales 3`] = `
 [
   {
     "end": 2073477,
@@ -186,7 +186,7 @@ exports[`bigwig formats loads a larger bigwig file at different scales 3`] = `
 ]
 `;
 
-exports[`bigwig formats loads a larger bigwig file at different scales 4`] = `
+exports[`loads a larger bigwig file at different scales 4`] = `
 [
   {
     "end": 2073477,
@@ -241,7 +241,7 @@ exports[`bigwig formats loads a larger bigwig file at different scales 4`] = `
 ]
 `;
 
-exports[`bigwig formats loads a larger bigwig file at different scales 5`] = `
+exports[`loads a larger bigwig file at different scales 5`] = `
 [
   {
     "end": 2073477,
@@ -296,7 +296,7 @@ exports[`bigwig formats loads a larger bigwig file at different scales 5`] = `
 ]
 `;
 
-exports[`bigwig formats loads bedgraph bigwig file 1`] = `
+exports[`loads bedgraph bigwig file 1`] = `
 [
   {
     "end": 3,
@@ -791,7 +791,7 @@ exports[`bigwig formats loads bedgraph bigwig file 1`] = `
 ]
 `;
 
-exports[`bigwig formats loads bedgraph bigwig file 2`] = `
+exports[`loads bedgraph bigwig file 2`] = `
 [
   {
     "end": 162,
@@ -804,7 +804,7 @@ exports[`bigwig formats loads bedgraph bigwig file 2`] = `
 ]
 `;
 
-exports[`bigwig formats loads bedgraph bigwig file 3`] = `
+exports[`loads bedgraph bigwig file 3`] = `
 [
   {
     "end": 642,
@@ -817,7 +817,7 @@ exports[`bigwig formats loads bedgraph bigwig file 3`] = `
 ]
 `;
 
-exports[`bigwig formats loads bedgraph bigwig file 4`] = `
+exports[`loads bedgraph bigwig file 4`] = `
 [
   {
     "end": 2562,
@@ -830,9 +830,9 @@ exports[`bigwig formats loads bedgraph bigwig file 4`] = `
 ]
 `;
 
-exports[`bigwig formats loads fixedstep bigwig with starts 1`] = `[]`;
+exports[`loads fixedstep bigwig with starts 1`] = `[]`;
 
-exports[`bigwig formats loads fixedstep bigwig with starts 2`] = `
+exports[`loads fixedstep bigwig with starts 2`] = `
 [
   {
     "end": 11492,
@@ -1652,7 +1652,7 @@ exports[`bigwig formats loads fixedstep bigwig with starts 2`] = `
 ]
 `;
 
-exports[`bigwig formats loads simple fixedstep bigwig 1`] = `
+exports[`loads simple fixedstep bigwig 1`] = `
 [
   {
     "end": 100,
@@ -1707,7 +1707,7 @@ exports[`bigwig formats loads simple fixedstep bigwig 1`] = `
 ]
 `;
 
-exports[`bigwig formats loads simple fixedstep bigwig 2`] = `
+exports[`loads simple fixedstep bigwig 2`] = `
 [
   {
     "end": 100,
@@ -1762,7 +1762,7 @@ exports[`bigwig formats loads simple fixedstep bigwig 2`] = `
 ]
 `;
 
-exports[`bigwig formats loads simple fixedstep bigwig 3`] = `
+exports[`loads simple fixedstep bigwig 3`] = `
 [
   {
     "end": 100,
@@ -1817,7 +1817,7 @@ exports[`bigwig formats loads simple fixedstep bigwig 3`] = `
 ]
 `;
 
-exports[`bigwig formats loads simple fixedstep bigwig 4`] = `
+exports[`loads simple fixedstep bigwig 4`] = `
 [
   {
     "end": 2000,
@@ -1832,7 +1832,7 @@ exports[`bigwig formats loads simple fixedstep bigwig 4`] = `
 ]
 `;
 
-exports[`bigwig formats loads variable step bigwig 1`] = `
+exports[`loads variable step bigwig 1`] = `
 [
   {
     "end": 12,
@@ -1887,7 +1887,7 @@ exports[`bigwig formats loads variable step bigwig 1`] = `
 ]
 `;
 
-exports[`bigwig formats missing data 1`] = `
+exports[`missing data 1`] = `
 [
   {
     "end": 4210,
@@ -1942,7 +1942,7 @@ exports[`bigwig formats missing data 1`] = `
 ]
 `;
 
-exports[`bigwig formats missing data 2`] = `
+exports[`missing data 2`] = `
 [
   {
     "end": 5200,
@@ -1997,7 +1997,7 @@ exports[`bigwig formats missing data 2`] = `
 ]
 `;
 
-exports[`bigwig formats should load a lot of summary data 1`] = `
+exports[`should load a lot of summary data 1`] = `
 [
   {
     "end": 86144,
@@ -2082,7 +2082,7 @@ exports[`bigwig formats should load a lot of summary data 1`] = `
 ]
 `;
 
-exports[`bigwig formats should load a lot of summary data 2`] = `
+exports[`should load a lot of summary data 2`] = `
 [
   {
     "end": 50480384,
@@ -2167,7 +2167,7 @@ exports[`bigwig formats should load a lot of summary data 2`] = `
 ]
 `;
 
-exports[`bigwig formats test uncompressed bw (-unc from wigToBigWig) 1`] = `
+exports[`test uncompressed bw (-unc from wigToBigWig) 1`] = `
 [
   {
     "end": 40000,

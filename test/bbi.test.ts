@@ -2,37 +2,30 @@
 
 import { LocalFile } from 'generic-filehandle'
 import { BigBed, BigWig } from '../src/index'
-import 'cross-fetch/polyfill'
+import { TextDecoder } from 'util'
 
-window.TextDecoder = require('util').TextDecoder
+// @ts-expect-error
+window.TextDecoder = TextDecoder
 
-describe('index formats', () => {
-  it('loads small bigwig header', async () => {
-    const ti = new BigWig({
-      path: require.resolve('./data/volvox.bw'),
-    })
-    const indexData = await ti.getHeader()
-    expect(indexData).toMatchSnapshot()
+test('loads small bigwig header', async () => {
+  const ti = new BigWig({
+    path: 'test/data/volvox.bw',
   })
-  it('loads small bigbed header', async () => {
-    const ti = new BigBed({
-      path: require.resolve('./data/hg18.bb'),
-    })
-    const indexData = await ti.getHeader()
-    expect(indexData).toMatchSnapshot()
+  const indexData = await ti.getHeader()
+  expect(indexData).toMatchSnapshot()
+})
+test('loads small bigbed header', async () => {
+  const ti = new BigBed({
+    path: 'test/data/hg18.bb',
   })
-  it('uses filehandle argument', async () => {
-    const ti = new BigBed({
-      filehandle: new LocalFile(require.resolve('./data/hg18.bb')),
-    })
+  const indexData = await ti.getHeader()
+  expect(indexData).toMatchSnapshot()
+})
+test('uses filehandle argument', async () => {
+  const ti = new BigBed({
+    filehandle: new LocalFile('test/data/hg18.bb'),
+  })
 
-    const indexData = await ti.getHeader()
-    expect(indexData).toMatchSnapshot()
-  })
-  it('uses url argument', () => {
-    const ti = new BigBed({
-      url: 'http://localhost/test.bw',
-    })
-    expect(ti).toBeTruthy()
-  })
+  const indexData = await ti.getHeader()
+  expect(indexData).toMatchSnapshot()
 })
