@@ -1,3 +1,5 @@
+- Improve typescripting, accept only opts.signal, not a actual signal
+
 ## [3.0.1](https://github.com/GMOD/bbi-js/compare/v3.0.0...v3.0.1) (2023-04-21)
 
 
