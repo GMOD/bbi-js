@@ -29,9 +29,10 @@ interface DataBlock {
   sumData: number
   sumSqData: number
 }
+
 interface ReadData {
-  offset: number
-  length: number
+  offset: bigint | number
+  length: bigint | number
 }
 
 interface Options {
@@ -154,10 +155,10 @@ function getParsers(isBigEndian: boolean) {
 export class BlockView {
   private cirTreePromise?: Promise<{ bytesRead: number; buffer: Buffer }>
 
-  private featureCache = new AbortablePromiseCache({
+  private featureCache = new AbortablePromiseCache<ReadData, Buffer>({
     cache: new QuickLRU({ maxSize: 1000 }),
 
-    fill: async (requestData: ReadData, signal: AbortSignal) => {
+    fill: async (requestData, signal) => {
       const len = Number(requestData.length)
       const off = Number(requestData.offset)
       const { buffer } = await this.bbi.read(Buffer.alloc(len), 0, len, off, {
@@ -193,7 +194,7 @@ export class BlockView {
     start: number,
     end: number,
     observer: Observer<Feature[]>,
-    opts: Options,
+    opts?: Options,
   ) {
     try {
       const { refsByName, bbi, cirTreeOffset, isBigEndian } = this
@@ -233,7 +234,7 @@ export class BlockView {
           if (p.blocksToFetch) {
             blocksToFetch = blocksToFetch.concat(
               p.blocksToFetch
-                .filter(filterFeats)
+                .filter(f => filterFeats(f))
                 .map((l: { blockOffset: bigint; blockSize: bigint }) => ({
                   offset: l.blockOffset,
                   length: l.blockSize,
@@ -242,7 +243,7 @@ export class BlockView {
           }
           if (p.recurOffsets) {
             const recurOffsets = p.recurOffsets
-              .filter(filterFeats)
+              .filter(f => filterFeats(f))
               .map(l => Number(l.blockOffset))
             if (recurOffsets.length > 0) {
               cirFobRecur(recurOffsets, level + 1)
@@ -272,11 +273,11 @@ export class BlockView {
           const resultBuffer: Buffer = await this.featureCache.get(
             `${length}_${offset}`,
             { length, offset },
-            opts.signal,
+            opts?.signal,
           )
-          for (let i = 0; i < off.length; i += 1) {
-            if (fr.contains(off[i])) {
-              cirFobRecur2(resultBuffer, off[i] - offset, level)
+          for (const element of off) {
+            if (fr.contains(element)) {
+              cirFobRecur2(resultBuffer, element - offset, level)
               outstanding -= 1
               if (outstanding === 0) {
                 this.readFeatures(observer, blocksToFetch, { ...opts, request })
@@ -291,7 +292,8 @@ export class BlockView {
         try {
           outstanding += offset.length
 
-          const maxCirBlockSpan = 4 + Number(cirBlockSize) * 32 // Upper bound on size, based on a completely full leaf node.
+          // Upper bound on size, based on a completely full leaf node.
+          const maxCirBlockSpan = 4 + Number(cirBlockSize) * 32
           let spans = new Range(offset[0], offset[0] + maxCirBlockSpan)
           for (let i = 1; i < offset.length; i += 1) {
             const blockSpan = new Range(offset[i], offset[i] + maxCirBlockSpan)
@@ -406,7 +408,7 @@ export class BlockView {
     offset += 2
     const items = new Array(itemCount)
     switch (blockType) {
-      case 1:
+      case 1: {
         for (let i = 0; i < itemCount; i++) {
           const start = dataView.getInt32(offset, true)
           offset += 4
@@ -417,7 +419,8 @@ export class BlockView {
           items[i] = { start, end, score }
         }
         break
-      case 2:
+      }
+      case 2: {
         for (let i = 0; i < itemCount; i++) {
           const start = dataView.getInt32(offset, true)
           offset += 4
@@ -426,7 +429,8 @@ export class BlockView {
           items[i] = { score, start, end: start + itemSpan }
         }
         break
-      case 3:
+      }
+      case 3: {
         for (let i = 0; i < itemCount; i++) {
           const score = dataView.getFloat32(offset, true)
           offset += 4
@@ -434,6 +438,7 @@ export class BlockView {
           items[i] = { score, start, end: start + itemSpan }
         }
         break
+      }
     }
 
     return request
@@ -462,7 +467,7 @@ export class BlockView {
             blockGroup,
             signal,
           )
-          blockGroup.blocks.forEach(block => {
+          for (const block of blockGroup.blocks) {
             checkAbortSignal(signal)
             let blockOffset = Number(block.offset) - Number(blockGroup.offset)
             let resultData = data
@@ -473,17 +478,19 @@ export class BlockView {
             checkAbortSignal(signal)
 
             switch (blockType) {
-              case 'summary':
+              case 'summary': {
                 observer.next(
                   this.parseSummaryBlock(resultData, blockOffset, request),
                 )
                 break
-              case 'bigwig':
+              }
+              case 'bigwig': {
                 observer.next(
                   this.parseBigWigBlock(resultData, blockOffset, request),
                 )
                 break
-              case 'bigbed':
+              }
+              case 'bigbed': {
                 observer.next(
                   this.parseBigBedBlock(
                     resultData,
@@ -493,10 +500,12 @@ export class BlockView {
                   ),
                 )
                 break
-              default:
+              }
+              default: {
                 console.warn(`Don't know what to do with ${blockType}`)
+              }
             }
-          })
+          }
         }),
       )
       observer.complete()

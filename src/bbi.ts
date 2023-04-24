@@ -1,9 +1,9 @@
 import { Buffer } from 'buffer'
 import { Parser } from 'binary-parser'
 import { LocalFile, RemoteFile, GenericFilehandle } from 'generic-filehandle'
-import { firstValueFrom, Observable, Observer } from 'rxjs'
+import { firstValueFrom, Observable } from 'rxjs'
 import { toArray } from 'rxjs/operators'
-import { BlockView } from './blockView'
+import { BlockView } from './block-view'
 
 const BIG_WIG_MAGIC = -2003829722
 const BIG_BED_MAGIC = -2021002517
@@ -130,10 +130,9 @@ export abstract class BBI {
    * @param abortSignal - abort the operation, can be null
    * @return a Header object
    */
-  public getHeader(opts: RequestOptions | AbortSignal = {}) {
-    const options = 'aborted' in opts ? { signal: opts as AbortSignal } : opts
+  public getHeader(opts?: RequestOptions) {
     if (!this.headerP) {
-      this.headerP = this._getHeader(options).catch(e => {
+      this.headerP = this._getHeader(opts).catch(e => {
         this.headerP = undefined
         throw e
       })
@@ -147,15 +146,13 @@ export abstract class BBI {
    * @param url - a URL string
    * @param renameRefSeqs - an optional method to rename the internal reference sequences using a mapping function
    */
-  public constructor(
-    options: {
-      filehandle?: GenericFilehandle
-      path?: string
-      url?: string
-      renameRefSeqs?: (a: string) => string
-    } = {},
-  ) {
-    const { filehandle, renameRefSeqs = s => s, path, url } = options
+  public constructor(args: {
+    filehandle?: GenericFilehandle
+    path?: string
+    url?: string
+    renameRefSeqs?: (a: string) => string
+  }) {
+    const { filehandle, renameRefSeqs = s => s, path, url } = args
     this.renameRefSeqs = renameRefSeqs
     if (filehandle) {
       this.bbi = filehandle
@@ -168,14 +165,14 @@ export abstract class BBI {
     }
   }
 
-  private async _getHeader(opts: RequestOptions) {
+  private async _getHeader(opts?: RequestOptions) {
     const header = await this._getMainHeader(opts)
     const chroms = await this._readChromTree(header, opts)
     return { ...header, ...chroms }
   }
 
   private async _getMainHeader(
-    opts: RequestOptions,
+    opts?: RequestOptions,
     requestSize = 2000,
   ): Promise<Header> {
     const { buffer } = await this.bbi.read(
@@ -208,7 +205,7 @@ export abstract class BBI {
     return { ...header, isBigEndian }
   }
 
-  private _isBigEndian(buffer: Buffer): boolean {
+  private _isBigEndian(buffer: Buffer) {
     let ret = buffer.readInt32LE(0)
     if (ret === BIG_WIG_MAGIC || ret === BIG_BED_MAGIC) {
       return false
@@ -221,7 +218,10 @@ export abstract class BBI {
   }
 
   // todo: add progress if long running
-  private async _readChromTree(header: Header, opts: { signal?: AbortSignal }) {
+  private async _readChromTree(
+    header: Header,
+    opts?: { signal?: AbortSignal },
+  ) {
     const isBE = header.isBigEndian
     const le = isBE ? 'big' : 'little'
     const refsByNumber: {
@@ -299,7 +299,7 @@ export abstract class BBI {
    * fetches the "unzoomed" view of the bigwig data. this is the default for bigbed
    * @param abortSignal - a signal to optionally abort this operation
    */
-  protected async getUnzoomedView(opts: RequestOptions): Promise<BlockView> {
+  protected async getUnzoomedView(opts?: RequestOptions) {
     const {
       unzoomedIndexOffset,
       refsByName,
@@ -322,7 +322,7 @@ export abstract class BBI {
    */
   protected abstract getView(
     scale: number,
-    opts: RequestOptions,
+    opts?: RequestOptions,
   ): Promise<BlockView>
 
   /**
@@ -337,26 +337,22 @@ export abstract class BBI {
     refName: string,
     start: number,
     end: number,
-    opts: RequestOptions & { scale?: number; basesPerSpan?: number } = {
-      scale: 1,
-    },
-  ): Promise<Observable<Feature[]>> {
+    opts?: RequestOptions & { scale?: number; basesPerSpan?: number },
+  ) {
     await this.getHeader(opts)
     const chrName = this.renameRefSeqs(refName)
     let view: BlockView
+    const { basesPerSpan, scale } = opts || {}
 
-    if (opts.basesPerSpan) {
-      view = await this.getView(1 / opts.basesPerSpan, opts)
-    } else if (opts.scale) {
-      view = await this.getView(opts.scale, opts)
+    if (basesPerSpan) {
+      view = await this.getView(1 / basesPerSpan, opts)
+    } else if (scale) {
+      view = await this.getView(scale, opts)
     } else {
       view = await this.getView(1, opts)
     }
 
-    if (!view) {
-      throw new Error('unable to get block view for data')
-    }
-    return new Observable((observer: Observer<Feature[]>): void => {
+    return new Observable<Feature[]>(observer => {
       view.readWigData(chrName, start, end, observer, opts)
     })
   }
@@ -365,9 +361,7 @@ export abstract class BBI {
     refName: string,
     start: number,
     end: number,
-    opts: RequestOptions & { scale?: number; basesPerSpan?: number } = {
-      scale: 1,
-    },
+    opts?: RequestOptions & { scale?: number; basesPerSpan?: number },
   ) {
     const ob = await this.getFeatureStream(refName, start, end, opts)
 

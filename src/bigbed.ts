@@ -6,7 +6,6 @@ import AbortablePromiseCache from 'abortable-promise-cache'
 import QuickLRU from 'quick-lru'
 
 import { BBI, Feature, RequestOptions } from './bbi'
-import { BlockView } from './blockView'
 
 interface Loc {
   key: string
@@ -27,32 +26,21 @@ export function filterUndef<T>(ts: (T | undefined)[]): T[] {
 }
 
 export class BigBed extends BBI {
-  public readIndicesCache = new AbortablePromiseCache({
+  public readIndicesCache = new AbortablePromiseCache<RequestOptions, Index[]>({
     cache: new QuickLRU({ maxSize: 1 }),
-    fill: async (args: any, signal?: AbortSignal) => {
-      return this._readIndices({ ...args, signal })
-    },
+    fill: (args: RequestOptions, signal?: AbortSignal) =>
+      this._readIndices({ ...args, signal }),
   })
 
-  public readIndices(opts: AbortSignal | RequestOptions = {}) {
-    const options = 'aborted' in opts ? { signal: opts } : opts
-    return this.readIndicesCache.get(
-      JSON.stringify(options),
-      options,
-      options.signal,
-    )
+  public readIndices(opts: RequestOptions = {}) {
+    const { signal, ...rest } = opts
+    return this.readIndicesCache.get(JSON.stringify(rest), opts, signal)
   }
 
   /*
    * retrieve unzoomed view for any scale
-   * @param scale - unused
-   * @param abortSignal - an optional AbortSignal to kill operation
-   * @return promise for a BlockView
    */
-  protected async getView(
-    _scale: number,
-    opts: RequestOptions,
-  ): Promise<BlockView> {
+  protected async getView(_scale: number, opts?: RequestOptions) {
     return this.getUnzoomedView(opts)
   }
 
@@ -121,7 +109,7 @@ export class BigBed extends BBI {
   ): Promise<Loc[]> {
     const { isBigEndian } = await this.getHeader(opts)
     const indices = await this.readIndices(opts)
-    if (!indices.length) {
+    if (indices.length === 0) {
       return []
     }
     const locs = indices.map(async (index: any): Promise<Loc | undefined> => {
@@ -219,7 +207,7 @@ export class BigBed extends BBI {
    */
   public async searchExtraIndex(name: string, opts: RequestOptions = {}) {
     const blocks = await this.searchExtraIndexBlocks(name, opts)
-    if (!blocks.length) {
+    if (blocks.length === 0) {
       return []
     }
     const view = await this.getUnzoomedView(opts)
@@ -229,8 +217,8 @@ export class BigBed extends BBI {
       }).pipe(
         reduce((acc, curr) => acc.concat(curr)),
         map(x => {
-          for (let i = 0; i < x.length; i += 1) {
-            x[i].field = block.field
+          for (const element of x) {
+            element.field = block.field
           }
           return x
         }),

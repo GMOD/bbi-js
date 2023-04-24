@@ -69,7 +69,7 @@ export default class Range {
   }
 
   public intersection(arg: Range): Range {
-    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    // eslint-disable-next-line @typescript-eslint/no-this-alias,unicorn/no-this-assignment
     let s0 = this
     let s1 = arg
     const r0 = this.ranges()
@@ -109,8 +109,7 @@ export default class Range {
   public coverage(): number {
     let tot = 0
     const rl = this.ranges()
-    for (let ri = 0; ri < rl.length; ri += 1) {
-      const r = rl[ri]
+    for (const r of rl) {
       tot += r.max() - r.min() + 1
     }
     return tot
@@ -121,7 +120,7 @@ export default class Range {
     let b = tmpb
     if (arguments.length < 2) {
       b = a
-      // eslint-disable-next-line @typescript-eslint/no-this-alias
+      // eslint-disable-next-line @typescript-eslint/no-this-alias,unicorn/no-this-assignment
       a = this
     }
 

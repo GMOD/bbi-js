@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`bigbed formats loads small bigbed file 1`] = `
+exports[`loads small bigbed file 1`] = `
 [
   {
     "chrom": "chr7",
@@ -70,7 +70,7 @@ exports[`bigbed formats loads small bigbed file 1`] = `
 ]
 `;
 
-exports[`bigbed formats searchExtraIdex returns null on file with no extra index 1`] = `
+exports[`searchExtraIdex returns null on file with no extra index 1`] = `
 [
   {
     "chromId": 0,
@@ -84,7 +84,7 @@ exports[`bigbed formats searchExtraIdex returns null on file with no extra index
 ]
 `;
 
-exports[`bigbed formats searchExtraIndex in bigbed with multiple extra indexes on the gene name index 1`] = `
+exports[`searchExtraIndex in bigbed with multiple extra indexes on the gene name index 1`] = `
 [
   {
     "chromId": 0,
@@ -107,7 +107,7 @@ exports[`bigbed formats searchExtraIndex in bigbed with multiple extra indexes o
 ]
 `;
 
-exports[`bigbed formats searchExtraIndex name in gencode 1`] = `
+exports[`searchExtraIndex name in gencode 1`] = `
 [
   {
     "chromId": 0,

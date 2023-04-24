@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`index formats loads small bigbed header 1`] = `
+exports[`loads small bigbed header 1`] = `
 {
   "asOffset": 304n,
   "autoSql": "table hg18KGchr7
@@ -96,7 +96,7 @@ string  spID;		"SWISS-PROT protein Accession number"
 }
 `;
 
-exports[`index formats loads small bigwig header 1`] = `
+exports[`loads small bigwig header 1`] = `
 {
   "asOffset": 0n,
   "chromTreeOffset": 344n,
@@ -176,7 +176,7 @@ exports[`index formats loads small bigwig header 1`] = `
 }
 `;
 
-exports[`index formats uses filehandle argument 1`] = `
+exports[`uses filehandle argument 1`] = `
 {
   "asOffset": 304n,
   "autoSql": "table hg18KGchr7
