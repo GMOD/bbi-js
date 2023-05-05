@@ -1,3 +1,7 @@
+# [4.0.0](https://github.com/GMOD/bbi-js/compare/v3.0.1...v4.0.0) (2023-05-05)
+
+
+
 - Improve typescripting, refactoring
 - Options argument only accepts {signal}, not just signal now
 
