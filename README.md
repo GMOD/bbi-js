@@ -148,7 +148,7 @@ https://genome.ucsc.edu/goldenpath/help/bigBed.html
 This function accepts two arguments
 
 - name: a string to search for in the BigBed extra indices
-- opts: an opject that can optionally contain opts.signal, an abort signal
+- opts: an object that can optionally contain opts.signal, an abort signal
 
 Returns a Promise to an array of Features, with an extra field indicating the
 field that was matched
