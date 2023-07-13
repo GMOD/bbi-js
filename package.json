@@ -43,7 +43,6 @@
   "dependencies": {
     "abortable-promise-cache": "^1.4.1",
     "binary-parser": "^2.1.0",
-    "eslint-plugin-unicorn": "^46.0.0",
     "generic-filehandle": "^3.0.0",
     "pako": "^2.0.0",
     "quick-lru": "^4.0.0",
@@ -59,6 +58,7 @@
     "@typescript-eslint/parser": "^5.56.0",
     "eslint": "^8.36.0",
     "eslint-config-prettier": "^8.8.0",
+    "eslint-plugin-unicorn": "^46.0.0",
     "eslint-plugin-import": "^2.27.5",
     "eslint-plugin-prettier": "^4.0.0",
     "jest": "^29.5.0",
