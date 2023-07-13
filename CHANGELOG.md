@@ -1,3 +1,7 @@
+## [4.0.1](https://github.com/GMOD/bbi-js/compare/v4.0.0...v4.0.1) (2023-07-13)
+
+
+
 - Fix eslint plugin being in dependencies Accidentally
 
 # [4.0.0](https://github.com/GMOD/bbi-js/compare/v3.0.1...v4.0.0) (2023-05-05)
