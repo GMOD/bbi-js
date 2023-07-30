@@ -22,9 +22,7 @@ test('loads small bigbed file', async () => {
 })
 test('loads volvox.bb', async () => {
   const filehandle = new LocalFile('test/data/volvox.bb')
-  const ti = new BigBed({
-    filehandle,
-  })
+  const ti = new BigBed({ filehandle })
   const spy = jest.spyOn(filehandle, 'read')
   const feats = await ti.getFeatures('chrA', 0, 160)
   expect(spy.mock.calls.length).toBeLessThanOrEqual(3)
@@ -74,9 +72,7 @@ test('2057 contigs', async () => {
 })
 test('bigbed file with large header', async () => {
   const filehandle = new LocalFile('test/data/clinvarCnv.bb')
-  const ti = new BigBed({
-    filehandle,
-  })
+  const ti = new BigBed({ filehandle })
   const spy = jest.spyOn(filehandle, 'read')
   const header = await ti.getHeader()
   expect(spy.mock.calls.length).toBeLessThanOrEqual(3)
@@ -84,9 +80,7 @@ test('bigbed file with large header', async () => {
 })
 test('bigbed file consistent file ID', async () => {
   const filehandle = new LocalFile('test/data/clinvarCnv.bb')
-  const ti = new BigBed({
-    filehandle,
-  })
+  const ti = new BigBed({ filehandle })
   const feats1 = await ti.getFeatures('chr21', 8850000, 10050000)
   const feats2 = await ti.getFeatures('chr21', 9550000, 10750000)
   const f1 = feats1.find(f => f.start === 9734795)
@@ -95,4 +89,11 @@ test('bigbed file consistent file ID', async () => {
   const f11 = feats1.filter(f => f.start === 9734795)
   const f22 = feats2.filter(f => f.start === 9734795)
   expect(f11).toEqual(f22)
+})
+
+test('transcripts.bb', async () => {
+  const filehandle = new LocalFile('test/data/transcripts.bb')
+  const ti = new BigBed({ filehandle })
+  const feats1 = await ti.getFeatures('1', 0, 20000)
+  console.log({ feats1 })
 })
