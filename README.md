@@ -164,18 +164,18 @@ can be parsed by the @gmod/bed module, which is not by default integrated with
 this module, but can be combined with it as follows
 
 ```typescript
-import {BigBed} from '@gmod/bbi'
+import { BigBed } from '@gmod/bbi'
 import BED from '@gmod/bed'
 
 const ti = new BigBed({
   filehandle: new LocalFile(require.resolve('./data/hg18.bb')),
 })
-const {autoSql} = await ti.getHeader()
+const { autoSql } = await ti.getHeader()
 const feats = await ti.getFeatures('chr7', 0, 100000)
-const parser = new BED({autoSql})
+const parser = new BED({ autoSql })
 const lines = feats.map(f => {
-    const { start, end, rest, uniqueId } = f
-    return parser.parseLine(`chr7\t${start}\t${end}\t${rest}, { uniqueId })\
+  const { start, end, rest, uniqueId } = f
+  return parser.parseLine(`chr7\t${start}\t${end}\t${rest}`, { uniqueId })
 })
 // @gmod/bbi returns features with {uniqueId, start, end, rest}
 // we reconstitute this as a line for @gmod/bed with a template string

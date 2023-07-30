@@ -1,4 +1,3 @@
-/* eslint no-bitwise: ["error", { "allow": ["|"] }] */
 export class AbortError extends Error {
   public code: string
 
