@@ -18,6 +18,7 @@
     "unicorn/no-new-array": 0,
     "unicorn/catch-error-name": 0,
     "unicorn/no-nested-ternary": 0,
+    "unicorn/prefer-at": 0,
     "unicorn/prefer-spread": 0,
     "unicorn/consistent-destructuring": 0,
     "unicorn/prefer-node-protocol": 0,

@@ -1,16 +1,14 @@
-/* eslint @typescript-eslint/explicit-function-return-type: 0 */
 import BED from '@gmod/bed'
-import { BigBed } from '../src/'
 import { LocalFile } from 'generic-filehandle'
 import { TextDecoder } from 'util'
+
+import { BigBed } from '../src/'
 
 // @ts-expect-error
 window.TextDecoder = TextDecoder
 
 test('loads small bigbed file', async () => {
-  const ti = new BigBed({
-    path: 'test/data/hg18.bb',
-  })
+  const ti = new BigBed({ path: 'test/data/hg18.bb' })
   const { autoSql } = await ti.getHeader()
   const feats = await ti.getFeatures('chr7', 0, 100000)
   const parser = new BED({ autoSql })
@@ -29,44 +27,36 @@ test('loads volvox.bb', async () => {
   expect(feats).toEqual([])
 })
 test('searchExtraIdex returns null on file with no extra index', async () => {
-  const ti = new BigBed({
-    path: 'test/data/volvox.bb',
-  })
+  const ti = new BigBed({ path: 'test/data/volvox.bb' })
   await ti.readIndices()
   const res = await ti.searchExtraIndex('EDEN.1')
   expect(res).toMatchSnapshot()
 })
 
 test('searchExtraIndex on file with no name index', async () => {
-  const ti = new BigBed({
-    path: 'test/data/chr22.bb',
-  })
+  const ti = new BigBed({ path: 'test/data/chr22.bb' })
   await ti.readIndices()
   const res = await ti.searchExtraIndex('ENST00000467796.2')
   expect(res).toEqual([])
 })
 
 test('searchExtraIndex name in gencode', async () => {
-  const ti = new BigBed({
-    path: 'test/data/chr22_with_name_index.bb',
-  })
+  const ti = new BigBed({ path: 'test/data/chr22_with_name_index.bb' })
   await ti.readIndices()
   const res = await ti.searchExtraIndex('ENST00000467796.2')
   expect(res).toMatchSnapshot()
 })
 
 test('searchExtraIndex in bigbed with multiple extra indexes on the gene name index', async () => {
-  const ti = new BigBed({
+  const t = new BigBed({
     path: 'test/data/chr22_with_name_and_geneName_index.bb',
   })
-  await ti.readIndices()
-  const res2 = await ti.searchExtraIndex('SYCE3')
+  await t.readIndices()
+  const res2 = await t.searchExtraIndex('SYCE3')
   expect(res2).toMatchSnapshot()
 })
 test('2057 contigs', async () => {
-  const ti = new BigBed({
-    path: 'test/data/2057.bb',
-  })
+  const ti = new BigBed({ path: 'test/data/2057.bb' })
   const header = await ti.getHeader()
   expect(Object.keys(header.refsByName).length).toEqual(2057)
 })
@@ -94,6 +84,5 @@ test('bigbed file consistent file ID', async () => {
 test('transcripts.bb', async () => {
   const filehandle = new LocalFile('test/data/transcripts.bb')
   const ti = new BigBed({ filehandle })
-  const feats1 = await ti.getFeatures('1', 0, 20000)
-  console.log({ feats1 })
+  await ti.getFeatures('1', 0, 20000)
 })

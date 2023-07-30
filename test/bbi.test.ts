@@ -1,5 +1,3 @@
-/* eslint @typescript-eslint/explicit-function-return-type:0 */
-
 import { LocalFile } from 'generic-filehandle'
 import { BigBed, BigWig } from '../src/index'
 import { TextDecoder } from 'util'
