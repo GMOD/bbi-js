@@ -142,9 +142,13 @@ export abstract class BBI {
 
   /*
    * @param filehandle - a filehandle from generic-filehandle or implementing something similar to the node10 fs.promises API
+   *
    * @param path - a Local file path as a string
+   *
    * @param url - a URL string
-   * @param renameRefSeqs - an optional method to rename the internal reference sequences using a mapping function
+   *
+   * @param renameRefSeqs - an optional method to rename the internal reference
+   * sequences using a mapping function
    */
   public constructor(args: {
     filehandle?: GenericFilehandle
@@ -194,9 +198,13 @@ export abstract class BBI {
       const off = Number(header.asOffset)
       header.autoSql = toString(buffer.subarray(off, buffer.indexOf(0, off)))
     }
-    if (header.totalSummaryOffset > requestSize) {
+
+    // refetch header if it is too large on first pass,
+    // 8*5 is the sizeof the totalSummary struct
+    if (header.totalSummaryOffset > requestSize - 8 * 5) {
       return this._getMainHeader(opts, requestSize * 2)
     }
+
     if (header.totalSummaryOffset) {
       const tail = buffer.subarray(Number(header.totalSummaryOffset))
       const sum = ret.totalSummaryParser.parse(tail)
