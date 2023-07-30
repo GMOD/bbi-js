@@ -1,6 +1,6 @@
+- Fix issue with fetching headers that are large in certain cases
+
 ## [4.0.1](https://github.com/GMOD/bbi-js/compare/v4.0.0...v4.0.1) (2023-07-13)
-
-
 
 - Fix eslint plugin being in dependencies Accidentally
 
