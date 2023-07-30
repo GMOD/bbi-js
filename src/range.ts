@@ -12,8 +12,8 @@ export default class Range {
       arguments.length === 2
         ? [{ min: arg1, max: arg2 }]
         : 0 in arg1
-        ? Object.assign({}, arg1)
-        : [arg1]
+          ? Object.assign({}, arg1)
+          : [arg1]
   }
 
   public min(): number {

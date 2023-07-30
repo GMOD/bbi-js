@@ -16,6 +16,8 @@ jobs:
         uses: bahmutov/npm-install@v1
       - name: Lint codebase
         run: yarn lint
+      - name: Format codebase
+        run: yarn prettier -c .
       - name: Build codebase
         run: yarn build
       - name: Test codebase

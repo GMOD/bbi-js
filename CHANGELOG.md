@@ -1,3 +1,5 @@
+- Small perf improvement (#58)
+
 ## [4.0.2](https://github.com/GMOD/bbi-js/compare/v4.0.1...v4.0.2) (2023-07-30)
 
 - Fix issue with fetching headers that are large in certain cases
