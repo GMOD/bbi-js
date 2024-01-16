@@ -375,7 +375,8 @@ export class BlockView {
     let currOffset = startOffset
     while (currOffset < data.byteLength) {
       const res = this.bigBedParser.parse(data.subarray(currOffset))
-      items.push({ ...res, uniqueId: `bb-${offset + currOffset}` })
+      res.uniqueId = `bb-${offset + currOffset}`
+      items.push(res)
       currOffset += res.offset
     }
 
