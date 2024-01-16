@@ -1,3 +1,12 @@
+## [4.0.3](https://github.com/GMOD/bbi-js/compare/v4.0.2...v4.0.3) (2024-01-16)
+
+
+### Performance Improvements
+
+* optimize `parseBigBedBlock` ([#58](https://github.com/GMOD/bbi-js/issues/58)) ([eb3f7a4](https://github.com/GMOD/bbi-js/commit/eb3f7a4885c4e8262c6e3e63696b533e53072463))
+
+
+
 - Small perf improvement (#58)
 
 ## [4.0.2](https://github.com/GMOD/bbi-js/compare/v4.0.1...v4.0.2) (2023-07-30)
