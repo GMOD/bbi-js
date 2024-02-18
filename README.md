@@ -29,12 +29,13 @@ https://github.com/GMOD/generic-filehandle/
 const { BigWig } = require('@gmod/bbi')
 const { RemoteFile } = require('generic-filehandle')
 
-// if running in the browser, RemoteFile will use the the global fetch
+// if running in the browser or newer versions of node.js, RemoteFile will use
+// the the global fetch
 const file = new BigWig({
   filehandle: new RemoteFile('volvox.bw'),
 })
 
-// if running under node.js you must supply the fetch function to RemoteFile
+// old versions of node.js without a global fetch, supply custom fetch function
 const fetch = require('node-fetch')
 const file = new BigWig({
   filehandle: new RemoteFile('volvox.bw', { fetch }),
