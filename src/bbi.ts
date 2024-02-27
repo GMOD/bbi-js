@@ -47,8 +47,8 @@ export interface Header {
   extHeaderOffset: number
   isBigEndian: boolean
   fileType: string
-  refsByName: { [key: string]: number }
-  refsByNumber: { [key: number]: RefInfo }
+  refsByName: Record<string, number>
+  refsByNumber: Record<number, RefInfo>
 }
 
 /* get the compiled parsers for different sections of the bigwig file
@@ -232,10 +232,11 @@ export abstract class BBI {
   ) {
     const isBE = header.isBigEndian
     const le = isBE ? 'big' : 'little'
-    const refsByNumber: {
-      [key: number]: { name: string; id: number; length: number }
-    } = []
-    const refsByName: { [key: string]: number } = {}
+    const refsByNumber: Record<
+      number,
+      { name: string; id: number; length: number }
+    > = []
+    const refsByName: Record<string, number> = {}
 
     let unzoomedDataOffset = Number(header.unzoomedDataOffset)
     const chromTreeOffset = Number(header.chromTreeOffset)
