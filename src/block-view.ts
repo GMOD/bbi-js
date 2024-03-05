@@ -268,8 +268,8 @@ export class BlockView {
         level: number,
       ) => {
         try {
-          const length = fr.max() - fr.min()
-          const offset = fr.min()
+          const length = fr.max - fr.min
+          const offset = fr.min
           const resultBuffer: Buffer = await this.featureCache.get(
             `${length}_${offset}`,
             { length, offset },
@@ -280,7 +280,10 @@ export class BlockView {
               cirFobRecur2(resultBuffer, element - offset, level)
               outstanding -= 1
               if (outstanding === 0) {
-                this.readFeatures(observer, blocksToFetch, { ...opts, request })
+                this.readFeatures(observer, blocksToFetch, {
+                  ...opts,
+                  request,
+                }).catch(e => observer.error(e))
               }
             }
           }
@@ -294,9 +297,13 @@ export class BlockView {
 
           // Upper bound on size, based on a completely full leaf node.
           const maxCirBlockSpan = 4 + Number(cirBlockSize) * 32
-          let spans = new Range(offset[0], offset[0] + maxCirBlockSpan)
+          let spans = new Range([
+            { min: offset[0], max: offset[0] + maxCirBlockSpan },
+          ])
           for (let i = 1; i < offset.length; i += 1) {
-            const blockSpan = new Range(offset[i], offset[i] + maxCirBlockSpan)
+            const blockSpan = new Range([
+              { min: offset[i], max: offset[i] + maxCirBlockSpan },
+            ])
             spans = spans.union(blockSpan)
           }
           spans.getRanges().map(fr => cirFobStartFetch(offset, fr, level))
