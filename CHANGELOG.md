@@ -1,3 +1,5 @@
+- Fix issue fetching data from file where refNames are not sorted (#59)
+
 ## [4.0.3](https://github.com/GMOD/bbi-js/compare/v4.0.2...v4.0.3) (2024-01-16)
 
 ### Performance Improvements
