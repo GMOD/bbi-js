@@ -2167,6 +2167,131 @@ exports[`should load a lot of summary data 2`] = `
 ]
 `;
 
+exports[`sorted names 1`] = `
+[
+  {
+    "end": 33117,
+    "score": 86,
+    "start": 32188,
+  },
+  {
+    "end": 96507,
+    "score": 106,
+    "start": 95819,
+  },
+  {
+    "end": 113500,
+    "score": 101,
+    "start": 112760,
+  },
+  {
+    "end": 137804,
+    "score": 98,
+    "start": 137115,
+  },
+  {
+    "end": 146479,
+    "score": 110,
+    "start": 145791,
+  },
+  {
+    "end": 168233,
+    "score": 101,
+    "start": 167417,
+  },
+  {
+    "end": 222798,
+    "score": 120,
+    "start": 222110,
+  },
+  {
+    "end": 236088,
+    "score": 112,
+    "start": 235400,
+  },
+  {
+    "end": 248514,
+    "score": 110,
+    "start": 247821,
+  },
+  {
+    "end": 266445,
+    "score": 85,
+    "start": 265757,
+  },
+  {
+    "end": 280029,
+    "score": 117,
+    "start": 279341,
+  },
+  {
+    "end": 285081,
+    "score": 93,
+    "start": 284393,
+  },
+  {
+    "end": 386501,
+    "score": 81,
+    "start": 385771,
+  },
+  {
+    "end": 420182,
+    "score": 82,
+    "start": 419494,
+  },
+  {
+    "end": 427830,
+    "score": 98,
+    "start": 427142,
+  },
+  {
+    "end": 525796,
+    "score": 87,
+    "start": 525108,
+  },
+  {
+    "end": 536087,
+    "score": 90,
+    "start": 535213,
+  },
+  {
+    "end": 552779,
+    "score": 98,
+    "start": 552091,
+  },
+  {
+    "end": 594037,
+    "score": 107,
+    "start": 592813,
+  },
+  {
+    "end": 657749,
+    "score": 95,
+    "start": 657061,
+  },
+  {
+    "end": 735702,
+    "score": 119,
+    "start": 735014,
+  },
+  {
+    "end": 751612,
+    "score": 106,
+    "start": 750924,
+  },
+  {
+    "end": 766621,
+    "score": 90,
+    "start": 765778,
+  },
+  {
+    "end": 817705,
+    "score": 100,
+    "start": 816713,
+  },
+]
+`;
+
 exports[`test uncompressed bw (-unc from wigToBigWig) 1`] = `
 [
   {

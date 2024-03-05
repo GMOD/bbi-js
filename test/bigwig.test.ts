@@ -19,6 +19,17 @@ test('loads bedgraph bigwig file', async () => {
   expect(feats3).toMatchSnapshot()
   expect(feats4).toMatchSnapshot()
 })
+
+// this originally failed due to complexity of src/range.ts code
+// https://github.com/GMOD/bbi-js/issues/59
+test('sorted names', async () => {
+  const ti = new BigWig({
+    path: 'test/data/out3.bw',
+  })
+  const feats1 = await ti.getFeatures('chr3', 0, 820982, { scale: 1 })
+  expect(feats1).toMatchSnapshot()
+})
+
 test('loads variable step bigwig', async () => {
   const ti = new BigWig({ path: 'test/data/variable_step.bw' })
   const feats1 = await ti.getFeatures('chr1', 0, 51, { scale: 1 })
