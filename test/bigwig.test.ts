@@ -24,7 +24,7 @@ test('loads bedgraph bigwig file', async () => {
 // https://github.com/GMOD/bbi-js/issues/59
 test('sorted names', async () => {
   const ti = new BigWig({
-    path: 'test/data/out3.bw',
+    path: 'test/data/example_bigwig_unsorted_with_error_small.bw',
   })
   const feats1 = await ti.getFeatures('chr3', 0, 820982, { scale: 1 })
   expect(feats1).toMatchSnapshot()
