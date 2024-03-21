@@ -43,7 +43,7 @@ export default class Range {
     return this.ranges.map(r => `[${r.min}-${r.max}]`).join(',')
   }
 
-  public union(s1: Range): IRange {
+  public union(s1: Range) {
     const ranges = [...this.getRanges(), ...s1.getRanges()].sort((a, b) => {
       if (a.min < b.min) {
         return -1
@@ -57,7 +57,7 @@ export default class Range {
         return 0
       }
     })
-    const oranges = [] as IRange[]
+    const oranges = [] as Range[]
     let current = ranges[0]
 
     for (const nxt of ranges) {
