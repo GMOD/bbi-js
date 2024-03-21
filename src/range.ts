@@ -1,5 +1,3 @@
-/* eslint prefer-rest-params:0, no-nested-ternary:0 */
-
 /**
  * Adapted from a combination of Range and _Compound in the
  * Dalliance Genome Explorer, (c) Thomas Down 2006-2010.
@@ -45,7 +43,7 @@ export default class Range {
     return this.ranges.map(r => `[${r.min}-${r.max}]`).join(',')
   }
 
-  public union(s1: Range): Range {
+  public union(s1: Range) {
     const ranges = [...this.getRanges(), ...s1.getRanges()].sort((a, b) => {
       if (a.min < b.min) {
         return -1
@@ -59,11 +57,10 @@ export default class Range {
         return 0
       }
     })
-    const oranges = []
+    const oranges = [] as Range[]
     let current = ranges[0]
 
-    for (let i = 1; i < ranges.length; i += 1) {
-      const nxt = ranges[i]
+    for (const nxt of ranges) {
       if (nxt.min > current.max + 1) {
         oranges.push(current)
         current = nxt

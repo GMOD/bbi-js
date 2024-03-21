@@ -174,18 +174,17 @@ export class BigBed extends BBI {
         const node = bpt.parse(buffer)
         if (node.leafkeys) {
           let lastOffset
-          for (let i = 0; i < node.leafkeys.length; i += 1) {
-            const { key } = node.leafkeys[i]
+          for (const { key, offset } of node.leafkeys) {
             if (name.localeCompare(key) < 0 && lastOffset) {
               return bptReadNode(lastOffset)
             }
-            lastOffset = node.leafkeys[i].offset
+            lastOffset = offset
           }
           return bptReadNode(lastOffset)
         }
-        for (let i = 0; i < node.keys.length; i += 1) {
-          if (node.keys[i].key === name) {
-            return { ...node.keys[i], field }
+        for (const n of node.keys) {
+          if (n.key === name) {
+            return { ...n, field }
           }
         }
 
@@ -198,8 +197,9 @@ export class BigBed extends BBI {
   }
 
   /*
-   * retrieve the features from the bigbed data that were found through the lookup of the extraIndex
-   * note that there can be multiple extraIndex, see the BigBed specification and the -extraIndex argument to bedToBigBed
+   * retrieve the features from the bigbed data that were found through the
+   * lookup of the extraIndex note that there can be multiple extraIndex, see
+   * the BigBed specification and the -extraIndex argument to bedToBigBed
    *
    * @param name - the name to search for
    * @param opts - a SearchOptions argument with optional signal
@@ -213,7 +213,7 @@ export class BigBed extends BBI {
     const view = await this.getUnzoomedView(opts)
     const res = blocks.map(block => {
       return new Observable<Feature[]>(observer => {
-        view.readFeatures(observer, [block], opts)
+        view.readFeatures(observer, [block], opts).catch(e => observer.error(e))
       }).pipe(
         reduce((acc, curr) => acc.concat(curr)),
         map(x => {

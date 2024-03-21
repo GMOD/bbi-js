@@ -6,7 +6,9 @@ export class BigWig extends BBI {
    * Retrieves a BlockView of a specific zoomLevel
    *
    * @param scale - number
-   * @param opts - An object containing basesPerSpan (e.g. pixels per basepair) or scale used to infer the zoomLevel to use
+   *
+   * @param opts - An object containing basesPerSpan (e.g. pixels per basepair)
+   * or scale used to infer the zoomLevel to use
    */
   protected async getView(scale: number, opts: RequestOptions) {
     const { zoomLevels, refsByName, fileSize, isBigEndian, uncompressBufSize } =
