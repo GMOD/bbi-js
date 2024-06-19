@@ -1,6 +1,6 @@
 {
   "name": "@gmod/bbi",
-  "version": "4.0.4",
+  "version": "4.0.5",
   "description": "Parser for BigWig/BigBed files",
   "license": "MIT",
   "repository": "GMOD/bbi-js",
