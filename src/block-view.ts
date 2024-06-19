@@ -235,7 +235,7 @@ export class BlockView {
             blocksToFetch = blocksToFetch.concat(
               p.blocksToFetch
                 .filter(f => filterFeats(f))
-                .map((l: { blockOffset: bigint; blockSize: bigint }) => ({
+                .map(l => ({
                   offset: l.blockOffset,
                   length: l.blockSize,
                 })),
@@ -306,6 +306,7 @@ export class BlockView {
             ])
             spans = spans.union(blockSpan)
           }
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises
           spans.getRanges().map(fr => cirFobStartFetch(offset, fr, level))
         } catch (e) {
           observer.error(e)
