@@ -35,6 +35,7 @@ interface RefInfo {
   length: number
 }
 export interface Header {
+  version: number
   autoSql: string
   totalSummary: Statistics
   zoomLevels: any
@@ -51,7 +52,8 @@ export interface Header {
   refsByNumber: Record<number, RefInfo>
 }
 
-/* get the compiled parsers for different sections of the bigwig file
+/**
+ * get the compiled parsers for different sections of the bigwig file
  *
  * @param isBE - is big endian, typically false
  * @return an object with compiled parsers
@@ -126,10 +128,6 @@ export abstract class BBI {
 
   protected renameRefSeqs: (a: string) => string
 
-  /* fetch and parse header information from a bigwig or bigbed file
-   * @param abortSignal - abort the operation, can be null
-   * @return a Header object
-   */
   public getHeader(opts?: RequestOptions) {
     if (!this.headerP) {
       this.headerP = this._getHeader(opts).catch(e => {
