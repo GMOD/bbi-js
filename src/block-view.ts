@@ -1,7 +1,7 @@
 import { Buffer } from 'buffer'
 import { Observer } from 'rxjs'
 import { Parser } from 'binary-parser'
-import AbortablePromiseCache from 'abortable-promise-cache'
+import AbortablePromiseCache from '@gmod/abortable-promise-cache'
 import { GenericFilehandle } from 'generic-filehandle'
 import QuickLRU from 'quick-lru'
 

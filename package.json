@@ -42,7 +42,7 @@
     "genomics"
   ],
   "dependencies": {
-    "abortable-promise-cache": "^1.4.1",
+    "@gmod/abortable-promise-cache": "^2.0.0",
     "binary-parser": "^2.1.0",
     "generic-filehandle": "^3.0.0",
     "pako": "^2.0.0",

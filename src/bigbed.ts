@@ -2,7 +2,7 @@ import { Buffer } from 'buffer'
 import { Parser } from 'binary-parser'
 import { Observable, merge, firstValueFrom } from 'rxjs'
 import { map, reduce } from 'rxjs/operators'
-import AbortablePromiseCache from 'abortable-promise-cache'
+import AbortablePromiseCache from '@gmod/abortable-promise-cache'
 import QuickLRU from 'quick-lru'
 
 import { BBI, Feature, RequestOptions } from './bbi'
