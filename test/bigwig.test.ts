@@ -1,8 +1,4 @@
 import { BigWig, Header } from '../src/'
-import { TextDecoder } from 'util'
-
-// @ts-expect-error
-window.TextDecoder = TextDecoder
 
 interface ExtendedHeader extends Header {
   iWasMemoized: boolean

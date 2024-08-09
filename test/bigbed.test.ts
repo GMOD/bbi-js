@@ -1,11 +1,7 @@
 import BED from '@gmod/bed'
 import { LocalFile } from 'generic-filehandle'
-import { TextDecoder } from 'util'
 
 import { BigBed } from '../src/'
-
-// @ts-expect-error
-window.TextDecoder = TextDecoder
 
 test('loads small bigbed file', async () => {
   const ti = new BigBed({ path: 'test/data/hg18.bb' })

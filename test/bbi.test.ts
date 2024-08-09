@@ -1,9 +1,5 @@
 import { LocalFile } from 'generic-filehandle'
 import { BigBed, BigWig } from '../src/index'
-import { TextDecoder } from 'util'
-
-// @ts-expect-error
-window.TextDecoder = TextDecoder
 
 test('loads small bigwig header', async () => {
   const ti = new BigWig({
