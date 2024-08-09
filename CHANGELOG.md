@@ -1,3 +1,7 @@
+# [5.0.0](https://github.com/GMOD/bbi-js/compare/v4.0.6...v5.0.0) (2024-08-09)
+
+
+
 ## [4.0.6](https://github.com/GMOD/bbi-js/compare/v4.0.5...v4.0.6) (2024-07-23)
 
 - Use renamed abortable-promise-cache -> @gmod/abortable-promise-cache
