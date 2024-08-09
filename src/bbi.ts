@@ -7,7 +7,7 @@ import { BlockView } from './block-view'
 const BIG_WIG_MAGIC = -2003829722
 const BIG_BED_MAGIC = -2021002517
 
-function toString(arr: Uint8Array) {
+function myToString(arr: Uint8Array) {
   return new TextDecoder().decode(arr)
 }
 interface ZoomLevel {
@@ -233,7 +233,7 @@ export abstract class BBI {
       version,
       isBigEndian,
       autoSql: asOffset
-        ? toString(buffer.subarray(asOffset, buffer.indexOf(0, asOffset)))
+        ? myToString(buffer.subarray(asOffset, buffer.indexOf(0, asOffset)))
         : '',
     }
   }

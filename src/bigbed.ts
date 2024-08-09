@@ -64,7 +64,7 @@ export class BigBed extends BBI {
     const b = data
     const dataView = new DataView(b.buffer, b.byteOffset, b.length)
     let offset = 0
-    const _size = dataView.getUint16(offset, le)
+    // const _size = dataView.getUint16(offset, le)
     offset += 2
     const count = dataView.getUint16(offset, le)
     offset += 2
