@@ -1,6 +1,5 @@
 import { Buffer } from 'buffer'
 import { Observer } from 'rxjs'
-import { Parser } from 'binary-parser'
 import AbortablePromiseCache from '@gmod/abortable-promise-cache'
 import { GenericFilehandle } from 'generic-filehandle'
 import QuickLRU from 'quick-lru'
@@ -16,23 +15,10 @@ interface CoordRequest {
   start: number
   end: number
 }
-interface DataBlock {
-  blockOffset: bigint
-  blockSize: bigint
-  startChrom: number
-  endChrom: number
-  startBase: number
-  endBase: number
-  validCnt: number
-  minVal: number
-  maxVal: number
-  sumData: number
-  sumSqData: number
-}
 
 interface ReadData {
-  offset: bigint | number
-  length: bigint | number
+  offset: number
+  length: number
 }
 
 interface Options {
@@ -40,115 +26,15 @@ interface Options {
   request?: CoordRequest
 }
 
-const BIG_WIG_TYPE_GRAPH = 1
-const BIG_WIG_TYPE_VSTEP = 2
-const BIG_WIG_TYPE_FSTEP = 3
-
 function coordFilter(s1: number, e1: number, s2: number, e2: number): boolean {
   return s1 < e2 && e1 >= s2
-}
-
-function getParsers(isBigEndian: boolean) {
-  const le = isBigEndian ? 'big' : 'little'
-  const summaryParser = new Parser()
-    .endianess(le)
-    .uint32('chromId')
-    .uint32('start')
-    .uint32('end')
-    .uint32('validCnt')
-    .floatle('minScore')
-    .floatle('maxScore')
-    .floatle('sumData')
-    .floatle('sumSqData')
-    .saveOffset('offset')
-
-  const leafParser = new Parser()
-    .endianess(le)
-    .uint8('isLeaf')
-    .skip(1)
-    .uint16('cnt')
-    .choice({
-      tag: 'isLeaf',
-      choices: {
-        1: new Parser().endianess(le).array('blocksToFetch', {
-          length: 'cnt',
-          type: new Parser()
-            .endianess(le)
-            .uint32('startChrom')
-            .uint32('startBase')
-            .uint32('endChrom')
-            .uint32('endBase')
-            .uint64('blockOffset')
-            .uint64('blockSize')
-            .saveOffset('offset'),
-        }),
-        0: new Parser().array('recurOffsets', {
-          length: 'cnt',
-          type: new Parser()
-            .endianess(le)
-            .uint32('startChrom')
-            .uint32('startBase')
-            .uint32('endChrom')
-            .uint32('endBase')
-            .uint64('blockOffset')
-            .saveOffset('offset'),
-        }),
-      },
-    })
-  const bigBedParser = new Parser()
-    .endianess(le)
-    .uint32('chromId')
-    .int32('start')
-    .int32('end')
-    .string('rest', {
-      zeroTerminated: true,
-    })
-    .saveOffset('offset')
-
-  const bigWigParser = new Parser()
-    .endianess(le)
-    .skip(4)
-    .int32('blockStart')
-    .skip(4)
-    .uint32('itemStep')
-    .uint32('itemSpan')
-    .uint8('blockType')
-    .skip(1)
-    .uint16('itemCount')
-    .choice({
-      tag: 'blockType',
-      choices: {
-        [BIG_WIG_TYPE_FSTEP]: new Parser().array('items', {
-          length: 'itemCount',
-          type: new Parser().floatle('score'),
-        }),
-        [BIG_WIG_TYPE_VSTEP]: new Parser().array('items', {
-          length: 'itemCount',
-          type: new Parser().endianess(le).int32('start').floatle('score'),
-        }),
-        [BIG_WIG_TYPE_GRAPH]: new Parser().array('items', {
-          length: 'itemCount',
-          type: new Parser()
-            .endianess(le)
-            .int32('start')
-            .int32('end')
-            .floatle('score'),
-        }),
-      },
-    })
-  return {
-    bigWigParser,
-    bigBedParser,
-    summaryParser,
-    leafParser,
-  }
 }
 
 /**
  * View into a subset of the data in a BigWig file.
  *
- * Adapted by Robert Buels and Colin Diesh from bigwig.js in the Dalliance Genome
- * Explorer by Thomas Down.
+ * Adapted by Robert Buels and Colin Diesh from bigwig.js in the Dalliance
+ * Genome Explorer by Thomas Down.
  * @constructs
  */
 
@@ -159,18 +45,14 @@ export class BlockView {
     cache: new QuickLRU({ maxSize: 1000 }),
 
     fill: async (requestData, signal) => {
-      const len = Number(requestData.length)
-      const off = Number(requestData.offset)
+      const len = requestData.length
+      const off = requestData.offset
       const { buffer } = await this.bbi.read(Buffer.alloc(len), 0, len, off, {
         signal,
       })
       return buffer
     },
   })
-
-  private leafParser: ReturnType<typeof getParsers>['leafParser']
-
-  private bigBedParser: ReturnType<typeof getParsers>['bigBedParser']
 
   public constructor(
     private bbi: GenericFilehandle,
@@ -183,10 +65,6 @@ export class BlockView {
     if (!(cirTreeOffset >= 0)) {
       throw new Error('invalid cirTreeOffset!')
     }
-
-    const parsers = getParsers(isBigEndian)
-    this.leafParser = parsers.leafParser
-    this.bigBedParser = parsers.bigBedParser
   }
 
   public async readWigData(
@@ -208,7 +86,7 @@ export class BlockView {
           Buffer.alloc(48),
           0,
           48,
-          Number(cirTreeOffset),
+          cirTreeOffset,
           opts,
         )
       }
@@ -218,35 +96,84 @@ export class BlockView {
         : buffer.readUInt32LE(4)
       let blocksToFetch: any[] = []
       let outstanding = 0
+      const le = true
 
       const cirFobRecur2 = (
         cirBlockData: Buffer,
-        offset: number,
+        offset2: number,
         level: number,
       ) => {
         try {
-          const data = cirBlockData.subarray(offset)
+          const data = cirBlockData.subarray(offset2)
 
-          const p = this.leafParser.parse(data) as {
-            blocksToFetch: DataBlock[]
-            recurOffsets: DataBlock[]
-          }
-          if (p.blocksToFetch) {
+          const b = data
+          const dataView = new DataView(b.buffer, b.byteOffset, b.length)
+          let offset = 0
+
+          const isLeaf = dataView.getUint8(offset)
+          offset += 2 // 1 skip
+          const cnt = dataView.getUint16(offset, le)
+          offset += 2
+          if (isLeaf === 1) {
+            const blocksToFetch2 = []
+            for (let i = 0; i < cnt; i++) {
+              const startChrom = dataView.getUint32(offset, le)
+              offset += 4
+              const startBase = dataView.getUint32(offset, le)
+              offset += 4
+              const endChrom = dataView.getUint32(offset, le)
+              offset += 4
+              const endBase = dataView.getUint32(offset, le)
+              offset += 4
+              const blockOffset = Number(dataView.getBigUint64(offset, le))
+              offset += 8
+              const blockSize = Number(dataView.getBigUint64(offset, le))
+              offset += 8
+              blocksToFetch2.push({
+                startChrom,
+                startBase,
+                endBase,
+                endChrom,
+                blockOffset,
+                blockSize,
+                offset,
+              })
+            }
             blocksToFetch = blocksToFetch.concat(
-              p.blocksToFetch
+              blocksToFetch2
                 .filter(f => filterFeats(f))
                 .map(l => ({
                   offset: l.blockOffset,
                   length: l.blockSize,
                 })),
             )
-          }
-          if (p.recurOffsets) {
-            const recurOffsets = p.recurOffsets
+          } else if (isLeaf === 0) {
+            const recurOffsets = []
+            for (let i = 0; i < cnt; i++) {
+              const startChrom = dataView.getUint32(offset, le)
+              offset += 4
+              const startBase = dataView.getUint32(offset, le)
+              offset += 4
+              const endChrom = dataView.getUint32(offset, le)
+              offset += 4
+              const endBase = dataView.getUint32(offset, le)
+              offset += 4
+              const blockOffset = Number(dataView.getBigUint64(offset, le))
+              offset += 8
+              recurOffsets.push({
+                startChrom,
+                startBase,
+                endChrom,
+                endBase,
+                blockOffset,
+                offset,
+              })
+            }
+            const recurOffsets2 = recurOffsets
               .filter(f => filterFeats(f))
-              .map(l => Number(l.blockOffset))
-            if (recurOffsets.length > 0) {
-              cirFobRecur(recurOffsets, level + 1)
+              .map(l => l.blockOffset)
+            if (recurOffsets2.length > 0) {
+              cirFobRecur(recurOffsets2, level + 1)
             }
           }
         } catch (e) {
@@ -254,7 +181,12 @@ export class BlockView {
         }
       }
 
-      const filterFeats = (b: DataBlock) => {
+      const filterFeats = (b: {
+        startChrom: number
+        startBase: number
+        endChrom: number
+        endBase: number
+      }) => {
         const { startChrom, startBase, endChrom, endBase } = b
         return (
           (startChrom < chrId || (startChrom === chrId && startBase <= end)) &&
@@ -296,13 +228,19 @@ export class BlockView {
           outstanding += offset.length
 
           // Upper bound on size, based on a completely full leaf node.
-          const maxCirBlockSpan = 4 + Number(cirBlockSize) * 32
+          const maxCirBlockSpan = 4 + cirBlockSize * 32
           let spans = new Range([
-            { min: offset[0], max: offset[0] + maxCirBlockSpan },
+            {
+              min: offset[0],
+              max: offset[0] + maxCirBlockSpan,
+            },
           ])
           for (let i = 1; i < offset.length; i += 1) {
             const blockSpan = new Range([
-              { min: offset[i], max: offset[i] + maxCirBlockSpan },
+              {
+                min: offset[i],
+                max: offset[i] + maxCirBlockSpan,
+              },
             ])
             spans = spans.union(blockSpan)
           }
@@ -320,19 +258,15 @@ export class BlockView {
   }
 
   private parseSummaryBlock(
-    buffer: Buffer,
+    b: Buffer,
     startOffset: number,
     request?: CoordRequest,
   ) {
     const features = [] as any[]
     let offset = startOffset
 
-    const dataView = new DataView(
-      buffer.buffer,
-      buffer.byteOffset,
-      buffer.length,
-    )
-    while (offset < buffer.byteLength) {
+    const dataView = new DataView(b.buffer, b.byteOffset, b.length)
+    while (offset < b.byteLength) {
       // this was extracted from looking at the runtime code generated by
       // binary-parser
       const chromId = dataView.getUint32(offset, true)
@@ -381,11 +315,32 @@ export class BlockView {
   ) {
     const items = [] as Feature[]
     let currOffset = startOffset
+    const le = true
+    const b = data
+    const dataView = new DataView(b.buffer, b.byteOffset, b.length)
     while (currOffset < data.byteLength) {
-      const res = this.bigBedParser.parse(data.subarray(currOffset))
-      res.uniqueId = `bb-${offset + currOffset}`
-      items.push(res)
-      currOffset += res.offset
+      const c2 = currOffset
+      const chromId = dataView.getUint32(currOffset, le)
+      currOffset += 4
+      const start = dataView.getInt32(currOffset, le)
+      currOffset += 4
+      const end = dataView.getInt32(currOffset, le)
+      currOffset += 4
+      let i = currOffset
+      for (; i < data.length; i++) {
+        if (data[i] === 0) {
+          break
+        }
+      }
+      const rest = data.subarray(currOffset, i).toString()
+      currOffset = i + 1
+      items.push({
+        chromId,
+        start,
+        end,
+        rest,
+        uniqueId: `bb-${offset + c2}`,
+      })
     }
 
     return request
@@ -398,7 +353,7 @@ export class BlockView {
   private parseBigWigBlock(
     buffer: Buffer,
     startOffset: number,
-    request?: CoordRequest,
+    req?: CoordRequest,
   ) {
     const b = buffer.subarray(startOffset)
 
@@ -425,7 +380,11 @@ export class BlockView {
           offset += 4
           const score = dataView.getFloat32(offset, true)
           offset += 4
-          items[i] = { start, end, score }
+          items[i] = {
+            start,
+            end,
+            score,
+          }
         }
         break
       }
@@ -435,7 +394,11 @@ export class BlockView {
           offset += 4
           const score = dataView.getFloat32(offset, true)
           offset += 4
-          items[i] = { score, start, end: start + itemSpan }
+          items[i] = {
+            score,
+            start,
+            end: start + itemSpan,
+          }
         }
         break
       }
@@ -444,22 +407,24 @@ export class BlockView {
           const score = dataView.getFloat32(offset, true)
           offset += 4
           const start = blockStart + i * itemStep
-          items[i] = { score, start, end: start + itemSpan }
+          items[i] = {
+            score,
+            start,
+            end: start + itemSpan,
+          }
         }
         break
       }
     }
 
-    return request
-      ? items.filter((f: any) =>
-          coordFilter(f.start, f.end, request.start, request.end),
-        )
+    return req
+      ? items.filter(f => coordFilter(f.start, f.end, req.start, req.end))
       : items
   }
 
   public async readFeatures(
     observer: Observer<Feature[]>,
-    blocks: { offset: bigint; length: bigint }[],
+    blocks: { offset: number; length: number }[],
     opts: Options = {},
   ) {
     try {

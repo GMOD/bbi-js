@@ -19,7 +19,7 @@ export default class Range {
   }
 
   get max() {
-    return this.ranges[this.ranges.length - 1].max
+    return this.ranges.at(-1)!.max
   }
 
   public contains(pos: number) {

@@ -27,6 +27,7 @@ test('sorted names', async () => {
     path: 'test/data/example_bigwig_unsorted_with_error_small.bw',
   })
   const feats1 = await ti.getFeatures('chr3', 0, 820982, { scale: 1 })
+  expect(feats1.length).toBeGreaterThan(0)
   expect(feats1).toMatchSnapshot()
 })
 
@@ -79,7 +80,7 @@ test('loads a larger bigwig file at different scales', async () => {
   const f3 = await ti.getFeatures('GK000001.2', s, e, { scale: 0.001 })
   const f4 = await ti.getFeatures('GK000001.2', s, e, { scale: 0.001 })
   const f5 = await ti.getFeatures('GK000001.2', s, e, { scale: 0.00001 })
-  const f4max = Math.max(...f4.map(s => s.score))
+  const f4max = Math.max(...f4.map(s => s.score || 0))
   const f5max = Math.max(...f5.map(s => s.maxScore || 0))
   expect(f4max).toEqual(f5max)
   expect(f5).toMatchSnapshot() // summary block
