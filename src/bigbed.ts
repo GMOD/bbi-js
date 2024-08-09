@@ -1,16 +1,16 @@
 import { Buffer } from 'buffer'
-import { Parser } from 'binary-parser'
 import { Observable, merge, firstValueFrom } from 'rxjs'
 import { map, reduce } from 'rxjs/operators'
 import AbortablePromiseCache from '@gmod/abortable-promise-cache'
 import QuickLRU from 'quick-lru'
 
+// locals
 import { BBI, Feature, RequestOptions } from './bbi'
 
 interface Loc {
   key: string
-  offset: bigint
-  length: bigint
+  offset: number
+  length: number
   field?: number
 }
 
@@ -46,8 +46,10 @@ export class BigBed extends BBI {
 
   /*
    * parse the bigbed extraIndex fields
-   * @param abortSignal to abort operation
-   * @return a Promise for an array of Index data structure since there can be multiple extraIndexes in a bigbed, see bedToBigBed documentation
+   *
+   *
+   * @return a Promise for an array of Index data structure since there can be
+   * multiple extraIndexes in a bigbed, see bedToBigBed documentation
    */
   private async _readIndices(opts: RequestOptions) {
     const { extHeaderOffset, isBigEndian } = await this.getHeader(opts)
@@ -57,15 +59,17 @@ export class BigBed extends BBI {
       64,
       Number(extHeaderOffset),
     )
-    const le = isBigEndian ? 'big' : 'little'
-    const ret = new Parser()
-      .endianess(le)
-      .uint16('size')
-      .uint16('count')
-      .uint64('offset')
-      .parse(data)
+    const le = !isBigEndian
 
-    const { count, offset } = ret
+    const b = data
+    const dataView = new DataView(b.buffer, b.byteOffset, b.length)
+    let offset = 0
+    const _size = dataView.getUint16(offset, le)
+    offset += 2
+    const count = dataView.getUint16(offset, le)
+    offset += 2
+    const dataOffset = Number(dataView.getBigUint64(offset, le))
+    offset += 8
 
     // no extra index is defined if count==0
     if (count === 0) {
@@ -78,26 +82,30 @@ export class BigBed extends BBI {
       Buffer.alloc(len),
       0,
       len,
-      Number(offset),
+      Number(dataOffset),
     )
-    const extParser = new Parser()
-      .endianess(le)
-      .int16('type')
-      .int16('fieldcount')
-      .uint64('offset')
-      .skip(4)
-      .int16('field')
+
     const indices = [] as Index[]
 
     for (let i = 0; i < count; i += 1) {
-      indices.push(extParser.parse(buffer.subarray(i * blocklen)))
+      const b = buffer.subarray(i * blocklen)
+      const dataView = new DataView(b.buffer, b.byteOffset, b.length)
+      let offset = 0
+      const type = dataView.getInt16(offset, le)
+      offset += 2
+      const fieldcount = dataView.getInt16(offset, le)
+      offset += 2
+      const dataOffset = Number(dataView.getBigUint64(offset, le))
+      offset += 8 + 4 //4 skip
+      const field = dataView.getInt16(offset, le)
+      indices.push({ type, fieldcount, offset: Number(dataOffset), field })
     }
     return indices
   }
 
   /*
-   * perform a search in the bigbed extraIndex to find which blocks in the bigbed data to look for the
-   * actual feature data
+   * perform a search in the bigbed extraIndex to find which blocks in the
+   * bigbed data to look for the actual feature data
    *
    * @param name - the name to search for
    * @param opts - a SearchOptions argument with optional signal
@@ -112,56 +120,32 @@ export class BigBed extends BBI {
     if (indices.length === 0) {
       return []
     }
-    const locs = indices.map(async (index: any): Promise<Loc | undefined> => {
-      const { offset, field } = index
+    const locs = indices.map(async (index): Promise<Loc | undefined> => {
+      const { offset: offset2, field } = index
       const { buffer: data } = await this.bbi.read(
         Buffer.alloc(32),
         0,
         32,
-        Number(offset),
+        offset2,
         opts,
       )
-      const le = isBigEndian ? 'big' : 'little'
-      const p = new Parser()
-        .endianess(le)
-        .int32('magic')
-        .int32('blockSize')
-        .int32('keySize')
-        .int32('valSize')
-        .uint64('itemCount')
+      const le = !isBigEndian
+      const b = data
 
-      const { blockSize, keySize, valSize } = p.parse(data)
-      // console.log({blockSize,keySize,valSize})
-      const bpt = new Parser()
-        .endianess(le)
-        .int8('nodeType')
-        .skip(1)
-        .int16('cnt')
-        .choice({
-          tag: 'nodeType',
-          choices: {
-            0: new Parser().array('leafkeys', {
-              length: 'cnt',
-              type: new Parser()
-                .endianess(le)
-                .string('key', { length: keySize, stripNull: true })
-                .uint64('offset'),
-            }),
-            1: new Parser().array('keys', {
-              length: 'cnt',
-              type: new Parser()
-                .endianess(le)
-                .string('key', { length: keySize, stripNull: true })
-                .uint64('offset')
-                .uint32('length')
-                .uint32('reserved'),
-            }),
-          },
-        })
+      const dataView = new DataView(b.buffer, b.byteOffset, b.length)
+      let offset = 0
+      // const _magic = dataView.getInt32(offset, le)
+      offset += 4
+      const blockSize = dataView.getInt32(offset, le)
+      offset += 4
+      const keySize = dataView.getInt32(offset, le)
+      offset += 4
+      const valSize = dataView.getInt32(offset, le)
+      offset += 4
+      // const _itemCount = Number(dataView.getBigUint64(offset, le))
+      offset += 8
 
-      const bptReadNode = async (
-        nodeOffset: number,
-      ): Promise<Loc | undefined> => {
+      const bptReadNode = async (nodeOffset: number) => {
         const val = Number(nodeOffset)
         const len = 4 + blockSize * (keySize + valSize)
         const { buffer } = await this.bbi.read(
@@ -171,27 +155,62 @@ export class BigBed extends BBI {
           val,
           opts,
         )
-        const node = bpt.parse(buffer)
-        if (node.leafkeys) {
-          let lastOffset
-          for (const { key, offset } of node.leafkeys) {
+        const b = buffer
+        const dataView = new DataView(b.buffer, b.byteOffset, b.length)
+        let offset = 0
+        const nodeType = dataView.getInt8(offset)
+        offset += 2 //skip 1
+        const cnt = dataView.getInt16(offset, le)
+        offset += 2
+        const keys = []
+        if (nodeType === 0) {
+          const leafkeys = []
+          for (let i = 0; i < cnt; i++) {
+            const key = b
+              .subarray(offset, offset + keySize)
+              .toString()
+              .replaceAll('\0', '')
+            offset += keySize
+            const dataOffset = Number(dataView.getBigUint64(offset, le))
+            offset += 8
+            leafkeys.push({ key, offset: dataOffset })
+          }
+
+          let lastOffset = 0
+          for (const { key, offset } of leafkeys) {
             if (name.localeCompare(key) < 0 && lastOffset) {
               return bptReadNode(lastOffset)
             }
             lastOffset = offset
           }
           return bptReadNode(lastOffset)
-        }
-        for (const n of node.keys) {
-          if (n.key === name) {
-            return { ...n, field }
+        } else if (nodeType === 1) {
+          for (let i = 0; i < cnt; i++) {
+            const key = b
+              .subarray(offset, offset + keySize)
+              .toString()
+              .replaceAll('\0', '')
+            offset += keySize
+            const dataOffset = Number(dataView.getBigUint64(offset, le))
+            offset += 8
+            const length = dataView.getUint32(offset, le)
+            offset += 4
+            const reserved = dataView.getUint32(offset, le)
+            offset += 4
+            keys.push({ key, offset: dataOffset, length, reserved })
           }
-        }
 
-        return undefined
+          for (const n of keys) {
+            if (n.key === name) {
+              return { ...n, field }
+            }
+          }
+
+          return undefined
+        }
       }
       const rootNodeOffset = 32
-      return bptReadNode(Number(offset) + rootNodeOffset)
+      return bptReadNode(offset2 + rootNodeOffset)
     })
     return filterUndef(await Promise.all(locs))
   }

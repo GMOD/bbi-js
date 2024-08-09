@@ -1,5 +1,4 @@
 import { Buffer } from 'buffer'
-import { Parser } from 'binary-parser'
 import { LocalFile, RemoteFile, GenericFilehandle } from 'generic-filehandle'
 import { firstValueFrom, Observable } from 'rxjs'
 import { toArray } from 'rxjs/operators'
@@ -11,11 +10,19 @@ const BIG_BED_MAGIC = -2021002517
 function toString(arr: Uint8Array) {
   return new TextDecoder().decode(arr)
 }
+interface ZoomLevel {
+  reductionLevel: number
+  reserved: number
+  dataOffset: number
+  indexOffset: number
+}
 
 export interface Feature {
+  offset?: number
+  chromId: number
   start: number
   end: number
-  score: number
+  score?: number
   rest?: string // for bigbed line
   minScore?: number // for summary line
   maxScore?: number // for summary line
@@ -27,6 +34,8 @@ interface Statistics {
   scoreSum: number
   basesCovered: number
   scoreSumSquares: number
+  scoreMin: number
+  scoreMax: number
 }
 
 interface RefInfo {
@@ -34,85 +43,29 @@ interface RefInfo {
   id: number
   length: number
 }
-export interface Header {
+
+export interface MainHeader {
+  magic: number
   version: number
   autoSql: string
   totalSummary: Statistics
-  zoomLevels: any
+  asOffset: number
+  zoomLevels: ZoomLevel[]
+  fieldCount: number
+  numZoomLevels: number
   unzoomedIndexOffset: number
+  totalSummaryOffset: number
   unzoomedDataOffset: number
   definedFieldCount: number
   uncompressBufSize: number
   chromTreeOffset: number
-  fileSize: number
   extHeaderOffset: number
   isBigEndian: boolean
   fileType: string
+}
+export interface Header extends MainHeader {
   refsByName: Record<string, number>
   refsByNumber: Record<number, RefInfo>
-}
-
-/**
- * get the compiled parsers for different sections of the bigwig file
- *
- * @param isBE - is big endian, typically false
- * @return an object with compiled parsers
- */
-function getParsers(isBE: boolean) {
-  const le = isBE ? 'big' : 'little'
-  const headerParser = new Parser()
-    .endianess(le)
-    .int32('magic')
-    .uint16('version')
-    .uint16('numZoomLevels')
-    .uint64('chromTreeOffset')
-    .uint64('unzoomedDataOffset')
-    .uint64('unzoomedIndexOffset')
-    .uint16('fieldCount')
-    .uint16('definedFieldCount')
-    .uint64('asOffset') // autoSql offset, used in bigbed
-    .uint64('totalSummaryOffset')
-    .uint32('uncompressBufSize')
-    .uint64('extHeaderOffset') // name index offset, used in bigbed
-    .array('zoomLevels', {
-      length: 'numZoomLevels',
-      type: new Parser()
-        .endianess(le)
-        .uint32('reductionLevel')
-        .uint32('reserved')
-        .uint64('dataOffset')
-        .uint64('indexOffset'),
-    })
-
-  const totalSummaryParser = new Parser()
-    .endianess(le)
-    .uint64('basesCovered')
-    .doublele('scoreMin')
-    .doublele('scoreMax')
-    .doublele('scoreSum')
-    .doublele('scoreSumSquares')
-
-  const chromTreeParser = new Parser()
-    .endianess(le)
-    .uint32('magic')
-    .uint32('blockSize')
-    .uint32('keySize')
-    .uint32('valSize')
-    .uint64('itemCount')
-
-  const isLeafNode = new Parser()
-    .endianess(le)
-    .uint8('isLeafNode')
-    .skip(1)
-    .uint16('cnt')
-    .saveOffset('offset')
-
-  return {
-    chromTreeParser,
-    totalSummaryParser,
-    headerParser,
-    isLeafNode,
-  }
 }
 
 export interface RequestOptions {
@@ -139,7 +92,8 @@ export abstract class BBI {
   }
 
   /*
-   * @param filehandle - a filehandle from generic-filehandle or implementing something similar to the node10 fs.promises API
+   * @param filehandle - a filehandle from generic-filehandle or implementing
+   * something similar to the node10 fs.promises API
    *
    * @param path - a Local file path as a string
    *
@@ -176,7 +130,8 @@ export abstract class BBI {
   private async _getMainHeader(
     opts?: RequestOptions,
     requestSize = 2000,
-  ): Promise<Header> {
+  ): Promise<MainHeader> {
+    const le = true
     const { buffer } = await this.bbi.read(
       Buffer.alloc(requestSize),
       0,
@@ -185,30 +140,102 @@ export abstract class BBI {
       opts,
     )
     const isBigEndian = this._isBigEndian(buffer)
-    const ret = getParsers(isBigEndian)
-    const header = ret.headerParser.parse(buffer)
-    const { magic, asOffset, totalSummaryOffset } = header
-    header.fileType = magic === BIG_BED_MAGIC ? 'bigbed' : 'bigwig'
-    if (asOffset > requestSize || totalSummaryOffset > requestSize) {
-      return this._getMainHeader(opts, requestSize * 2)
+    const b = buffer
+    const dataView = new DataView(b.buffer, b.byteOffset, b.length)
+    let offset = 0
+    const magic = dataView.getInt32(offset, le)
+    offset += 4
+    const version = dataView.getUint16(offset, le)
+    offset += 2
+    const numZoomLevels = dataView.getUint16(offset, le)
+    offset += 2
+    const chromTreeOffset = Number(dataView.getBigUint64(offset, le))
+    offset += 8
+    const unzoomedDataOffset = Number(dataView.getBigUint64(offset, le))
+    offset += 8
+    const unzoomedIndexOffset = Number(dataView.getBigUint64(offset, le))
+    offset += 8
+    const fieldCount = dataView.getUint16(offset, le)
+    offset += 2
+    const definedFieldCount = dataView.getUint16(offset, le)
+    offset += 2
+    const asOffset = Number(dataView.getBigUint64(offset, le))
+    offset += 8
+    const totalSummaryOffset = Number(dataView.getBigUint64(offset, le))
+    offset += 8
+    const uncompressBufSize = dataView.getUint32(offset, le)
+    offset += 4
+    const extHeaderOffset = Number(dataView.getBigUint64(offset, le))
+    offset += 8
+    const zoomLevels = [] as ZoomLevel[]
+    for (let i = 0; i < numZoomLevels; i++) {
+      const reductionLevel = dataView.getUint32(offset, le)
+      offset += 4
+      const reserved = dataView.getUint32(offset, le)
+      offset += 4
+      const dataOffset = Number(dataView.getBigUint64(offset, le))
+      offset += 8
+      const indexOffset = Number(dataView.getBigUint64(offset, le))
+      offset += 8
+      zoomLevels.push({ reductionLevel, reserved, dataOffset, indexOffset })
     }
-    if (asOffset) {
-      const off = Number(header.asOffset)
-      header.autoSql = toString(buffer.subarray(off, buffer.indexOf(0, off)))
-    }
+
+    const fileType = magic === BIG_BED_MAGIC ? 'bigbed' : 'bigwig'
 
     // refetch header if it is too large on first pass,
     // 8*5 is the sizeof the totalSummary struct
-    if (header.totalSummaryOffset > requestSize - 8 * 5) {
+    if (asOffset > requestSize || totalSummaryOffset > requestSize - 8 * 5) {
       return this._getMainHeader(opts, requestSize * 2)
     }
 
-    if (header.totalSummaryOffset) {
-      const tail = buffer.subarray(Number(header.totalSummaryOffset))
-      const sum = ret.totalSummaryParser.parse(tail)
-      header.totalSummary = { ...sum, basesCovered: Number(sum.basesCovered) }
+    let totalSummary: Statistics
+    if (totalSummaryOffset) {
+      const b = buffer.subarray(Number(totalSummaryOffset))
+      let offset = 0
+      const dataView = new DataView(b.buffer, b.byteOffset, b.length)
+      const basesCovered = Number(dataView.getBigUint64(offset, le))
+      offset += 8
+      const scoreMin = dataView.getFloat64(offset, le)
+      offset += 8
+      const scoreMax = dataView.getFloat64(offset, le)
+      offset += 8
+      const scoreSum = dataView.getFloat64(offset, le)
+      offset += 8
+      const scoreSumSquares = dataView.getFloat64(offset, le)
+      offset += 8
+
+      totalSummary = {
+        scoreMin,
+        scoreMax,
+        scoreSum,
+        scoreSumSquares,
+        basesCovered,
+      }
+    } else {
+      throw new Error('no stats')
     }
-    return { ...header, isBigEndian }
+
+    return {
+      zoomLevels,
+      magic,
+      extHeaderOffset,
+      numZoomLevels,
+      fieldCount,
+      totalSummary,
+      definedFieldCount,
+      uncompressBufSize,
+      asOffset,
+      chromTreeOffset,
+      totalSummaryOffset,
+      unzoomedDataOffset,
+      unzoomedIndexOffset,
+      fileType,
+      version,
+      isBigEndian,
+      autoSql: asOffset
+        ? toString(buffer.subarray(asOffset, buffer.indexOf(0, asOffset)))
+        : '',
+    }
   }
 
   private _isBigEndian(buffer: Buffer) {
@@ -225,19 +252,19 @@ export abstract class BBI {
 
   // todo: add progress if long running
   private async _readChromTree(
-    header: Header,
+    header: MainHeader,
     opts?: { signal?: AbortSignal },
   ) {
     const isBE = header.isBigEndian
-    const le = isBE ? 'big' : 'little'
+    const le = !isBE
     const refsByNumber: Record<
       number,
       { name: string; id: number; length: number }
     > = []
     const refsByName: Record<string, number> = {}
 
-    let unzoomedDataOffset = Number(header.unzoomedDataOffset)
-    const chromTreeOffset = Number(header.chromTreeOffset)
+    let unzoomedDataOffset = header.unzoomedDataOffset
+    const chromTreeOffset = header.chromTreeOffset
     while (unzoomedDataOffset % 4 !== 0) {
       unzoomedDataOffset += 1
     }
@@ -250,33 +277,42 @@ export abstract class BBI {
       opts,
     )
 
-    const p = getParsers(isBE)
-    const { keySize } = p.chromTreeParser.parse(buffer)
-    const leafNodeParser = new Parser()
-      .endianess(le)
-      .string('key', { stripNull: true, length: keySize })
-      .uint32('refId')
-      .uint32('refSize')
-      .saveOffset('offset')
-    const nonleafNodeParser = new Parser()
-      .endianess(le)
-      .skip(keySize)
-      .uint64('childOffset')
-      .saveOffset('offset')
+    const b = buffer
+    const dataView = new DataView(b.buffer, b.byteOffset, b.length)
+    let offset = 0
+    //    const magic = dataView.getUint32(offset, le)
+    offset += 4
+    //   const blockSize = dataView.getUint32(offset, le)
+    offset += 4
+    const keySize = dataView.getUint32(offset, le)
+    offset += 4
+    //  const valSize = dataView.getUint32(offset, le)
+    offset += 4
+    // const itemCount = dataView.getBigUint64(offset, le)
+    offset += 8
+
     const rootNodeOffset = 32
     const bptReadNode = async (currentOffset: number) => {
       let offset = currentOffset
       if (offset >= buffer.length) {
         throw new Error('reading beyond end of buffer')
       }
-      const ret = p.isLeafNode.parse(buffer.subarray(offset))
-      const { isLeafNode, cnt } = ret
-      offset += ret.offset
+      const isLeafNode = dataView.getUint8(offset)
+      offset += 2 //skip 1
+      const cnt = dataView.getUint16(offset, le)
+      offset += 2
       if (isLeafNode) {
-        for (let n = 0; n < cnt; n += 1) {
-          const leafRet = leafNodeParser.parse(buffer.subarray(offset))
-          offset += leafRet.offset
-          const { key, refId, refSize } = leafRet
+        for (let n = 0; n < cnt; n++) {
+          const key = buffer
+            .subarray(offset, offset + keySize)
+            .toString()
+            .replaceAll('\0', '')
+          offset += keySize
+          const refId = dataView.getUint32(offset, le)
+          offset += 4
+          const refSize = dataView.getUint32(offset, le)
+          offset += 4
+
           const refRec = { name: key, id: refId, length: refSize }
           refsByName[this.renameRefSeqs(key)] = refId
           refsByNumber[refId] = refRec
@@ -284,10 +320,10 @@ export abstract class BBI {
       } else {
         // parse index node
         const nextNodes = []
-        for (let n = 0; n < cnt; n += 1) {
-          const nonleafRet = nonleafNodeParser.parse(buffer.subarray(offset))
-          const { childOffset } = nonleafRet
-          offset += nonleafRet.offset
+        for (let n = 0; n < cnt; n++) {
+          offset += keySize
+          const childOffset = Number(dataView.getBigUint64(offset, le))
+          offset += 8
           nextNodes.push(
             bptReadNode(Number(childOffset) - Number(chromTreeOffset)),
           )
