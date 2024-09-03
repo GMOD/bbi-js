@@ -18,6 +18,7 @@ export class BigWig extends BBI {
 
     for (let i = maxLevel; i >= 0; i -= 1) {
       const zh = zoomLevels[i]
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
       if (zh && zh.reductionLevel <= 2 * basesPerPx) {
         return new BlockView(
           this.bbi,

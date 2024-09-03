@@ -10,6 +10,9 @@ import { unzip } from './unzip'
 import { Feature } from './bbi'
 import { groupBlocks, checkAbortSignal } from './util'
 
+const decoder =
+  typeof TextDecoder !== 'undefined' ? new TextDecoder('utf8') : undefined
+
 interface CoordRequest {
   chrId: number
   start: number
@@ -215,7 +218,9 @@ export class BlockView {
                 this.readFeatures(observer, blocksToFetch, {
                   ...opts,
                   request,
-                }).catch(e => observer.error(e))
+                }).catch((e: unknown) => {
+                  observer.error(e)
+                })
               }
             }
           }
@@ -251,7 +256,8 @@ export class BlockView {
         }
       }
 
-      return cirFobRecur([Number(cirTreeOffset) + 48], 1)
+      cirFobRecur([Number(cirTreeOffset) + 48], 1)
+      return
     } catch (e) {
       observer.error(e)
     }
@@ -332,7 +338,8 @@ export class BlockView {
           break
         }
       }
-      const rest = data.subarray(currOffset, i).toString()
+      const b = data.subarray(currOffset, i)
+      const rest = decoder?.decode(b) ?? b.toString()
       currOffset = i + 1
       items.push({
         chromId,
