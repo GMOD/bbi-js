@@ -232,7 +232,9 @@ export class BigBed extends BBI {
     const view = await this.getUnzoomedView(opts)
     const res = blocks.map(block => {
       return new Observable<Feature[]>(observer => {
-        view.readFeatures(observer, [block], opts).catch(e => observer.error(e))
+        view.readFeatures(observer, [block], opts).catch((e: unknown) => {
+          observer.error(e)
+        })
       }).pipe(
         reduce((acc, curr) => acc.concat(curr)),
         map(x => {

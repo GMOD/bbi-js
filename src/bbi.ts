@@ -80,7 +80,7 @@ export abstract class BBI {
 
   public getHeader(opts?: RequestOptions) {
     if (!this.headerP) {
-      this.headerP = this._getHeader(opts).catch(e => {
+      this.headerP = this._getHeader(opts).catch((e: unknown) => {
         this.headerP = undefined
         throw e
       })
@@ -395,7 +395,9 @@ export abstract class BBI {
     return new Observable<Feature[]>(observer => {
       view
         .readWigData(chrName, start, end, observer, opts)
-        .catch(e => observer.error(e))
+        .catch((e: unknown) => {
+          observer.error(e)
+        })
     })
   }
 

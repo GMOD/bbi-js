@@ -1,3 +1,4 @@
+import { expect, test } from 'vitest'
 import { LocalFile } from 'generic-filehandle'
 import { BigBed, BigWig } from '../src/index'
 

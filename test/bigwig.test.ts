@@ -1,3 +1,4 @@
+import { expect, test } from 'vitest'
 import { BigWig, Header } from '../src/'
 
 interface ExtendedHeader extends Header {
@@ -130,15 +131,15 @@ test('test memoize', async () => {
   expect(ret2.iWasMemoized).toEqual(true)
 })
 
-xtest('abort loading a bigwig file', async () => {
-  const ti = new BigWig({ path: 'test/data/volvox.bw' })
-  const aborter = new AbortController()
-  const indexDataP = ti.getHeader({ signal: aborter.signal })
-  aborter.abort()
-  await expect(indexDataP).rejects.toThrow(/aborted/)
-  const header = await ti.getHeader()
-  expect(header.isBigEndian).toEqual(false)
-})
+// xtest('abort loading a bigwig file', async () => {
+//   const ti = new BigWig({ path: 'test/data/volvox.bw' })
+//   const aborter = new AbortController()
+//   const indexDataP = ti.getHeader({ signal: aborter.signal })
+//   aborter.abort()
+//   await expect(indexDataP).rejects.toThrow(/aborted/)
+//   const header = await ti.getHeader()
+//   expect(header.isBigEndian).toEqual(false)
+// })
 
 test('test a slow loading getfeatures', async () => {
   const ti = new BigWig({ path: 'test/data/volvox.bw' })

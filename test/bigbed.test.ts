@@ -1,3 +1,4 @@
+import { vi, expect, test } from 'vitest'
 import BED from '@gmod/bed'
 import { LocalFile } from 'generic-filehandle'
 
@@ -17,7 +18,7 @@ test('loads small bigbed file', async () => {
 test('loads volvox.bb', async () => {
   const filehandle = new LocalFile('test/data/volvox.bb')
   const ti = new BigBed({ filehandle })
-  const spy = jest.spyOn(filehandle, 'read')
+  const spy = vi.spyOn(filehandle, 'read')
   const feats = await ti.getFeatures('chrA', 0, 160)
   expect(spy.mock.calls.length).toBeLessThanOrEqual(3)
   expect(feats).toEqual([])
@@ -59,7 +60,7 @@ test('2057 contigs', async () => {
 test('bigbed file with large header', async () => {
   const filehandle = new LocalFile('test/data/clinvarCnv.bb')
   const ti = new BigBed({ filehandle })
-  const spy = jest.spyOn(filehandle, 'read')
+  const spy = vi.spyOn(filehandle, 'read')
   const header = await ti.getHeader()
   expect(spy.mock.calls.length).toBeLessThanOrEqual(3)
   expect(header).toBeTruthy()
