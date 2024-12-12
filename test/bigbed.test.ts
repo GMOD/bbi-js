@@ -1,6 +1,6 @@
 import { vi, expect, test } from 'vitest'
 import BED from '@gmod/bed'
-import { LocalFile } from 'generic-filehandle'
+import { LocalFile } from 'generic-filehandle2'
 
 import { BigBed } from '../src/'
 

@@ -1,5 +1,4 @@
-import { Buffer } from 'buffer'
-import { LocalFile, RemoteFile, GenericFilehandle } from 'generic-filehandle'
+import { LocalFile, RemoteFile, GenericFilehandle } from 'generic-filehandle2'
 import { firstValueFrom, Observable } from 'rxjs'
 import { toArray } from 'rxjs/operators'
 import { BlockView } from './block-view'
@@ -7,7 +6,7 @@ import { BlockView } from './block-view'
 const BIG_WIG_MAGIC = -2003829722
 const BIG_BED_MAGIC = -2021002517
 
-interface ZoomLevel {
+export interface ZoomLevel {
   reductionLevel: number
   reserved: number
   dataOffset: number
@@ -27,7 +26,7 @@ export interface Feature {
   uniqueId?: string // for bigbed contains uniqueId calculated from file offset
   field?: number // used in bigbed searching
 }
-interface Statistics {
+export interface Statistics {
   scoreSum: number
   basesCovered: number
   scoreSumSquares: number
@@ -35,7 +34,7 @@ interface Statistics {
   scoreMax: number
 }
 
-interface RefInfo {
+export interface RefInfo {
   name: string
   id: number
   length: number
@@ -57,7 +56,6 @@ export interface MainHeader {
   uncompressBufSize: number
   chromTreeOffset: number
   extHeaderOffset: number
-  isBigEndian: boolean
   fileType: string
 }
 export interface Header extends MainHeader {
@@ -69,6 +67,11 @@ export interface RequestOptions {
   signal?: AbortSignal
   headers?: Record<string, string>
   [key: string]: unknown
+}
+
+export interface RequestOptions2 extends RequestOptions {
+  scale?: number
+  basesPerSpan?: number
 }
 
 export abstract class BBI {
@@ -89,8 +92,7 @@ export abstract class BBI {
   }
 
   /*
-   * @param filehandle - a filehandle from generic-filehandle or implementing
-   * something similar to the node10 fs.promises API
+   * @param filehandle - a filehandle from generic-filehandle2
    *
    * @param path - a Local file path as a string
    *
@@ -121,58 +123,57 @@ export abstract class BBI {
   private async _getHeader(opts?: RequestOptions) {
     const header = await this._getMainHeader(opts)
     const chroms = await this._readChromTree(header, opts)
-    return { ...header, ...chroms }
+    return {
+      ...header,
+      ...chroms,
+    }
   }
 
   private async _getMainHeader(
     opts?: RequestOptions,
     requestSize = 2000,
   ): Promise<MainHeader> {
-    const le = true
-    const { buffer } = await this.bbi.read(
-      Buffer.alloc(requestSize),
-      0,
-      requestSize,
-      0,
-      opts,
-    )
-    const isBigEndian = this._isBigEndian(buffer)
-    const b = buffer
+    const b = await this.bbi.read(requestSize, 0, opts)
     const dataView = new DataView(b.buffer, b.byteOffset, b.length)
+
+    const r1 = dataView.getInt32(0, true)
+    if (r1 !== BIG_WIG_MAGIC && r1 !== BIG_BED_MAGIC) {
+      throw new Error('not a BigWig/BigBed file')
+    }
     let offset = 0
-    const magic = dataView.getInt32(offset, le)
+    const magic = dataView.getInt32(offset, true)
     offset += 4
-    const version = dataView.getUint16(offset, le)
+    const version = dataView.getUint16(offset, true)
     offset += 2
-    const numZoomLevels = dataView.getUint16(offset, le)
+    const numZoomLevels = dataView.getUint16(offset, true)
     offset += 2
-    const chromTreeOffset = Number(dataView.getBigUint64(offset, le))
+    const chromTreeOffset = Number(dataView.getBigUint64(offset, true))
     offset += 8
-    const unzoomedDataOffset = Number(dataView.getBigUint64(offset, le))
+    const unzoomedDataOffset = Number(dataView.getBigUint64(offset, true))
     offset += 8
-    const unzoomedIndexOffset = Number(dataView.getBigUint64(offset, le))
+    const unzoomedIndexOffset = Number(dataView.getBigUint64(offset, true))
     offset += 8
-    const fieldCount = dataView.getUint16(offset, le)
+    const fieldCount = dataView.getUint16(offset, true)
     offset += 2
-    const definedFieldCount = dataView.getUint16(offset, le)
+    const definedFieldCount = dataView.getUint16(offset, true)
     offset += 2
-    const asOffset = Number(dataView.getBigUint64(offset, le))
+    const asOffset = Number(dataView.getBigUint64(offset, true))
     offset += 8
-    const totalSummaryOffset = Number(dataView.getBigUint64(offset, le))
+    const totalSummaryOffset = Number(dataView.getBigUint64(offset, true))
     offset += 8
-    const uncompressBufSize = dataView.getUint32(offset, le)
+    const uncompressBufSize = dataView.getUint32(offset, true)
     offset += 4
-    const extHeaderOffset = Number(dataView.getBigUint64(offset, le))
+    const extHeaderOffset = Number(dataView.getBigUint64(offset, true))
     offset += 8
     const zoomLevels = [] as ZoomLevel[]
     for (let i = 0; i < numZoomLevels; i++) {
-      const reductionLevel = dataView.getUint32(offset, le)
+      const reductionLevel = dataView.getUint32(offset, true)
       offset += 4
-      const reserved = dataView.getUint32(offset, le)
+      const reserved = dataView.getUint32(offset, true)
       offset += 4
-      const dataOffset = Number(dataView.getBigUint64(offset, le))
+      const dataOffset = Number(dataView.getBigUint64(offset, true))
       offset += 8
-      const indexOffset = Number(dataView.getBigUint64(offset, le))
+      const indexOffset = Number(dataView.getBigUint64(offset, true))
       offset += 8
       zoomLevels.push({ reductionLevel, reserved, dataOffset, indexOffset })
     }
@@ -187,18 +188,18 @@ export abstract class BBI {
 
     let totalSummary: Statistics
     if (totalSummaryOffset) {
-      const b = buffer.subarray(Number(totalSummaryOffset))
+      const b2 = b.subarray(Number(totalSummaryOffset))
       let offset = 0
-      const dataView = new DataView(b.buffer, b.byteOffset, b.length)
-      const basesCovered = Number(dataView.getBigUint64(offset, le))
+      const dataView = new DataView(b2.buffer, b2.byteOffset, b2.length)
+      const basesCovered = Number(dataView.getBigUint64(offset, true))
       offset += 8
-      const scoreMin = dataView.getFloat64(offset, le)
+      const scoreMin = dataView.getFloat64(offset, true)
       offset += 8
-      const scoreMax = dataView.getFloat64(offset, le)
+      const scoreMax = dataView.getFloat64(offset, true)
       offset += 8
-      const scoreSum = dataView.getFloat64(offset, le)
+      const scoreSum = dataView.getFloat64(offset, true)
       offset += 8
-      const scoreSumSquares = dataView.getFloat64(offset, le)
+      const scoreSumSquares = dataView.getFloat64(offset, true)
       offset += 8
 
       totalSummary = {
@@ -211,6 +212,7 @@ export abstract class BBI {
     } else {
       throw new Error('no stats')
     }
+    const decoder = new TextDecoder('utf8')
 
     return {
       zoomLevels,
@@ -228,36 +230,17 @@ export abstract class BBI {
       unzoomedIndexOffset,
       fileType,
       version,
-      isBigEndian,
       autoSql: asOffset
-        ? buffer.subarray(asOffset, buffer.indexOf(0, asOffset)).toString()
+        ? decoder.decode(b.subarray(asOffset, b.indexOf(0, asOffset)))
         : '',
     }
   }
 
-  private _isBigEndian(buffer: Buffer) {
-    let ret = buffer.readInt32LE(0)
-    if (ret === BIG_WIG_MAGIC || ret === BIG_BED_MAGIC) {
-      return false
-    }
-    ret = buffer.readInt32BE(0)
-    if (ret === BIG_WIG_MAGIC || ret === BIG_BED_MAGIC) {
-      return true
-    }
-    throw new Error('not a BigWig/BigBed file')
-  }
-
-  // todo: add progress if long running
   private async _readChromTree(
     header: MainHeader,
     opts?: { signal?: AbortSignal },
   ) {
-    const isBE = header.isBigEndian
-    const le = !isBE
-    const refsByNumber: Record<
-      number,
-      { name: string; id: number; length: number }
-    > = []
+    const refsByNumber: Record<number, RefInfo> = []
     const refsByName: Record<string, number> = {}
 
     let unzoomedDataOffset = header.unzoomedDataOffset
@@ -266,60 +249,56 @@ export abstract class BBI {
       unzoomedDataOffset += 1
     }
     const off = unzoomedDataOffset - chromTreeOffset
-    const { buffer } = await this.bbi.read(
-      Buffer.alloc(off),
-      0,
-      off,
-      Number(chromTreeOffset),
-      opts,
-    )
+    const b = await this.bbi.read(off, Number(chromTreeOffset), opts)
 
-    const b = buffer
     const dataView = new DataView(b.buffer, b.byteOffset, b.length)
     let offset = 0
-    //    const magic = dataView.getUint32(offset, le)
+    //    const magic = dataView.getUint32(offset, true)
     offset += 4
-    //   const blockSize = dataView.getUint32(offset, le)
+    //   const blockSize = dataView.getUint32(offset, true)
     offset += 4
-    const keySize = dataView.getUint32(offset, le)
+    const keySize = dataView.getUint32(offset, true)
     offset += 4
-    //  const valSize = dataView.getUint32(offset, le)
+    //  const valSize = dataView.getUint32(offset, true)
     offset += 4
-    // const itemCount = dataView.getBigUint64(offset, le)
+    // const itemCount = dataView.getBigUint64(offset, true)
     offset += 8
 
     const rootNodeOffset = 32
+    const decoder = new TextDecoder('utf8')
     const bptReadNode = async (currentOffset: number) => {
       let offset = currentOffset
-      if (offset >= buffer.length) {
+      if (offset >= b.length) {
         throw new Error('reading beyond end of buffer')
       }
       const isLeafNode = dataView.getUint8(offset)
       offset += 2 //skip 1
-      const cnt = dataView.getUint16(offset, le)
+      const cnt = dataView.getUint16(offset, true)
       offset += 2
       if (isLeafNode) {
         for (let n = 0; n < cnt; n++) {
-          const key = buffer
-            .subarray(offset, offset + keySize)
-            .toString()
+          const key = decoder
+            .decode(b.subarray(offset, offset + keySize))
             .replaceAll('\0', '')
           offset += keySize
-          const refId = dataView.getUint32(offset, le)
+          const refId = dataView.getUint32(offset, true)
           offset += 4
-          const refSize = dataView.getUint32(offset, le)
+          const refSize = dataView.getUint32(offset, true)
           offset += 4
 
-          const refRec = { name: key, id: refId, length: refSize }
           refsByName[this.renameRefSeqs(key)] = refId
-          refsByNumber[refId] = refRec
+          refsByNumber[refId] = {
+            name: key,
+            id: refId,
+            length: refSize,
+          }
         }
       } else {
         // parse index node
         const nextNodes = []
         for (let n = 0; n < cnt; n++) {
           offset += keySize
-          const childOffset = Number(dataView.getBigUint64(offset, le))
+          const childOffset = Number(dataView.getBigUint64(offset, true))
           offset += 8
           nextNodes.push(
             bptReadNode(Number(childOffset) - Number(chromTreeOffset)),
@@ -340,18 +319,12 @@ export abstract class BBI {
    * @param abortSignal - a signal to optionally abort this operation
    */
   protected async getUnzoomedView(opts?: RequestOptions) {
-    const {
-      unzoomedIndexOffset,
-      refsByName,
-      uncompressBufSize,
-      isBigEndian,
-      fileType,
-    } = await this.getHeader(opts)
+    const { unzoomedIndexOffset, refsByName, uncompressBufSize, fileType } =
+      await this.getHeader(opts)
     return new BlockView(
       this.bbi,
       refsByName,
       unzoomedIndexOffset,
-      isBigEndian,
       uncompressBufSize > 0,
       fileType,
     )
@@ -369,15 +342,19 @@ export abstract class BBI {
    * Gets features from a BigWig file
    *
    * @param refName - The chromosome name
+   *
    * @param start - The start of a region
+   *
    * @param end - The end of a region
-   * @param opts - An object containing basesPerSpan (e.g. pixels per basepair) or scale used to infer the zoomLevel to use
+   *
+   * @param opts - An object containing basesPerSpan (e.g. pixels per basepair)
+   * or scale used to infer the zoomLevel to use
    */
   public async getFeatureStream(
     refName: string,
     start: number,
     end: number,
-    opts?: RequestOptions & { scale?: number; basesPerSpan?: number },
+    opts?: RequestOptions2,
   ) {
     await this.getHeader(opts)
     const chrName = this.renameRefSeqs(refName)
@@ -405,7 +382,7 @@ export abstract class BBI {
     refName: string,
     start: number,
     end: number,
-    opts?: RequestOptions & { scale?: number; basesPerSpan?: number },
+    opts?: RequestOptions2,
   ) {
     const ob = await this.getFeatureStream(refName, start, end, opts)
 

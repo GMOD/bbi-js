@@ -1,7 +1,6 @@
-import { Buffer } from 'buffer'
 import { Observer } from 'rxjs'
 import AbortablePromiseCache from '@gmod/abortable-promise-cache'
-import { GenericFilehandle } from 'generic-filehandle'
+import { GenericFilehandle } from 'generic-filehandle2'
 import QuickLRU from 'quick-lru'
 
 // locals
@@ -42,18 +41,15 @@ function coordFilter(s1: number, e1: number, s2: number, e2: number): boolean {
  */
 
 export class BlockView {
-  private cirTreePromise?: Promise<{ bytesRead: number; buffer: Buffer }>
+  private cirTreePromise?: Promise<Uint8Array>
 
-  private featureCache = new AbortablePromiseCache<ReadData, Buffer>({
+  private featureCache = new AbortablePromiseCache<ReadData, Uint8Array>({
     cache: new QuickLRU({ maxSize: 1000 }),
 
     fill: async (requestData, signal) => {
-      const len = requestData.length
-      const off = requestData.offset
-      const { buffer } = await this.bbi.read(Buffer.alloc(len), 0, len, off, {
+      return this.bbi.read(requestData.length, requestData.offset, {
         signal,
       })
-      return buffer
     },
   })
 
@@ -61,7 +57,6 @@ export class BlockView {
     private bbi: GenericFilehandle,
     private refsByName: any,
     private cirTreeOffset: number,
-    private isBigEndian: boolean,
     private isCompressed: boolean,
     private blockType: string,
   ) {
@@ -78,31 +73,23 @@ export class BlockView {
     opts?: Options,
   ) {
     try {
-      const { refsByName, bbi, cirTreeOffset, isBigEndian } = this
+      const { refsByName, bbi, cirTreeOffset } = this
       const chrId = refsByName[chrName]
       if (chrId === undefined) {
         observer.complete()
       }
       const request = { chrId, start, end }
       if (!this.cirTreePromise) {
-        this.cirTreePromise = bbi.read(
-          Buffer.alloc(48),
-          0,
-          48,
-          cirTreeOffset,
-          opts,
-        )
+        this.cirTreePromise = bbi.read(48, cirTreeOffset, opts)
       }
-      const { buffer } = await this.cirTreePromise
-      const cirBlockSize = isBigEndian
-        ? buffer.readUInt32BE(4)
-        : buffer.readUInt32LE(4)
+      const buffer = await this.cirTreePromise
+      const dataView = new DataView(buffer.buffer)
+      const cirBlockSize = dataView.getUint32(4, true)
       let blocksToFetch: any[] = []
       let outstanding = 0
-      const le = true
 
       const cirFobRecur2 = (
-        cirBlockData: Buffer,
+        cirBlockData: Uint8Array,
         offset2: number,
         level: number,
       ) => {
@@ -115,22 +102,22 @@ export class BlockView {
 
           const isLeaf = dataView.getUint8(offset)
           offset += 2 // 1 skip
-          const cnt = dataView.getUint16(offset, le)
+          const cnt = dataView.getUint16(offset, true)
           offset += 2
           if (isLeaf === 1) {
             const blocksToFetch2 = []
             for (let i = 0; i < cnt; i++) {
-              const startChrom = dataView.getUint32(offset, le)
+              const startChrom = dataView.getUint32(offset, true)
               offset += 4
-              const startBase = dataView.getUint32(offset, le)
+              const startBase = dataView.getUint32(offset, true)
               offset += 4
-              const endChrom = dataView.getUint32(offset, le)
+              const endChrom = dataView.getUint32(offset, true)
               offset += 4
-              const endBase = dataView.getUint32(offset, le)
+              const endBase = dataView.getUint32(offset, true)
               offset += 4
-              const blockOffset = Number(dataView.getBigUint64(offset, le))
+              const blockOffset = Number(dataView.getBigUint64(offset, true))
               offset += 8
-              const blockSize = Number(dataView.getBigUint64(offset, le))
+              const blockSize = Number(dataView.getBigUint64(offset, true))
               offset += 8
               blocksToFetch2.push({
                 startChrom,
@@ -153,15 +140,15 @@ export class BlockView {
           } else if (isLeaf === 0) {
             const recurOffsets = []
             for (let i = 0; i < cnt; i++) {
-              const startChrom = dataView.getUint32(offset, le)
+              const startChrom = dataView.getUint32(offset, true)
               offset += 4
-              const startBase = dataView.getUint32(offset, le)
+              const startBase = dataView.getUint32(offset, true)
               offset += 4
-              const endChrom = dataView.getUint32(offset, le)
+              const endChrom = dataView.getUint32(offset, true)
               offset += 4
-              const endBase = dataView.getUint32(offset, le)
+              const endBase = dataView.getUint32(offset, true)
               offset += 4
-              const blockOffset = Number(dataView.getBigUint64(offset, le))
+              const blockOffset = Number(dataView.getBigUint64(offset, true))
               offset += 8
               recurOffsets.push({
                 startChrom,
@@ -205,7 +192,7 @@ export class BlockView {
         try {
           const length = fr.max - fr.min
           const offset = fr.min
-          const resultBuffer: Buffer = await this.featureCache.get(
+          const resultBuffer = await this.featureCache.get(
             `${length}_${offset}`,
             { length, offset },
             opts?.signal,
@@ -264,7 +251,7 @@ export class BlockView {
   }
 
   private parseSummaryBlock(
-    b: Buffer,
+    b: Uint8Array,
     startOffset: number,
     request?: CoordRequest,
   ) {
@@ -314,23 +301,22 @@ export class BlockView {
   }
 
   private parseBigBedBlock(
-    data: Buffer,
+    data: Uint8Array,
     startOffset: number,
     offset: number,
     request?: CoordRequest,
   ) {
     const items = [] as Feature[]
     let currOffset = startOffset
-    const le = true
     const b = data
     const dataView = new DataView(b.buffer, b.byteOffset, b.length)
     while (currOffset < data.byteLength) {
       const c2 = currOffset
-      const chromId = dataView.getUint32(currOffset, le)
+      const chromId = dataView.getUint32(currOffset, true)
       currOffset += 4
-      const start = dataView.getInt32(currOffset, le)
+      const start = dataView.getInt32(currOffset, true)
       currOffset += 4
-      const end = dataView.getInt32(currOffset, le)
+      const end = dataView.getInt32(currOffset, true)
       currOffset += 4
       let i = currOffset
       for (; i < data.length; i++) {
@@ -358,7 +344,7 @@ export class BlockView {
   }
 
   private parseBigWigBlock(
-    buffer: Buffer,
+    buffer: Uint8Array,
     startOffset: number,
     req?: CoordRequest,
   ) {
@@ -450,32 +436,28 @@ export class BlockView {
           )
           for (const block of blockGroup.blocks) {
             checkAbortSignal(signal)
-            let blockOffset = Number(block.offset) - Number(blockGroup.offset)
-            let resultData = data
+            let resultData = data.subarray(
+              Number(block.offset) - Number(blockGroup.offset),
+            )
             if (isCompressed) {
-              resultData = unzip(data.subarray(blockOffset))
-              blockOffset = 0
+              resultData = unzip(resultData)
             }
             checkAbortSignal(signal)
 
             switch (blockType) {
               case 'summary': {
-                observer.next(
-                  this.parseSummaryBlock(resultData, blockOffset, request),
-                )
+                observer.next(this.parseSummaryBlock(resultData, 0, request))
                 break
               }
               case 'bigwig': {
-                observer.next(
-                  this.parseBigWigBlock(resultData, blockOffset, request),
-                )
+                observer.next(this.parseBigWigBlock(resultData, 0, request))
                 break
               }
               case 'bigbed': {
                 observer.next(
                   this.parseBigBedBlock(
                     resultData,
-                    blockOffset,
+                    0,
                     Number(block.offset) * (1 << 8),
                     request,
                   ),

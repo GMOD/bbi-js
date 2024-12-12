@@ -24,7 +24,6 @@ string  spID;		"SWISS-PROT protein Accession number"
   "extHeaderOffset": 923,
   "fieldCount": 11,
   "fileType": "bigbed",
-  "isBigEndian": false,
   "magic": -2021002517,
   "numZoomLevels": 7,
   "refsByName": {
@@ -105,7 +104,6 @@ exports[`loads small bigwig header 1`] = `
   "extHeaderOffset": 0,
   "fieldCount": 0,
   "fileType": "bigwig",
-  "isBigEndian": false,
   "magic": -2003829722,
   "numZoomLevels": 7,
   "refsByName": {
@@ -201,7 +199,6 @@ string  spID;		"SWISS-PROT protein Accession number"
   "extHeaderOffset": 923,
   "fieldCount": 11,
   "fileType": "bigbed",
-  "isBigEndian": false,
   "magic": -2021002517,
   "numZoomLevels": 7,
   "refsByName": {
