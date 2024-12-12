@@ -21,13 +21,13 @@ const file = new BigWig({
 })()
 ```
 
-If using remotely, you can use it in combination with generic-filehandle or your
-own implementation of something like generic-filehandle
-https://github.com/GMOD/generic-filehandle/
+If using remotely, you can use it in combination with generic-filehandle2 or
+your own implementation of something like generic-filehandle2
+https://github.com/GMOD/generic-filehandle2/
 
 ```typescript
 const { BigWig } = require('@gmod/bbi')
-const { RemoteFile } = require('generic-filehandle')
+const { RemoteFile } = require('generic-filehandle2')
 
 // if running in the browser or newer versions of node.js, RemoteFile will use
 // the the global fetch
@@ -57,7 +57,7 @@ Accepts an object containing either
 - url - path to a url
 - filehandle - a filehandle instance that you can implement as a custom class
   yourself. path and url are based on
-  https://www.npmjs.com/package/generic-filehandle but by implementing a class
+  https://www.npmjs.com/package/generic-filehandle2 but by implementing a class
   containing the Filehandle interface specified therein, you can pass it to this
   module
 
