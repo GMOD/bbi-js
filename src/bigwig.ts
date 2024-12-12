@@ -11,7 +11,7 @@ export class BigWig extends BBI {
    * or scale used to infer the zoomLevel to use
    */
   protected async getView(scale: number, opts: RequestOptions) {
-    const { zoomLevels, refsByName, isBigEndian, uncompressBufSize } =
+    const { zoomLevels, refsByName, uncompressBufSize } =
       await this.getHeader(opts)
     const basesPerPx = 1 / scale
     const maxLevel = zoomLevels.length - 1
@@ -24,7 +24,6 @@ export class BigWig extends BBI {
           this.bbi,
           refsByName,
           zh.indexOffset,
-          isBigEndian,
           uncompressBufSize > 0,
           'summary',
         )

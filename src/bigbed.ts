@@ -1,4 +1,3 @@
-import { Buffer } from 'buffer'
 import { Observable, merge, firstValueFrom } from 'rxjs'
 import { map, reduce } from 'rxjs/operators'
 import AbortablePromiseCache from '@gmod/abortable-promise-cache'
@@ -52,23 +51,16 @@ export class BigBed extends BBI {
    * multiple extraIndexes in a bigbed, see bedToBigBed documentation
    */
   private async _readIndices(opts: RequestOptions) {
-    const { extHeaderOffset, isBigEndian } = await this.getHeader(opts)
-    const { buffer: data } = await this.bbi.read(
-      Buffer.alloc(64),
-      0,
-      64,
-      Number(extHeaderOffset),
-    )
-    const le = !isBigEndian
+    const { extHeaderOffset } = await this.getHeader(opts)
+    const b = await this.bbi.read(64, Number(extHeaderOffset))
 
-    const b = data
     const dataView = new DataView(b.buffer, b.byteOffset, b.length)
     let offset = 0
-    // const _size = dataView.getUint16(offset, le)
+    // const _size = dataView.getUint16(offset, true)
     offset += 2
-    const count = dataView.getUint16(offset, le)
+    const count = dataView.getUint16(offset, true)
     offset += 2
-    const dataOffset = Number(dataView.getBigUint64(offset, le))
+    const dataOffset = Number(dataView.getBigUint64(offset, true))
     offset += 8
 
     // no extra index is defined if count==0
@@ -78,12 +70,7 @@ export class BigBed extends BBI {
 
     const blocklen = 20
     const len = blocklen * count
-    const { buffer } = await this.bbi.read(
-      Buffer.alloc(len),
-      0,
-      len,
-      Number(dataOffset),
-    )
+    const buffer = await this.bbi.read(len, Number(dataOffset))
 
     const indices = [] as Index[]
 
@@ -91,13 +78,13 @@ export class BigBed extends BBI {
       const b = buffer.subarray(i * blocklen)
       const dataView = new DataView(b.buffer, b.byteOffset, b.length)
       let offset = 0
-      const type = dataView.getInt16(offset, le)
+      const type = dataView.getInt16(offset, true)
       offset += 2
-      const fieldcount = dataView.getInt16(offset, le)
+      const fieldcount = dataView.getInt16(offset, true)
       offset += 2
-      const dataOffset = Number(dataView.getBigUint64(offset, le))
+      const dataOffset = Number(dataView.getBigUint64(offset, true))
       offset += 8 + 4 //4 skip
-      const field = dataView.getInt16(offset, le)
+      const field = dataView.getInt16(offset, true)
       indices.push({ type, fieldcount, offset: Number(dataOffset), field })
     }
     return indices
@@ -108,72 +95,62 @@ export class BigBed extends BBI {
    * bigbed data to look for the actual feature data
    *
    * @param name - the name to search for
+   *
    * @param opts - a SearchOptions argument with optional signal
+   *
    * @return a Promise for an array of bigbed block Loc entries
    */
   private async searchExtraIndexBlocks(
     name: string,
     opts: RequestOptions = {},
   ): Promise<Loc[]> {
-    const { isBigEndian } = await this.getHeader(opts)
     const indices = await this.readIndices(opts)
     if (indices.length === 0) {
       return []
     }
+    const decoder = new TextDecoder('utf8')
     const locs = indices.map(async (index): Promise<Loc | undefined> => {
       const { offset: offset2, field } = index
-      const { buffer: data } = await this.bbi.read(
-        Buffer.alloc(32),
-        0,
-        32,
-        offset2,
-        opts,
-      )
-      const le = !isBigEndian
-      const b = data
+      const b = await this.bbi.read(32, offset2, opts)
 
       const dataView = new DataView(b.buffer, b.byteOffset, b.length)
       let offset = 0
-      // const _magic = dataView.getInt32(offset, le)
+      // const _magic = dataView.getInt32(offset, true)
       offset += 4
-      const blockSize = dataView.getInt32(offset, le)
+      const blockSize = dataView.getInt32(offset, true)
       offset += 4
-      const keySize = dataView.getInt32(offset, le)
+      const keySize = dataView.getInt32(offset, true)
       offset += 4
-      const valSize = dataView.getInt32(offset, le)
+      const valSize = dataView.getInt32(offset, true)
       offset += 4
-      // const _itemCount = Number(dataView.getBigUint64(offset, le))
+      // const _itemCount = Number(dataView.getBigUint64(offset, true))
       offset += 8
 
       const bptReadNode = async (nodeOffset: number) => {
         const val = Number(nodeOffset)
         const len = 4 + blockSize * (keySize + valSize)
-        const { buffer } = await this.bbi.read(
-          Buffer.alloc(len),
-          0,
-          len,
-          val,
-          opts,
-        )
+        const buffer = await this.bbi.read(len, val, opts)
         const b = buffer
         const dataView = new DataView(b.buffer, b.byteOffset, b.length)
         let offset = 0
         const nodeType = dataView.getInt8(offset)
         offset += 2 //skip 1
-        const cnt = dataView.getInt16(offset, le)
+        const cnt = dataView.getInt16(offset, true)
         offset += 2
         const keys = []
         if (nodeType === 0) {
           const leafkeys = []
           for (let i = 0; i < cnt; i++) {
-            const key = b
-              .subarray(offset, offset + keySize)
-              .toString()
+            const key = decoder
+              .decode(b.subarray(offset, offset + keySize))
               .replaceAll('\0', '')
             offset += keySize
-            const dataOffset = Number(dataView.getBigUint64(offset, le))
+            const dataOffset = Number(dataView.getBigUint64(offset, true))
             offset += 8
-            leafkeys.push({ key, offset: dataOffset })
+            leafkeys.push({
+              key,
+              offset: dataOffset,
+            })
           }
 
           let lastOffset = 0
@@ -186,18 +163,22 @@ export class BigBed extends BBI {
           return bptReadNode(lastOffset)
         } else if (nodeType === 1) {
           for (let i = 0; i < cnt; i++) {
-            const key = b
-              .subarray(offset, offset + keySize)
-              .toString()
+            const key = decoder
+              .decode(b.subarray(offset, offset + keySize))
               .replaceAll('\0', '')
             offset += keySize
-            const dataOffset = Number(dataView.getBigUint64(offset, le))
+            const dataOffset = Number(dataView.getBigUint64(offset, true))
             offset += 8
-            const length = dataView.getUint32(offset, le)
+            const length = dataView.getUint32(offset, true)
             offset += 4
-            const reserved = dataView.getUint32(offset, le)
+            const reserved = dataView.getUint32(offset, true)
             offset += 4
-            keys.push({ key, offset: dataOffset, length, reserved })
+            keys.push({
+              key,
+              offset: dataOffset,
+              length,
+              reserved,
+            })
           }
 
           for (const n of keys) {
@@ -221,8 +202,10 @@ export class BigBed extends BBI {
    * the BigBed specification and the -extraIndex argument to bedToBigBed
    *
    * @param name - the name to search for
-   * @param opts - a SearchOptions argument with optional signal
-   * @return a Promise for an array of Feature
+   *
+   * @param opts - options object with optional AboutSignal
+   *
+   * @return array of Feature
    */
   public async searchExtraIndex(name: string, opts: RequestOptions = {}) {
     const blocks = await this.searchExtraIndexBlocks(name, opts)

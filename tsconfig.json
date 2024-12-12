@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "moduleResolution": "node",
-    "lib": ["es2021"],
+    "target": "es2021",
     "declaration": true,
     "skipLibCheck": true,
     "outDir": "dist",
