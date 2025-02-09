@@ -1,13 +1,13 @@
-import { Observer } from 'rxjs'
 import AbortablePromiseCache from '@gmod/abortable-promise-cache'
-import { GenericFilehandle } from 'generic-filehandle2'
 import QuickLRU from 'quick-lru'
 
-// locals
 import Range from './range'
 import { unzip } from './unzip'
-import { Feature } from './bbi'
-import { groupBlocks, checkAbortSignal } from './util'
+import { checkAbortSignal, groupBlocks } from './util'
+
+import type { Feature } from './types'
+import type { GenericFilehandle } from 'generic-filehandle2'
+import type { Observer } from 'rxjs'
 
 const decoder =
   typeof TextDecoder !== 'undefined' ? new TextDecoder('utf8') : undefined
@@ -37,7 +37,6 @@ function coordFilter(s1: number, e1: number, s2: number, e2: number): boolean {
  *
  * Adapted by Robert Buels and Colin Diesh from bigwig.js in the Dalliance
  * Genome Explorer by Thomas Down.
- * @constructs
  */
 
 export class BlockView {
@@ -46,11 +45,8 @@ export class BlockView {
   private featureCache = new AbortablePromiseCache<ReadData, Uint8Array>({
     cache: new QuickLRU({ maxSize: 1000 }),
 
-    fill: async (requestData, signal) => {
-      return this.bbi.read(requestData.length, requestData.offset, {
-        signal,
-      })
-    },
+    fill: async ({ length, offset }, signal) =>
+      this.bbi.read(length, offset, { signal }),
   })
 
   public constructor(
@@ -73,14 +69,13 @@ export class BlockView {
     opts?: Options,
   ) {
     try {
-      const { refsByName, bbi, cirTreeOffset } = this
-      const chrId = refsByName[chrName]
+      const chrId = this.refsByName[chrName]
       if (chrId === undefined) {
         observer.complete()
       }
       const request = { chrId, start, end }
       if (!this.cirTreePromise) {
-        this.cirTreePromise = bbi.read(48, cirTreeOffset, opts)
+        this.cirTreePromise = this.bbi.read(48, this.cirTreeOffset, opts)
       }
       const buffer = await this.cirTreePromise
       const dataView = new DataView(buffer.buffer)
@@ -243,7 +238,7 @@ export class BlockView {
         }
       }
 
-      cirFobRecur([Number(cirTreeOffset) + 48], 1)
+      cirFobRecur([Number(this.cirTreeOffset) + 48], 1)
       return
     } catch (e) {
       observer.error(e)

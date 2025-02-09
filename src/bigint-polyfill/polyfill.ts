@@ -1,3 +1,6 @@
+// from https://github.com/yume-chan/ya-webadb/blob/main/libraries/dataview-bigint-polyfill
+// license:MIT
+// needed for browsers including safari 14
 import { getBigInt64, getBigUint64 } from './pure'
 
 if (!('getBigInt64' in DataView)) {

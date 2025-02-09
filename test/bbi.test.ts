@@ -1,5 +1,6 @@
-import { expect, test } from 'vitest'
 import { LocalFile } from 'generic-filehandle2'
+import { expect, test } from 'vitest'
+
 import { BigBed, BigWig } from '../src/index'
 
 test('loads small bigwig header', async () => {

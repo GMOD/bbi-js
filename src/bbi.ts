@@ -1,83 +1,28 @@
-import { LocalFile, RemoteFile, GenericFilehandle } from 'generic-filehandle2'
-import { firstValueFrom, Observable } from 'rxjs'
+import { LocalFile, RemoteFile } from 'generic-filehandle2'
+import { Observable, firstValueFrom } from 'rxjs'
 import { toArray } from 'rxjs/operators'
+
 import { BlockView } from './block-view'
+
+import type {
+  BigWigHeader,
+  BigWigHeaderWithRefNames,
+  Feature,
+  RefInfo,
+  RequestOptions2,
+  RequestOptions,
+  Statistics,
+  ZoomLevel,
+} from './types'
+import type { GenericFilehandle } from 'generic-filehandle2'
 
 const BIG_WIG_MAGIC = -2003829722
 const BIG_BED_MAGIC = -2021002517
 
-export interface ZoomLevel {
-  reductionLevel: number
-  reserved: number
-  dataOffset: number
-  indexOffset: number
-}
-
-export interface Feature {
-  offset?: number
-  chromId: number
-  start: number
-  end: number
-  score?: number
-  rest?: string // for bigbed line
-  minScore?: number // for summary line
-  maxScore?: number // for summary line
-  summary?: boolean // is summary line
-  uniqueId?: string // for bigbed contains uniqueId calculated from file offset
-  field?: number // used in bigbed searching
-}
-export interface Statistics {
-  scoreSum: number
-  basesCovered: number
-  scoreSumSquares: number
-  scoreMin: number
-  scoreMax: number
-}
-
-export interface RefInfo {
-  name: string
-  id: number
-  length: number
-}
-
-export interface MainHeader {
-  magic: number
-  version: number
-  autoSql: string
-  totalSummary: Statistics
-  asOffset: number
-  zoomLevels: ZoomLevel[]
-  fieldCount: number
-  numZoomLevels: number
-  unzoomedIndexOffset: number
-  totalSummaryOffset: number
-  unzoomedDataOffset: number
-  definedFieldCount: number
-  uncompressBufSize: number
-  chromTreeOffset: number
-  extHeaderOffset: number
-  fileType: string
-}
-export interface Header extends MainHeader {
-  refsByName: Record<string, number>
-  refsByNumber: Record<number, RefInfo>
-}
-
-export interface RequestOptions {
-  signal?: AbortSignal
-  headers?: Record<string, string>
-  [key: string]: unknown
-}
-
-export interface RequestOptions2 extends RequestOptions {
-  scale?: number
-  basesPerSpan?: number
-}
-
 export abstract class BBI {
   protected bbi: GenericFilehandle
 
-  private headerP?: Promise<Header>
+  private headerP?: Promise<BigWigHeaderWithRefNames>
 
   protected renameRefSeqs: (a: string) => string
 
@@ -132,7 +77,7 @@ export abstract class BBI {
   private async _getMainHeader(
     opts?: RequestOptions,
     requestSize = 2000,
-  ): Promise<MainHeader> {
+  ): Promise<BigWigHeader> {
     const b = await this.bbi.read(requestSize, 0, opts)
     const dataView = new DataView(b.buffer, b.byteOffset, b.length)
 
@@ -175,7 +120,12 @@ export abstract class BBI {
       offset += 8
       const indexOffset = Number(dataView.getBigUint64(offset, true))
       offset += 8
-      zoomLevels.push({ reductionLevel, reserved, dataOffset, indexOffset })
+      zoomLevels.push({
+        reductionLevel,
+        reserved,
+        dataOffset,
+        indexOffset,
+      })
     }
 
     const fileType = magic === BIG_BED_MAGIC ? 'bigbed' : 'bigwig'
@@ -237,7 +187,7 @@ export abstract class BBI {
   }
 
   private async _readChromTree(
-    header: MainHeader,
+    header: BigWigHeader,
     opts?: { signal?: AbortSignal },
   ) {
     const refsByNumber: Record<number, RefInfo> = []
@@ -253,14 +203,18 @@ export abstract class BBI {
 
     const dataView = new DataView(b.buffer, b.byteOffset, b.length)
     let offset = 0
+    // unused:
     //    const magic = dataView.getUint32(offset, true)
     offset += 4
+    // unused:
     //   const blockSize = dataView.getUint32(offset, true)
     offset += 4
     const keySize = dataView.getUint32(offset, true)
     offset += 4
+    // unused:
     //  const valSize = dataView.getUint32(offset, true)
     offset += 4
+    // unused:
     // const itemCount = dataView.getBigUint64(offset, true)
     offset += 8
 

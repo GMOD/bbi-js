@@ -1,5 +1,7 @@
 import { expect, test } from 'vitest'
+
 import { BigWig, Header } from '../src/'
+import { firstValueFrom, toArray } from 'rxjs'
 
 interface ExtendedHeader extends Header {
   iWasMemoized: boolean
@@ -115,7 +117,7 @@ test('matches bigWigToBedGraph', async () => {
     GK000001.2\t1000977\t1001000\t0`
       .split('\n')
       .map(s => s.split('\t'))
-      .map(([refName, start, end, score]) => ({
+      .map(([_refName, start, end, score]) => ({
         start: +start,
         end: +end,
         score: +score,
@@ -169,7 +171,7 @@ test('abort with getFeatureStream', async () => {
     signal: aborter.signal,
   })
   aborter.abort()
-  await expect(ob.toPromise()).rejects.toThrow(/aborted/)
+  await expect(firstValueFrom(ob.pipe(toArray()))).rejects.toThrow(/aborted/)
 })
 test('test uncompressed bw (-unc from wigToBigWig)', async () => {
   const ti = new BigWig({ path: 'test/data/uncompressed.bw' })

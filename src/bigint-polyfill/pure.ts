@@ -1,3 +1,7 @@
+// from https://github.com/yume-chan/ya-webadb/blob/main/libraries/dataview-bigint-polyfill
+// license:MIT
+// needed for browsers including safari 14
+
 const BigInt32 = BigInt(32)
 
 export function getBigInt64(

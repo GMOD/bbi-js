@@ -1,10 +1,11 @@
-import { Observable, merge, firstValueFrom } from 'rxjs'
-import { map, reduce } from 'rxjs/operators'
 import AbortablePromiseCache from '@gmod/abortable-promise-cache'
 import QuickLRU from 'quick-lru'
+import { Observable, firstValueFrom, merge } from 'rxjs'
+import { map, reduce } from 'rxjs/operators'
 
-// locals
-import { BBI, Feature, RequestOptions } from './bbi'
+import { BBI } from './bbi'
+
+import type { Feature, RequestOptions } from './types'
 
 interface Loc {
   key: string
