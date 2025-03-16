@@ -28,6 +28,7 @@ export class BigWig extends BBI {
           zh.indexOffset,
           uncompressBufSize > 0,
           'summary',
+          this.featureCache,
         )
       }
     }

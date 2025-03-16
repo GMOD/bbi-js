@@ -1,11 +1,7 @@
-import { parseBigBedBlock } from './parse-big-bed.block'
-import { parseBigWigBlock } from './parse-big-wig-block'
-import { parseSummaryBlock } from './parse-summary-block'
 import Range from './range'
-import { unzip } from './unzip'
-import { checkAbortSignal, groupBlocks } from './util'
-
-import type { CoordRequest, Feature } from './types'
+import { checkAbortSignal } from './util'
+import AbortablePromiseCache from '@gmod/abortable-promise-cache'
+import type { BlockToFetch, CoordRequest, Feature } from './types'
 import type { GenericFilehandle } from 'generic-filehandle2'
 import type { Observer } from 'rxjs'
 
@@ -13,11 +9,6 @@ interface Options {
   signal?: AbortSignal
   request?: CoordRequest
 }
-interface BlockToFetch {
-  offset: number
-  length: number
-}
-
 /**
  * View into a subset of the data in a BigWig file.
  *
@@ -34,6 +25,7 @@ export class BlockView {
     private cirTreeOffset: number,
     private isCompressed: boolean,
     private blockType: string,
+    private featureCache: AbortablePromiseCache<any, any>,
   ) {
     if (!(cirTreeOffset >= 0)) {
       throw new Error('invalid cirTreeOffset!')
@@ -172,8 +164,10 @@ export class BlockView {
               cirFobRecur2(resultBuffer, element - offset, level)
               outstanding -= 1
               if (outstanding === 0) {
-                this.readFeatures(observer, blocksToFetch, {
-                  ...opts,
+                this.readFeatures({
+                  observer,
+                  blocks: blocksToFetch,
+                  opts,
                   request,
                 }).catch((e: unknown) => {
                   observer.error(e)
@@ -197,7 +191,7 @@ export class BlockView {
               max: offset[0] + maxCirBlockSpan,
             },
           ])
-          for (let i = 1; i < offset.length; i += 1) {
+          for (let i = 1; i < offset.length; i++) {
             const blockSpan = new Range([
               {
                 min: offset[i],
@@ -220,48 +214,36 @@ export class BlockView {
     }
   }
 
-  public async readFeatures(
-    observer: Observer<Feature[]>,
-    blocks: BlockToFetch[],
-    opts: Options = {},
-  ) {
+  public async readFeatures({
+    observer,
+    blocks,
+    request,
+    opts = {},
+  }: {
+    request?: CoordRequest
+    observer: Observer<Feature[]>
+    blocks: BlockToFetch[]
+    opts?: Options
+  }) {
     try {
-      const { signal, request } = opts
+      const { signal } = opts
       checkAbortSignal(signal)
       await Promise.all(
-        groupBlocks(blocks).map(async blockGroup => {
-          const { length, offset } = blockGroup
-          const data = await this.bbi.read(length, offset, opts)
-          for (const block of blockGroup.blocks) {
-            const res = data.subarray(
-              Number(block.offset) - Number(blockGroup.offset),
-            )
-            const b = this.isCompressed ? unzip(res) : res
-
-            switch (this.blockType) {
-              case 'summary': {
-                observer.next(parseSummaryBlock(b, 0, request))
-                break
-              }
-              case 'bigwig': {
-                observer.next(parseBigWigBlock(b, 0, request))
-                break
-              }
-              case 'bigbed': {
-                observer.next(
-                  parseBigBedBlock(
-                    b,
-                    0,
-                    Number(block.offset) * (1 << 8),
-                    request,
-                  ),
-                )
-                break
-              }
-              default: {
-                console.warn(`Don't know what to do with ${this.blockType}`)
-              }
-            }
+        blocks.map(async block => {
+          console.log('cache test')
+          const res = await this.featureCache.get(
+            `${block.offset}_${block.length}`,
+            {
+              block,
+              isCompressed: this.isCompressed,
+              request,
+              opts,
+              blockType: this.blockType,
+            },
+            opts.signal,
+          )
+          if (res) {
+            observer.next(res)
           }
         }),
       )

@@ -71,3 +71,13 @@ export interface CoordRequest {
   start: number
   end: number
 }
+
+export interface BlockToFetch {
+  offset: number
+  length: number
+}
+
+export interface Options {
+  signal?: AbortSignal
+  request?: CoordRequest
+}

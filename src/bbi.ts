@@ -13,8 +13,16 @@ import type {
   RequestOptions,
   Statistics,
   ZoomLevel,
+  BlockToFetch,
+  CoordRequest,
 } from './types'
 import type { GenericFilehandle } from 'generic-filehandle2'
+import { unzip } from './unzip'
+import { parseSummaryBlock } from './parse-summary-block'
+import { parseBigWigBlock } from './parse-big-wig-block'
+import { parseBigBedBlock } from './parse-big-bed.block'
+import AbortablePromiseCache from '@gmod/abortable-promise-cache'
+import QuickLRU from 'quick-lru'
 
 const BIG_WIG_MAGIC = -2003829722
 const BIG_BED_MAGIC = -2021002517
@@ -25,6 +33,15 @@ export abstract class BBI {
   private headerP?: Promise<BigWigHeaderWithRefNames>
 
   protected renameRefSeqs: (a: string) => string
+
+  protected featureCache = new AbortablePromiseCache<any, any>({
+    cache: new QuickLRU({ maxSize: 1000 }),
+
+    fill: async b => {
+      console.log('cache miss')
+      return this.parseBlock(b)
+    },
+  })
 
   public getHeader(opts?: RequestOptions) {
     if (!this.headerP) {
@@ -281,6 +298,7 @@ export abstract class BBI {
       unzoomedIndexOffset,
       uncompressBufSize > 0,
       fileType,
+      this.featureCache,
     )
   }
 
@@ -339,8 +357,40 @@ export abstract class BBI {
     opts?: RequestOptions2,
   ) {
     const ob = await this.getFeatureStream(refName, start, end, opts)
-
     const ret = await firstValueFrom(ob.pipe(toArray()))
     return ret.flat()
+  }
+
+  async parseBlock({
+    block,
+    blockType,
+    request,
+    isCompressed,
+    opts = {},
+  }: {
+    block: BlockToFetch
+    blockType: string
+    request: CoordRequest
+    isCompressed: boolean
+    opts: RequestOptions
+  }) {
+    const { length, offset } = block
+    const res = await this.bbi.read(length, offset, opts)
+    const b = isCompressed ? unzip(res) : res
+
+    switch (blockType) {
+      case 'summary': {
+        return parseSummaryBlock(b, 0, request)
+      }
+      case 'bigwig': {
+        return parseBigWigBlock(b, 0, request)
+      }
+      case 'bigbed': {
+        return parseBigBedBlock(b, 0, Number(block.offset) * (1 << 8), request)
+      }
+      default: {
+        console.warn(`Don't know what to do with ${blockType}`)
+      }
+    }
   }
 }
