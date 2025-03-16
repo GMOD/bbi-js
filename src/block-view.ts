@@ -222,17 +222,18 @@ export class BlockView {
 
   public async readFeatures(
     observer: Observer<Feature[]>,
-    blocks: { offset: number; length: number }[],
+    blocks: BlockToFetch[],
     opts: Options = {},
   ) {
     try {
-      const { request } = opts
+      const { signal, request } = opts
+      checkAbortSignal(signal)
       await Promise.all(
         groupBlocks(blocks).map(async blockGroup => {
           const { length, offset } = blockGroup
           const data = await this.bbi.read(length, offset, opts)
           for (const block of blockGroup.blocks) {
-            let res = data.subarray(
+            const res = data.subarray(
               Number(block.offset) - Number(blockGroup.offset),
             )
             const b = this.isCompressed ? unzip(res) : res
