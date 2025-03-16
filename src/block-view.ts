@@ -195,11 +195,8 @@ export class BlockView {
         try {
           const length = range.max - range.min
           const offset = range.min
-          const resultBuffer = await this.featureCache.get(
-            `${length}_${offset}`,
-            { length, offset },
-            opts?.signal,
-          )
+          const resultBuffer = await this.bbi.read(length, offset, opts)
+
           for (const element of offsets) {
             if (range.contains(element)) {
               processRTreeNode(resultBuffer, element - offset, level)
@@ -430,7 +427,7 @@ export class BlockView {
   ) {
     try {
       const { blockType, isCompressed } = this
-      const { signal, request } = opts
+      const { request } = opts
       const blockGroupsToFetch = groupBlocks(blocks)
       await Promise.all(
         blockGroupsToFetch.map(async blockGroup => {
