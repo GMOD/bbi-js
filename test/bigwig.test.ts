@@ -1,7 +1,7 @@
+import { firstValueFrom, toArray } from 'rxjs'
 import { expect, test } from 'vitest'
 
 import { BigWig, Header } from '../src/'
-import { firstValueFrom, toArray } from 'rxjs'
 
 interface ExtendedHeader extends Header {
   iWasMemoized: boolean
