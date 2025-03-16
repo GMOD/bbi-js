@@ -1,6 +1,3 @@
-import AbortablePromiseCache from '@gmod/abortable-promise-cache'
-import QuickLRU from 'quick-lru'
-
 import Range from './range'
 import { unzip } from './unzip'
 import { checkAbortSignal, groupBlocks } from './util'
@@ -16,11 +13,6 @@ interface CoordRequest {
   chrId: number
   start: number
   end: number
-}
-
-interface ReadData {
-  offset: number
-  length: number
 }
 
 interface Options {
@@ -41,13 +33,6 @@ function coordFilter(s1: number, e1: number, s2: number, e2: number): boolean {
 
 export class BlockView {
   private cirTreePromise?: Promise<Uint8Array>
-
-  private featureCache = new AbortablePromiseCache<ReadData, Uint8Array>({
-    cache: new QuickLRU({ maxSize: 1000 }),
-
-    fill: async ({ length, offset }, signal) =>
-      this.bbi.read(length, offset, { signal }),
-  })
 
   public constructor(
     private bbi: GenericFilehandle,
@@ -187,11 +172,7 @@ export class BlockView {
         try {
           const length = fr.max - fr.min
           const offset = fr.min
-          const resultBuffer = await this.featureCache.get(
-            `${length}_${offset}`,
-            { length, offset },
-            opts?.signal,
-          )
+          const resultBuffer = await this.bbi.read(length, offset, opts)
           for (const element of off) {
             if (fr.contains(element)) {
               cirFobRecur2(resultBuffer, element - offset, level)
@@ -424,11 +405,7 @@ export class BlockView {
         blockGroupsToFetch.map(async blockGroup => {
           checkAbortSignal(signal)
           const { length, offset } = blockGroup
-          const data = await this.featureCache.get(
-            `${length}_${offset}`,
-            blockGroup,
-            signal,
-          )
+          const data = await this.bbi.read(length, offset, opts)
           for (const block of blockGroup.blocks) {
             checkAbortSignal(signal)
             let resultData = data.subarray(
