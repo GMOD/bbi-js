@@ -68,7 +68,5 @@ export function parseBigWigBlock(
     }
   }
 
-  return req
-    ? items.filter(f => coordFilter(f.start, f.end, req.start, req.end))
-    : items
+  return items
 }

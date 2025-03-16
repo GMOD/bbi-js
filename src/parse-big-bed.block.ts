@@ -40,7 +40,5 @@ export function parseBigBedBlock(
     })
   }
 
-  return request
-    ? items.filter(f => coordFilter(f.start, f.end, request.start, request.end))
-    : items
+  return items
 }

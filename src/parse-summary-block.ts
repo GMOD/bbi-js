@@ -31,21 +31,14 @@ export function parseSummaryBlock(
     // const sumSqData = dataView.getFloat32(offset, true)
     offset += 4
 
-    if (
-      request
-        ? chromId === request.chrId &&
-          coordFilter(start, end, request.start, request.end)
-        : true
-    ) {
-      features.push({
-        start,
-        end,
-        maxScore,
-        minScore,
-        summary: true,
-        score: sumData / (validCnt || 1),
-      })
-    }
+    features.push({
+      start,
+      end,
+      maxScore,
+      minScore,
+      summary: true,
+      score: sumData / (validCnt || 1),
+    })
   }
 
   return features
