@@ -19,7 +19,10 @@ interface Options {
   signal?: AbortSignal
   request?: CoordRequest
 }
-
+interface BlockToFetch {
+  offset: number
+  length: number
+}
 function coordFilter(s1: number, e1: number, s2: number, e2: number): boolean {
   return s1 < e2 && e1 >= s2
 }
@@ -65,7 +68,7 @@ export class BlockView {
       const buffer = await this.cirTreePromise
       const dataView = new DataView(buffer.buffer)
       const cirBlockSize = dataView.getUint32(4, true)
-      let blocksToFetch: any[] = []
+      let blocksToFetch = [] as BlockToFetch[]
       let outstanding = 0
 
       const cirFobRecur2 = (
@@ -313,7 +316,7 @@ export class BlockView {
     }
 
     return request
-      ? items.filter((f: any) =>
+      ? items.filter(f =>
           coordFilter(f.start, f.end, request.start, request.end),
         )
       : items
