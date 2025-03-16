@@ -65,3 +65,9 @@ export interface RequestOptions2 extends RequestOptions {
   scale?: number
   basesPerSpan?: number
 }
+
+export interface CoordRequest {
+  chrId: number
+  start: number
+  end: number
+}
