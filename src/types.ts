@@ -58,7 +58,6 @@ export interface BigWigHeaderWithRefNames extends BigWigHeader {
 export interface RequestOptions {
   signal?: AbortSignal
   headers?: Record<string, string>
-  [key: string]: unknown
 }
 
 export interface RequestOptions2 extends RequestOptions {
