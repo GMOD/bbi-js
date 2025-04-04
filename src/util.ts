@@ -75,3 +75,7 @@ export async function abortBreakPoint(signal?: AbortSignal): Promise<void> {
   await Promise.resolve()
   checkAbortSignal(signal)
 }
+
+export function coordFilter(s1: number, e1: number, s2: number, e2: number) {
+  return s1 < e2 && e1 >= s2
+}
