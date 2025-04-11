@@ -227,6 +227,10 @@ export abstract class BBI {
       }
       const isLeafNode = dataView.getUint8(offset)
       offset += 2 //skip 1
+
+      if (offset >= b.length) {
+        return
+      }
       const cnt = dataView.getUint16(offset, true)
       offset += 2
       if (isLeafNode) {
@@ -248,7 +252,6 @@ export abstract class BBI {
           }
         }
       } else {
-        // parse index node
         const nextNodes = []
         for (let n = 0; n < cnt; n++) {
           offset += keySize

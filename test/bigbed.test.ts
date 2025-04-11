@@ -83,3 +83,10 @@ test('transcripts.bb', async () => {
   const ti = new BigBed({ filehandle })
   await ti.getFeatures('1', 0, 20000)
 })
+
+test('crash', async () => {
+  const filehandle = new LocalFile('test/data/unipLocCytopl.bb')
+  const ti = new BigBed({ filehandle })
+  const h = await ti.getHeader()
+  expect(h).toMatchSnapshot()
+})

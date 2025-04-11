@@ -110,7 +110,7 @@ export class BigBed extends BBI {
       return []
     }
     const decoder = new TextDecoder('utf8')
-    const locs = indices.map(async (index): Promise<Loc | undefined> => {
+    const locs = indices.map(async index => {
       const { offset: offset2, field } = index
       const b = await this.bbi.read(32, offset2, opts)
 
@@ -184,15 +184,17 @@ export class BigBed extends BBI {
 
           for (const n of keys) {
             if (n.key === name) {
-              return { ...n, field }
+              return {
+                ...n,
+                field,
+              }
             }
           }
 
           return undefined
         }
       }
-      const rootNodeOffset = 32
-      return bptReadNode(offset2 + rootNodeOffset)
+      return bptReadNode(offset2 + 32)
     })
     return filterUndef(await Promise.all(locs))
   }
