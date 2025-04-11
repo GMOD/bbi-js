@@ -84,9 +84,9 @@ test('transcripts.bb', async () => {
   await ti.getFeatures('1', 0, 20000)
 })
 
-test('range error crash', async () => {
+test('crash', async () => {
   const filehandle = new LocalFile('test/data/unipLocCytopl.bb')
   const ti = new BigBed({ filehandle })
   const h = await ti.getHeader()
-  console.log({ h })
+  expect(h).toMatchSnapshot()
 })
