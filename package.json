@@ -41,10 +41,8 @@
     "genomics"
   ],
   "dependencies": {
-    "@gmod/abortable-promise-cache": "^2.0.0",
     "generic-filehandle2": "^1.0.0",
     "pako": "^2.0.0",
-    "quick-lru": "^4.0.0",
     "rxjs": "^7.8.0"
   },
   "devDependencies": {
