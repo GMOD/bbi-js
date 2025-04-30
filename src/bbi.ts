@@ -2,7 +2,7 @@ import { LocalFile, RemoteFile } from 'generic-filehandle2'
 import { Observable, firstValueFrom } from 'rxjs'
 import { toArray } from 'rxjs/operators'
 
-import { BlockView } from './block-view'
+import { BlockView } from './block-view.ts'
 
 import type {
   BigWigHeader,
@@ -13,7 +13,7 @@ import type {
   RequestOptions,
   Statistics,
   ZoomLevel,
-} from './types'
+} from './types.ts'
 import type { GenericFilehandle } from 'generic-filehandle2'
 
 const BIG_WIG_MAGIC = -2003829722
