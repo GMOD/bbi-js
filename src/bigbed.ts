@@ -3,9 +3,9 @@ import QuickLRU from 'quick-lru'
 import { Observable, firstValueFrom, merge } from 'rxjs'
 import { map, reduce } from 'rxjs/operators'
 
-import { BBI } from './bbi'
+import { BBI } from './bbi.ts'
 
-import type { Feature, RequestOptions } from './types'
+import type { Feature, RequestOptions } from './types.ts'
 
 interface Loc {
   key: string

@@ -1,11 +1,11 @@
 import AbortablePromiseCache from '@gmod/abortable-promise-cache'
 import QuickLRU from 'quick-lru'
 
-import Range from './range'
-import { unzip } from './unzip'
-import { checkAbortSignal, groupBlocks } from './util'
+import Range from './range.ts'
+import { unzip } from './unzip.ts'
+import { checkAbortSignal, groupBlocks } from './util.ts'
 
-import type { Feature } from './types'
+import type { Feature } from './types.ts'
 import type { GenericFilehandle } from 'generic-filehandle2'
 import type { Observer } from 'rxjs'
 

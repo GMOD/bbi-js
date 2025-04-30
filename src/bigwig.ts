@@ -1,7 +1,7 @@
-import { BBI } from './bbi'
-import { BlockView } from './block-view'
+import { BBI } from './bbi.ts'
+import { BlockView } from './block-view.ts'
 
-import type { RequestOptions } from './types'
+import type { RequestOptions } from './types.ts'
 
 export class BigWig extends BBI {
   /**
