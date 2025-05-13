@@ -249,9 +249,9 @@
     levn "^0.4.1"
 
 "@gmod/abortable-promise-cache@^3.0.1":
-  version "3.0.1"
-  resolved "https://registry.yarnpkg.com/@gmod/abortable-promise-cache/-/abortable-promise-cache-3.0.1.tgz#68da57ba2458f73cbce185d7a92b61b55ad1babf"
-  integrity sha512-TLFzrC+ZLLY7V+ZP+Uda8gG9E0n5tL+ph98EuZ2RQ4XPNVb0WTaNJvlWKlzHW9rXa4SsAHMjYP6oisLbx6kfDA==
+  version "3.0.3"
+  resolved "https://registry.yarnpkg.com/@gmod/abortable-promise-cache/-/abortable-promise-cache-3.0.3.tgz#9f4eb69ef21abb950e91f061e4b58fffbc4bbe29"
+  integrity sha512-HnE6hh8Smxj0iHBbgpMRhagTYxqfhTfACBp5C0HAmm8XxNloS/2tHStPNo0ywYD3IOLse5dOV7m+LQxw2HZynw==
 
 "@gmod/bed@^2.1.2":
   version "2.1.3"
