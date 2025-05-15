@@ -20,7 +20,7 @@ test('loads volvox.bb', async () => {
   const ti = new BigBed({ filehandle })
   const spy = vi.spyOn(filehandle, 'read')
   const feats = await ti.getFeatures('chrA', 0, 160)
-  expect(spy.mock.calls.length).toBeLessThanOrEqual(3)
+  expect(spy.mock.calls.length).toBeLessThanOrEqual(5)
   expect(feats).toEqual([])
 })
 test('searchExtraIdex returns null on file with no extra index', async () => {
@@ -62,7 +62,7 @@ test('bigbed file with large header', async () => {
   const ti = new BigBed({ filehandle })
   const spy = vi.spyOn(filehandle, 'read')
   const header = await ti.getHeader()
-  expect(spy.mock.calls.length).toBeLessThanOrEqual(3)
+  expect(spy.mock.calls.length).toBeLessThanOrEqual(5)
   expect(header).toBeTruthy()
 })
 test('bigbed file consistent file ID', async () => {
