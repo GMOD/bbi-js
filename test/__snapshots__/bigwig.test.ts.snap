@@ -1,6 +1,59 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`crash from bigtools 1`] = `[]`;
+exports[`crash from bigtools 1`] = `
+[
+  {
+    "end": 64680,
+    "score": 0.03767288476228714,
+    "start": 64510,
+  },
+  {
+    "end": 77950,
+    "score": 0.03767288476228714,
+    "start": 77890,
+  },
+  {
+    "end": 86110,
+    "score": 0.03767288476228714,
+    "start": 85930,
+  },
+  {
+    "end": 89520,
+    "score": 0.03767288476228714,
+    "start": 89290,
+  },
+  {
+    "end": 91180,
+    "score": 0.03767288476228714,
+    "start": 90840,
+  },
+  {
+    "end": 91240,
+    "score": 0.07534576952457428,
+    "start": 91180,
+  },
+  {
+    "end": 91430,
+    "score": 0.03767288476228714,
+    "start": 91240,
+  },
+  {
+    "end": 91440,
+    "score": 0.07534576952457428,
+    "start": 91430,
+  },
+  {
+    "end": 91590,
+    "score": 0.03767288476228714,
+    "start": 91440,
+  },
+  {
+    "end": 94790,
+    "score": 0.03767288476228714,
+    "start": 94730,
+  },
+]
+`;
 
 exports[`inside file deeply 1`] = `
 [

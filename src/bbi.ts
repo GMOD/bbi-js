@@ -222,14 +222,12 @@ export abstract class BBI {
       let offset = 0
       const isLeafNode = dataView.getUint8(offset)
       offset += 1
-      const _reserved = dataView.getUint8(offset)
+      // const _reserved = dataView.getUint8(offset) // unused
       offset += 1
       const count = dataView.getUint16(offset, true)
       offset += 2
-      console.log('k1', { count, isLeafNode })
 
       if (isLeafNode) {
-        console.log(count * (keySize + valSize))
         const b = await this.bbi.read(
           count * (keySize + valSize),
           currentOffset + offset,
@@ -270,12 +268,10 @@ export abstract class BBI {
           offset += 8
           nextNodes.push(bptReadNode(Number(childOffset)))
         }
-        console.log({ nextNodes })
         await Promise.all(nextNodes)
       }
     }
     await bptReadNode(rootNodeOffset)
-    console.log({ refsByName })
     return {
       refsByName,
       refsByNumber,
