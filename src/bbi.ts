@@ -19,6 +19,10 @@ import type { GenericFilehandle } from 'generic-filehandle2'
 const BIG_WIG_MAGIC = -2003829722
 const BIG_BED_MAGIC = -2021002517
 
+function getDataView(buffer: Uint8Array) {
+  return new DataView(buffer.buffer, buffer.byteOffset, buffer.length)
+}
+
 export abstract class BBI {
   protected bbi: GenericFilehandle
 
@@ -79,7 +83,7 @@ export abstract class BBI {
     requestSize = 2000,
   ): Promise<BigWigHeader> {
     const b = await this.bbi.read(requestSize, 0, opts)
-    const dataView = new DataView(b.buffer, b.byteOffset, b.length)
+    const dataView = getDataView(b)
 
     const r1 = dataView.getInt32(0, true)
     if (r1 !== BIG_WIG_MAGIC && r1 !== BIG_BED_MAGIC) {
@@ -140,7 +144,7 @@ export abstract class BBI {
     if (totalSummaryOffset) {
       const b2 = b.subarray(Number(totalSummaryOffset))
       let offset = 0
-      const dataView = new DataView(b2.buffer, b2.byteOffset, b2.length)
+      const dataView = getDataView(b2)
       const basesCovered = Number(dataView.getBigUint64(offset, true))
       offset += 8
       const scoreMin = dataView.getFloat64(offset, true)
@@ -193,36 +197,30 @@ export abstract class BBI {
     const refsByNumber: Record<number, RefInfo> = []
     const refsByName: Record<string, number> = {}
 
-    const c = Number(header.chromTreeOffset)
-    const b = await this.bbi.read(32, c, opts)
+    const chromTreeOffset = Number(header.chromTreeOffset)
 
-    const dataView = new DataView(b.buffer, b.byteOffset, b.length)
+    const dataView = getDataView(await this.bbi.read(32, chromTreeOffset, opts))
     let offset = 0
-    // unused:
-    //    const magic = dataView.getUint32(offset, true)
+    // const magic = dataView.getUint32(offset, true) // unused
     offset += 4
-    // unused:
-    //   const blockSize = dataView.getUint32(offset, true)
+    // const blockSize = dataView.getUint32(offset, true) // unused
     offset += 4
     const keySize = dataView.getUint32(offset, true)
     offset += 4
-    // unused:
     const valSize = dataView.getUint32(offset, true)
     offset += 4
-    // unused:
-    // const itemCount = dataView.getBigUint64(offset, true)
+    // const itemCount = dataView.getBigUint64(offset, true) // unused
     offset += 8
 
-    const rootNodeOffset = c + 32
     const decoder = new TextDecoder('utf8')
 
     const bptReadNode = async (currentOffset: number) => {
       const b = await this.bbi.read(4, currentOffset)
-      const dataView = new DataView(b.buffer, b.byteOffset, b.length)
+      const dataView = getDataView(b)
       let offset = 0
       const isLeafNode = dataView.getUint8(offset)
       offset += 1
-      // const _reserved = dataView.getUint8(offset) // unused
+      // const reserved = dataView.getUint8(offset) // unused
       offset += 1
       const count = dataView.getUint16(offset, true)
       offset += 2
@@ -232,7 +230,7 @@ export abstract class BBI {
           count * (keySize + valSize),
           currentOffset + offset,
         )
-        const dataView = new DataView(b.buffer, b.byteOffset, b.length)
+        const dataView = getDataView(b)
         offset = 0
 
         for (let n = 0; n < count; n++) {
@@ -254,24 +252,21 @@ export abstract class BBI {
         }
       } else {
         const nextNodes = []
-        const b = await this.bbi.read(
-          count * (keySize + 8),
-          currentOffset + offset,
+        const dataView = getDataView(
+          await this.bbi.read(count * (keySize + 8), currentOffset + offset),
         )
-        const dataView = new DataView(b.buffer, b.byteOffset, b.length)
-
         offset = 0
 
         for (let n = 0; n < count; n++) {
           offset += keySize
           const childOffset = Number(dataView.getBigUint64(offset, true))
           offset += 8
-          nextNodes.push(bptReadNode(Number(childOffset)))
+          nextNodes.push(bptReadNode(childOffset))
         }
         await Promise.all(nextNodes)
       }
     }
-    await bptReadNode(rootNodeOffset)
+    await bptReadNode(chromTreeOffset + 32)
     return {
       refsByName,
       refsByNumber,
