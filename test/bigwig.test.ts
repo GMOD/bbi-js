@@ -178,3 +178,9 @@ test('test uncompressed bw (-unc from wigToBigWig)', async () => {
   const ob = await ti.getFeatures('ctgA', 40000, 40100)
   expect(ob.slice(0, 10)).toMatchSnapshot()
 })
+
+test('crash from bigtools', async () => {
+  const ti = new BigWig({ path: 'test/data/cDC.bw' })
+  const ob = await ti.getFeatures('chr1', 40000, 100100)
+  expect(ob.slice(0, 10)).toMatchSnapshot()
+})
