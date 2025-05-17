@@ -5,15 +5,8 @@
   "license": "MIT",
   "repository": "GMOD/bbi-js",
   "type": "module",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    "import": {
-      "import": "./esm/index.js"
-    },
-    "require": {
-      "require": "./dist/index.js"
-    }
-  },
+  "exports": "./esm/index.js",
+  "main": "./esm/index.js",
   "author": {
     "name": "Colin Diesh",
     "email": "colin.diesh@gmail.com",
@@ -51,6 +44,7 @@
   ],
   "dependencies": {
     "@gmod/abortable-promise-cache": "^3.0.1",
+    "@progress/pako-esm": "^1.0.1",
     "generic-filehandle2": "^2.0.1",
     "pako": "^2.0.0",
     "quick-lru": "^4.0.0",
