@@ -1,3 +1,7 @@
+## [7.0.5](https://github.com/GMOD/bbi-js/compare/v7.0.4...v7.0.5) (2025-06-10)
+
+
+
 ## [7.0.4](https://github.com/GMOD/bbi-js/compare/v7.0.3...v7.0.4) (2025-06-07)
 
 
