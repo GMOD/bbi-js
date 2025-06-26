@@ -1,9 +1,10 @@
 import eslint from '@eslint/js'
+import { defineConfig } from 'eslint/config'
 import importPlugin from 'eslint-plugin-import'
 import eslintPluginUnicorn from 'eslint-plugin-unicorn'
 import tseslint from 'typescript-eslint'
 
-export default tseslint.config(
+export default defineConfig(
   {
     ignores: ['esm/**/*', 'dist/**/*', '*.js', '*.mjs', 'example/*'],
   },
@@ -20,7 +21,7 @@ export default tseslint.config(
   ...tseslint.configs.stylisticTypeChecked,
   ...tseslint.configs.strictTypeChecked,
   importPlugin.flatConfigs.recommended,
-  eslintPluginUnicorn.configs['flat/recommended'],
+  eslintPluginUnicorn.configs.recommended,
   {
     rules: {
       '@typescript-eslint/no-unused-vars': [
@@ -33,11 +34,10 @@ export default tseslint.config(
 
       'no-underscore-dangle': 0,
       curly: 'error',
-      '@typescript-eslint/no-explicit-any': 0,
-      '@typescript-eslint/explicit-module-boundary-types': 0,
-      '@typescript-eslint/ban-ts-comment': 0,
+
       semi: ['error', 'never'],
       'unicorn/no-new-array': 'off',
+      'unicorn/no-array-sort': 'off',
       'unicorn/no-empty-file': 'off',
       'unicorn/prefer-type-error': 'off',
       'unicorn/prefer-modern-math-apis': 'off',
@@ -78,6 +78,7 @@ export default tseslint.config(
       'unicorn/prefer-number-properties': 'off',
       'unicorn/no-process-exit': 'off',
       'unicorn/prefer-at': 'off',
+      'unicorn/prefer-bigint-literals': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',
       '@typescript-eslint/no-unsafe-argument': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',
@@ -87,6 +88,9 @@ export default tseslint.config(
       '@typescript-eslint/require-await': 'off',
       '@typescript-eslint/restrict-template-expressions': 'off',
       '@typescript-eslint/no-non-null-assertion': 'off',
+      '@typescript-eslint/no-explicit-any': 0,
+      '@typescript-eslint/explicit-module-boundary-types': 0,
+      '@typescript-eslint/ban-ts-comment': 0,
 
       'import/no-unresolved': 'off',
       'import/order': [
@@ -102,18 +106,6 @@ export default tseslint.config(
             ['external', 'internal'],
             ['parent', 'sibling', 'index', 'object'],
             'type',
-          ],
-          pathGroups: [
-            {
-              group: 'builtin',
-              pattern: 'react',
-              position: 'before',
-            },
-            {
-              group: 'external',
-              pattern: '@mui/icons-material',
-              position: 'after',
-            },
           ],
 
           pathGroupsExcludedImportTypes: ['react'],
