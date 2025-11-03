@@ -238,7 +238,7 @@ export class BlockView {
         }
       }
 
-      cirFobRecur([Number(this.cirTreeOffset) + 48], 1)
+      cirFobRecur([this.cirTreeOffset + 48], 1)
       return
     } catch (e) {
       observer.error(e)
@@ -431,9 +431,7 @@ export class BlockView {
           )
           for (const block of blockGroup.blocks) {
             checkAbortSignal(signal)
-            let resultData = data.subarray(
-              Number(block.offset) - Number(blockGroup.offset),
-            )
+            let resultData = data.subarray(block.offset - blockGroup.offset)
             if (isCompressed) {
               resultData = unzip(resultData)
             }
@@ -453,7 +451,7 @@ export class BlockView {
                   this.parseBigBedBlock(
                     resultData,
                     0,
-                    Number(block.offset) * (1 << 8),
+                    block.offset * (1 << 8),
                     request,
                   ),
                 )

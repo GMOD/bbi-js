@@ -142,7 +142,7 @@ export abstract class BBI {
 
     let totalSummary: Statistics
     if (totalSummaryOffset) {
-      const b2 = b.subarray(Number(totalSummaryOffset))
+      const b2 = b.subarray(totalSummaryOffset)
       let offset = 0
       const dataView = getDataView(b2)
       const basesCovered = Number(dataView.getBigUint64(offset, true))
@@ -197,7 +197,7 @@ export abstract class BBI {
     const refsByNumber: Record<number, RefInfo> = []
     const refsByName: Record<string, number> = {}
 
-    const chromTreeOffset = Number(header.chromTreeOffset)
+    const chromTreeOffset = header.chromTreeOffset
 
     const dataView = getDataView(await this.bbi.read(32, chromTreeOffset, opts))
     let offset = 0

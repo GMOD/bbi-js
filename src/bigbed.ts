@@ -53,7 +53,7 @@ export class BigBed extends BBI {
    */
   private async _readIndices(opts: RequestOptions) {
     const { extHeaderOffset } = await this.getHeader(opts)
-    const b = await this.bbi.read(64, Number(extHeaderOffset))
+    const b = await this.bbi.read(64, extHeaderOffset)
 
     const dataView = new DataView(b.buffer, b.byteOffset, b.length)
     let offset = 0
@@ -71,7 +71,7 @@ export class BigBed extends BBI {
 
     const blocklen = 20
     const len = blocklen * count
-    const buffer = await this.bbi.read(len, Number(dataOffset))
+    const buffer = await this.bbi.read(len, dataOffset)
 
     const indices = [] as Index[]
 
@@ -86,7 +86,12 @@ export class BigBed extends BBI {
       const dataOffset = Number(dataView.getBigUint64(offset, true))
       offset += 8 + 4 //4 skip
       const field = dataView.getInt16(offset, true)
-      indices.push({ type, fieldcount, offset: Number(dataOffset), field })
+      indices.push({
+        type,
+        fieldcount,
+        offset: dataOffset,
+        field,
+      })
     }
     return indices
   }
@@ -128,7 +133,7 @@ export class BigBed extends BBI {
       offset += 8
 
       const bptReadNode = async (nodeOffset: number) => {
-        const val = Number(nodeOffset)
+        const val = nodeOffset
         const len = 4 + blockSize * (keySize + valSize)
         const buffer = await this.bbi.read(len, val, opts)
         const b = buffer

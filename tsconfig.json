@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "moduleResolution": "node",
-    "target": "es2021",
+    "target": "es2022",
     "declaration": true,
     "skipLibCheck": true,
     "outDir": "dist",
@@ -11,5 +11,7 @@
     "rewriteRelativeImportExtensions": true,
     "esModuleInterop": true
   },
-  "include": ["src"]
+  "include": [
+    "src"
+  ]
 }
