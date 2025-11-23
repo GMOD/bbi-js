@@ -18,6 +18,7 @@ import type { GenericFilehandle } from 'generic-filehandle2'
 
 const BIG_WIG_MAGIC = -2003829722
 const BIG_BED_MAGIC = -2021002517
+
 const decoder = new TextDecoder('utf8')
 
 function getDataView(buffer: Uint8Array) {
@@ -72,7 +73,7 @@ export abstract class BBI {
 
   private async _getHeader(opts?: RequestOptions) {
     const header = await this._getMainHeader(opts)
-    const chroms = await this._readChromTree(header, opts)
+    const chroms = await this._readChromosomeTree(header, opts)
     return {
       ...header,
       ...chroms,
@@ -97,7 +98,8 @@ export abstract class BBI {
     offset += 2
     const numZoomLevels = dataView.getUint16(offset, true)
     offset += 2
-    const chromTreeOffset = Number(dataView.getBigUint64(offset, true))
+    // Offset to the B+ tree that maps chromosome names to integer IDs
+    const chromosomeTreeOffset = Number(dataView.getBigUint64(offset, true))
     offset += 8
     const unzoomedDataOffset = Number(dataView.getBigUint64(offset, true))
     offset += 8
@@ -178,7 +180,7 @@ export abstract class BBI {
       definedFieldCount,
       uncompressBufSize,
       asOffset,
-      chromTreeOffset,
+      chromosomeTreeOffset,
       totalSummaryOffset,
       unzoomedDataOffset,
       unzoomedIndexOffset,
@@ -190,16 +192,21 @@ export abstract class BBI {
     }
   }
 
-  private async _readChromTree(
+  // Reads the B+ tree that maps chromosome names to integer IDs
+  // This is part of the "cirTree" (combined ID R-tree) structure, which uses
+  // integer chromosome IDs instead of strings for more efficient spatial indexing
+  private async _readChromosomeTree(
     header: BigWigHeader,
     opts?: { signal?: AbortSignal },
   ) {
     const refsByNumber: RefInfo[] = []
     const refsByName = {} as Record<string, number>
 
-    const chromTreeOffset = header.chromTreeOffset
+    const chromosomeTreeOffset = header.chromosomeTreeOffset
 
-    const dataView = getDataView(await this.bbi.read(32, chromTreeOffset, opts))
+    const dataView = getDataView(
+      await this.bbi.read(32, chromosomeTreeOffset, opts),
+    )
     let offset = 0
     // const magic = dataView.getUint32(offset, true) // unused
     offset += 4
@@ -212,7 +219,8 @@ export abstract class BBI {
     // const itemCount = dataView.getBigUint64(offset, true) // unused
     offset += 8
 
-    const bptReadNode = async (currentOffset: number) => {
+    // Recursively traverses the B+ tree to populate chromosome name-to-ID mappings
+    const readBPlusTreeNode = async (currentOffset: number) => {
       const b = await this.bbi.read(4, currentOffset)
       const dataView = getDataView(b)
       let offset = 0
@@ -223,6 +231,7 @@ export abstract class BBI {
       const count = dataView.getUint16(offset, true)
       offset += 2
 
+      // Leaf nodes contain the actual chromosome name-to-ID mappings
       if (isLeafNode) {
         const b = await this.bbi.read(
           count * (keySize + valSize),
@@ -250,6 +259,7 @@ export abstract class BBI {
           }
         }
       } else {
+        // Non-leaf nodes contain pointers to child nodes
         const nextNodes = []
         const dataView = getDataView(
           await this.bbi.read(count * (keySize + 8), currentOffset + offset),
@@ -260,12 +270,12 @@ export abstract class BBI {
           offset += keySize
           const childOffset = Number(dataView.getBigUint64(offset, true))
           offset += 8
-          nextNodes.push(bptReadNode(childOffset))
+          nextNodes.push(readBPlusTreeNode(childOffset))
         }
         await Promise.all(nextNodes)
       }
     }
-    await bptReadNode(chromTreeOffset + 32)
+    await readBPlusTreeNode(chromosomeTreeOffset + 32)
     return {
       refsByName,
       refsByNumber,

@@ -9,8 +9,7 @@ import type { Feature } from './types.ts'
 import type { GenericFilehandle } from 'generic-filehandle2'
 import type { Observer } from 'rxjs'
 
-const decoder =
-  typeof TextDecoder !== 'undefined' ? new TextDecoder('utf8') : undefined
+const decoder = new TextDecoder('utf8')
 
 interface CoordRequest {
   chrId: number
@@ -40,7 +39,9 @@ function coordFilter(s1: number, e1: number, s2: number, e2: number): boolean {
  */
 
 export class BlockView {
-  private cirTreePromise?: Promise<Uint8Array>
+  // R-tree index header cache - R-trees are spatial data structures used to
+  // efficiently query genomic intervals by chromosome and position
+  private rTreePromise?: Promise<Uint8Array>
 
   private featureCache = new AbortablePromiseCache<ReadData, Uint8Array>({
     cache: new QuickLRU({ maxSize: 1000 }),
@@ -52,12 +53,15 @@ export class BlockView {
   public constructor(
     private bbi: GenericFilehandle,
     private refsByName: Record<string, number>,
-    private cirTreeOffset: number,
+    // Offset to the R-tree index in the file - this is part of the "cirTree"
+    // (combined ID R-tree), which combines a B+ tree for chromosome names
+    // with an R-tree for efficient spatial queries
+    private rTreeOffset: number,
     private isCompressed: boolean,
     private blockType: string,
   ) {
-    if (!(cirTreeOffset >= 0)) {
-      throw new Error('invalid cirTreeOffset!')
+    if (!(rTreeOffset >= 0)) {
+      throw new Error('invalid rTreeOffset!')
     }
   }
 
@@ -75,19 +79,21 @@ export class BlockView {
         return
       }
       const request = { chrId, start, end }
-      if (!this.cirTreePromise) {
-        this.cirTreePromise = this.bbi.read(48, this.cirTreeOffset, opts)
+      if (!this.rTreePromise) {
+        this.rTreePromise = this.bbi.read(48, this.rTreeOffset, opts)
       }
-      const buffer = await this.cirTreePromise
+      const buffer = await this.rTreePromise
       const dataView = new DataView(
         buffer.buffer,
         buffer.byteOffset,
         buffer.length,
       )
-      const cirBlockSize = dataView.getUint32(4, true)
+      // Maximum number of children per R-tree node - used to calculate memory bounds
+      const rTreeBlockSize = dataView.getUint32(4, true)
       const blocksToFetch: ReadData[] = []
       let outstanding = 0
 
+      // R-tree leaf nodes contain the actual data blocks to fetch
       const processLeafNode = (
         dataView: DataView,
         startOffset: number,
@@ -118,6 +124,7 @@ export class BlockView {
         }
       }
 
+      // R-tree non-leaf nodes contain pointers to child nodes
       const processNonLeafNode = (
         dataView: DataView,
         startOffset: number,
@@ -149,12 +156,12 @@ export class BlockView {
       }
 
       const processRTreeNode = (
-        cirBlockData: Uint8Array,
+        rTreeBlockData: Uint8Array,
         offset2: number,
         level: number,
       ) => {
         try {
-          const data = cirBlockData.subarray(offset2)
+          const data = rTreeBlockData.subarray(offset2)
           const dataView = new DataView(
             data.buffer,
             data.byteOffset,
@@ -226,18 +233,18 @@ export class BlockView {
           outstanding += offsets.length
 
           // Upper bound on size, based on a completely full leaf node.
-          const maxCirBlockSpan = 4 + cirBlockSize * 32
+          const maxRTreeBlockSpan = 4 + rTreeBlockSize * 32
           let spans = new Range([
             {
               min: offsets[0]!,
-              max: offsets[0]! + maxCirBlockSpan,
+              max: offsets[0]! + maxRTreeBlockSpan,
             },
           ])
           for (let i = 1; i < offsets.length; i += 1) {
             const blockSpan = new Range([
               {
                 min: offsets[i]!,
-                max: offsets[i]! + maxCirBlockSpan,
+                max: offsets[i]! + maxRTreeBlockSpan,
               },
             ])
             spans = spans.union(blockSpan)
@@ -254,7 +261,7 @@ export class BlockView {
         }
       }
 
-      traverseRTree([this.cirTreeOffset + 48], 1)
+      traverseRTree([this.rTreeOffset + 48], 1)
       return
     } catch (e) {
       observer.error(e)

@@ -6,6 +6,7 @@ import { map, reduce } from 'rxjs/operators'
 import { BBI } from './bbi.ts'
 
 import type { Feature, RequestOptions } from './types.ts'
+import type { GenericFilehandle } from 'generic-filehandle2'
 
 const decoder = new TextDecoder('utf8')
 
@@ -25,6 +26,98 @@ interface Index {
 
 export function filterUndef<T>(ts: (T | undefined)[]): T[] {
   return ts.filter((t: T | undefined): t is T => !!t)
+}
+
+// Parses a null-terminated string key from a B+ tree node
+function parseKey(buffer: Uint8Array, offset: number, keySize: number) {
+  const keyEnd = buffer.indexOf(0, offset)
+  return decoder.decode(
+    buffer.subarray(offset, keyEnd !== -1 ? keyEnd : offset + keySize),
+  )
+}
+
+// Recursively traverses a B+ tree to search for a specific name in the BigBed extraIndex
+// B+ trees are balanced tree structures optimized for disk-based searches
+async function readBPlusTreeNode(
+  bbi: GenericFilehandle,
+  nodeOffset: number,
+  blockSize: number,
+  keySize: number,
+  valSize: number,
+  name: string,
+  field: number,
+  opts: RequestOptions,
+): Promise<Loc | undefined> {
+  const len = 4 + blockSize * (keySize + valSize)
+  const buffer = await bbi.read(len, nodeOffset, opts)
+  const dataView = new DataView(buffer.buffer, buffer.byteOffset, buffer.length)
+  let offset = 0
+  const nodeType = dataView.getInt8(offset)
+  offset += 2 //skip 1
+  const cnt = dataView.getInt16(offset, true)
+  offset += 2
+
+  // Non-leaf node (nodeType === 0): contains keys and child node pointers for navigation
+  if (nodeType === 0) {
+    const leafkeys = []
+    for (let i = 0; i < cnt; i++) {
+      const key = parseKey(buffer, offset, keySize)
+      offset += keySize
+      const dataOffset = Number(dataView.getBigUint64(offset, true))
+      offset += 8
+      leafkeys.push({
+        key,
+        offset: dataOffset,
+      })
+    }
+
+    let lastOffset = 0
+    for (const { key, offset } of leafkeys) {
+      if (name.localeCompare(key) < 0 && lastOffset) {
+        return readBPlusTreeNode(
+          bbi,
+          lastOffset,
+          blockSize,
+          keySize,
+          valSize,
+          name,
+          field,
+          opts,
+        )
+      }
+      lastOffset = offset
+    }
+    return readBPlusTreeNode(
+      bbi,
+      lastOffset,
+      blockSize,
+      keySize,
+      valSize,
+      name,
+      field,
+      opts,
+    )
+  } else if (nodeType === 1) {
+    // Leaf node (nodeType === 1): contains actual key-value data
+    const keys = []
+    for (let i = 0; i < cnt; i++) {
+      const key = parseKey(buffer, offset, keySize)
+      offset += keySize
+      const dataOffset = Number(dataView.getBigUint64(offset, true))
+      offset += 8
+      const length = dataView.getUint32(offset, true)
+      offset += 4
+      offset += 4 // skip reserved
+      keys.push({
+        key,
+        offset: dataOffset,
+        length,
+      })
+    }
+
+    const found = keys.find(n => n.key === name)
+    return found ? { ...found, field } : undefined
+  }
 }
 
 export class BigBed extends BBI {
@@ -133,85 +226,16 @@ export class BigBed extends BBI {
       // const _itemCount = Number(dataView.getBigUint64(offset, true))
       offset += 8
 
-      const bptReadNode = async (nodeOffset: number) => {
-        const val = nodeOffset
-        const len = 4 + blockSize * (keySize + valSize)
-        const buffer = await this.bbi.read(len, val, opts)
-        const dataView = new DataView(
-          buffer.buffer,
-          buffer.byteOffset,
-          buffer.length,
-        )
-        let offset = 0
-        const nodeType = dataView.getInt8(offset)
-        offset += 2 //skip 1
-        const cnt = dataView.getInt16(offset, true)
-        offset += 2
-        const keys = []
-        if (nodeType === 0) {
-          const leafkeys = []
-          for (let i = 0; i < cnt; i++) {
-            const keyEnd = buffer.indexOf(0, offset)
-            const key = decoder.decode(
-              buffer.subarray(
-                offset,
-                keyEnd !== -1 ? keyEnd : offset + keySize,
-              ),
-            )
-            offset += keySize
-            const dataOffset = Number(dataView.getBigUint64(offset, true))
-            offset += 8
-            leafkeys.push({
-              key,
-              offset: dataOffset,
-            })
-          }
-
-          let lastOffset = 0
-          for (const { key, offset } of leafkeys) {
-            if (name.localeCompare(key) < 0 && lastOffset) {
-              return bptReadNode(lastOffset)
-            }
-            lastOffset = offset
-          }
-          return bptReadNode(lastOffset)
-        } else if (nodeType === 1) {
-          for (let i = 0; i < cnt; i++) {
-            const keyEnd = buffer.indexOf(0, offset)
-            const key = decoder.decode(
-              buffer.subarray(
-                offset,
-                keyEnd !== -1 ? keyEnd : offset + keySize,
-              ),
-            )
-            offset += keySize
-            const dataOffset = Number(dataView.getBigUint64(offset, true))
-            offset += 8
-            const length = dataView.getUint32(offset, true)
-            offset += 4
-            const reserved = dataView.getUint32(offset, true)
-            offset += 4
-            keys.push({
-              key,
-              offset: dataOffset,
-              length,
-              reserved,
-            })
-          }
-
-          for (const n of keys) {
-            if (n.key === name) {
-              return {
-                ...n,
-                field,
-              }
-            }
-          }
-
-          return undefined
-        }
-      }
-      return bptReadNode(offset2 + 32)
+      return readBPlusTreeNode(
+        this.bbi,
+        offset2 + 32,
+        blockSize,
+        keySize,
+        valSize,
+        name,
+        field,
+        opts,
+      )
     })
     return filterUndef(await Promise.all(locs))
   }
@@ -223,7 +247,7 @@ export class BigBed extends BBI {
    *
    * @param name - the name to search for
    *
-   * @param opts - options object with optional AboutSignal
+   * @param opts - options object with optional AbortSignal
    *
    * @return array of Feature
    */
