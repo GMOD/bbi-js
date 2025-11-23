@@ -18,6 +18,7 @@ import type { GenericFilehandle } from 'generic-filehandle2'
 
 const BIG_WIG_MAGIC = -2003829722
 const BIG_BED_MAGIC = -2021002517
+const decoder = new TextDecoder('utf8')
 
 function getDataView(buffer: Uint8Array) {
   return new DataView(buffer.buffer, buffer.byteOffset, buffer.length)
@@ -166,7 +167,6 @@ export abstract class BBI {
     } else {
       throw new Error('no stats')
     }
-    const decoder = new TextDecoder('utf8')
 
     return {
       zoomLevels,
@@ -194,8 +194,8 @@ export abstract class BBI {
     header: BigWigHeader,
     opts?: { signal?: AbortSignal },
   ) {
-    const refsByNumber: Record<number, RefInfo> = []
-    const refsByName: Record<string, number> = {}
+    const refsByNumber: RefInfo[] = []
+    const refsByName = {} as Record<string, number>
 
     const chromTreeOffset = header.chromTreeOffset
 
@@ -211,8 +211,6 @@ export abstract class BBI {
     offset += 4
     // const itemCount = dataView.getBigUint64(offset, true) // unused
     offset += 8
-
-    const decoder = new TextDecoder('utf8')
 
     const bptReadNode = async (currentOffset: number) => {
       const b = await this.bbi.read(4, currentOffset)
@@ -234,9 +232,10 @@ export abstract class BBI {
         offset = 0
 
         for (let n = 0; n < count; n++) {
-          const key = decoder
-            .decode(b.subarray(offset, offset + keySize))
-            .replaceAll('\0', '')
+          const keyEnd = b.indexOf(0, offset)
+          const key = decoder.decode(
+            b.subarray(offset, keyEnd !== -1 ? keyEnd : offset + keySize),
+          )
           offset += keySize
           const refId = dataView.getUint32(offset, true)
           offset += 4

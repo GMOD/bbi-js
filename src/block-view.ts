@@ -3,7 +3,7 @@ import QuickLRU from 'quick-lru'
 
 import Range from './range.ts'
 import { unzip } from './unzip.ts'
-import { checkAbortSignal, groupBlocks } from './util.ts'
+import { groupBlocks } from './util.ts'
 
 import type { Feature } from './types.ts'
 import type { GenericFilehandle } from 'generic-filehandle2'
@@ -51,7 +51,7 @@ export class BlockView {
 
   public constructor(
     private bbi: GenericFilehandle,
-    private refsByName: any,
+    private refsByName: Record<string, number>,
     private cirTreeOffset: number,
     private isCompressed: boolean,
     private blockType: string,
@@ -78,9 +78,9 @@ export class BlockView {
         this.cirTreePromise = this.bbi.read(48, this.cirTreeOffset, opts)
       }
       const buffer = await this.cirTreePromise
-      const dataView = new DataView(buffer.buffer)
+      const dataView = new DataView(buffer.buffer, buffer.byteOffset, buffer.length)
       const cirBlockSize = dataView.getUint32(4, true)
-      let blocksToFetch: any[] = []
+      let blocksToFetch: ReadData[] = []
       let outstanding = 0
 
       const cirFobRecur2 = (
@@ -90,9 +90,7 @@ export class BlockView {
       ) => {
         try {
           const data = cirBlockData.subarray(offset2)
-
-          const b = data
-          const dataView = new DataView(b.buffer, b.byteOffset, b.length)
+          const dataView = new DataView(data.buffer, data.byteOffset, data.length)
           let offset = 0
 
           const isLeaf = dataView.getUint8(offset)
@@ -100,7 +98,6 @@ export class BlockView {
           const cnt = dataView.getUint16(offset, true)
           offset += 2
           if (isLeaf === 1) {
-            const blocksToFetch2 = []
             for (let i = 0; i < cnt; i++) {
               const startChrom = dataView.getUint32(offset, true)
               offset += 4
@@ -114,24 +111,13 @@ export class BlockView {
               offset += 8
               const blockSize = Number(dataView.getBigUint64(offset, true))
               offset += 8
-              blocksToFetch2.push({
-                startChrom,
-                startBase,
-                endBase,
-                endChrom,
-                blockOffset,
-                blockSize,
-                offset,
-              })
+              if (filterFeats({ startChrom, startBase, endBase, endChrom })) {
+                blocksToFetch.push({
+                  offset: blockOffset,
+                  length: blockSize,
+                })
+              }
             }
-            blocksToFetch = blocksToFetch.concat(
-              blocksToFetch2
-                .filter(f => filterFeats(f))
-                .map(l => ({
-                  offset: l.blockOffset,
-                  length: l.blockSize,
-                })),
-            )
           } else if (isLeaf === 0) {
             const recurOffsets = []
             for (let i = 0; i < cnt; i++) {
@@ -145,20 +131,12 @@ export class BlockView {
               offset += 4
               const blockOffset = Number(dataView.getBigUint64(offset, true))
               offset += 8
-              recurOffsets.push({
-                startChrom,
-                startBase,
-                endChrom,
-                endBase,
-                blockOffset,
-                offset,
-              })
+              if (filterFeats({ startChrom, startBase, endChrom, endBase })) {
+                recurOffsets.push(blockOffset)
+              }
             }
-            const recurOffsets2 = recurOffsets
-              .filter(f => filterFeats(f))
-              .map(l => l.blockOffset)
-            if (recurOffsets2.length > 0) {
-              cirFobRecur(recurOffsets2, level + 1)
+            if (recurOffsets.length > 0) {
+              cirFobRecur(recurOffsets, level + 1)
             }
           }
         } catch (e) {
@@ -231,8 +209,9 @@ export class BlockView {
             ])
             spans = spans.union(blockSpan)
           }
-          // eslint-disable-next-line @typescript-eslint/no-floating-promises
-          spans.getRanges().map(fr => cirFobStartFetch(offset, fr, level))
+          spans.getRanges().forEach(fr => {
+            cirFobStartFetch(offset, fr, level).catch(e => observer.error(e))
+          })
         } catch (e) {
           observer.error(e)
         }
@@ -250,7 +229,7 @@ export class BlockView {
     startOffset: number,
     request?: CoordRequest,
   ) {
-    const features = [] as any[]
+    const features: Feature[] = []
     let offset = startOffset
 
     const dataView = new DataView(b.buffer, b.byteOffset, b.length)
@@ -301,10 +280,9 @@ export class BlockView {
     offset: number,
     request?: CoordRequest,
   ) {
-    const items = [] as Feature[]
+    const items: Feature[] = []
     let currOffset = startOffset
-    const b = data
-    const dataView = new DataView(b.buffer, b.byteOffset, b.length)
+    const dataView = new DataView(data.buffer, data.byteOffset, data.length)
     while (currOffset < data.byteLength) {
       const c2 = currOffset
       const chromId = dataView.getUint32(currOffset, true)
@@ -332,7 +310,7 @@ export class BlockView {
     }
 
     return request
-      ? items.filter((f: any) =>
+      ? items.filter(f =>
           coordFilter(f.start, f.end, request.start, request.end),
         )
       : items
@@ -419,10 +397,8 @@ export class BlockView {
       const { blockType, isCompressed } = this
       const { signal, request } = opts
       const blockGroupsToFetch = groupBlocks(blocks)
-      checkAbortSignal(signal)
       await Promise.all(
         blockGroupsToFetch.map(async blockGroup => {
-          checkAbortSignal(signal)
           const { length, offset } = blockGroup
           const data = await this.featureCache.get(
             `${length}_${offset}`,
@@ -430,12 +406,10 @@ export class BlockView {
             signal,
           )
           for (const block of blockGroup.blocks) {
-            checkAbortSignal(signal)
             let resultData = data.subarray(block.offset - blockGroup.offset)
             if (isCompressed) {
               resultData = unzip(resultData)
             }
-            checkAbortSignal(signal)
 
             switch (blockType) {
               case 'summary': {

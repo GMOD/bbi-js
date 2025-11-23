@@ -7,6 +7,8 @@ import { BBI } from './bbi.ts'
 
 import type { Feature, RequestOptions } from './types.ts'
 
+const decoder = new TextDecoder('utf8')
+
 interface Loc {
   key: string
   offset: number
@@ -73,7 +75,7 @@ export class BigBed extends BBI {
     const len = blocklen * count
     const buffer = await this.bbi.read(len, dataOffset)
 
-    const indices = [] as Index[]
+    const indices: Index[] = []
 
     for (let i = 0; i < count; i += 1) {
       const b = buffer.subarray(i * blocklen)
@@ -114,7 +116,6 @@ export class BigBed extends BBI {
     if (indices.length === 0) {
       return []
     }
-    const decoder = new TextDecoder('utf8')
     const locs = indices.map(async index => {
       const { offset: offset2, field } = index
       const b = await this.bbi.read(32, offset2, opts)
@@ -136,8 +137,11 @@ export class BigBed extends BBI {
         const val = nodeOffset
         const len = 4 + blockSize * (keySize + valSize)
         const buffer = await this.bbi.read(len, val, opts)
-        const b = buffer
-        const dataView = new DataView(b.buffer, b.byteOffset, b.length)
+        const dataView = new DataView(
+          buffer.buffer,
+          buffer.byteOffset,
+          buffer.length,
+        )
         let offset = 0
         const nodeType = dataView.getInt8(offset)
         offset += 2 //skip 1
@@ -147,9 +151,10 @@ export class BigBed extends BBI {
         if (nodeType === 0) {
           const leafkeys = []
           for (let i = 0; i < cnt; i++) {
-            const key = decoder
-              .decode(b.subarray(offset, offset + keySize))
-              .replaceAll('\0', '')
+            const keyEnd = buffer.indexOf(0, offset)
+            const key = decoder.decode(
+              buffer.subarray(offset, keyEnd !== -1 ? keyEnd : offset + keySize),
+            )
             offset += keySize
             const dataOffset = Number(dataView.getBigUint64(offset, true))
             offset += 8
@@ -169,9 +174,10 @@ export class BigBed extends BBI {
           return bptReadNode(lastOffset)
         } else if (nodeType === 1) {
           for (let i = 0; i < cnt; i++) {
-            const key = decoder
-              .decode(b.subarray(offset, offset + keySize))
-              .replaceAll('\0', '')
+            const keyEnd = buffer.indexOf(0, offset)
+            const key = decoder.decode(
+              buffer.subarray(offset, keyEnd !== -1 ? keyEnd : offset + keySize),
+            )
             offset += keySize
             const dataOffset = Number(dataView.getBigUint64(offset, true))
             offset += 8
