@@ -15,7 +15,7 @@ export default class Range {
   }
 
   get min() {
-    return this.ranges[0].min
+    return this.ranges[0]!.min
   }
 
   get max() {
@@ -58,7 +58,7 @@ export default class Range {
       }
     })
     const oranges = [] as Range[]
-    let current = ranges[0]
+    let current = ranges[0]!
 
     for (const nxt of ranges) {
       if (nxt.min > current.max + 1) {
@@ -70,6 +70,6 @@ export default class Range {
     }
     oranges.push(current)
 
-    return oranges.length === 1 ? oranges[0] : new Range(oranges)
+    return oranges.length === 1 ? oranges[0]! : new Range(oranges)
   }
 }

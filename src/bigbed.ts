@@ -153,7 +153,10 @@ export class BigBed extends BBI {
           for (let i = 0; i < cnt; i++) {
             const keyEnd = buffer.indexOf(0, offset)
             const key = decoder.decode(
-              buffer.subarray(offset, keyEnd !== -1 ? keyEnd : offset + keySize),
+              buffer.subarray(
+                offset,
+                keyEnd !== -1 ? keyEnd : offset + keySize,
+              ),
             )
             offset += keySize
             const dataOffset = Number(dataView.getBigUint64(offset, true))
@@ -176,7 +179,10 @@ export class BigBed extends BBI {
           for (let i = 0; i < cnt; i++) {
             const keyEnd = buffer.indexOf(0, offset)
             const key = decoder.decode(
-              buffer.subarray(offset, keyEnd !== -1 ? keyEnd : offset + keySize),
+              buffer.subarray(
+                offset,
+                keyEnd !== -1 ? keyEnd : offset + keySize,
+              ),
             )
             offset += keySize
             const dataOffset = Number(dataView.getBigUint64(offset, true))
