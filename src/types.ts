@@ -7,7 +7,7 @@ export interface ZoomLevel {
 
 export interface Feature {
   offset?: number
-  chromId: number
+  chromId?: number
   start: number
   end: number
   score?: number
@@ -46,7 +46,10 @@ export interface BigWigHeader {
   unzoomedDataOffset: number
   definedFieldCount: number
   uncompressBufSize: number
-  chromTreeOffset: number
+  // Offset to the B+ tree that maps chromosome names to integer IDs.
+  // This is part of the "cirTree" (combined ID R-tree) - a structure that
+  // combines a B+ tree for chromosome names with an R-tree for spatial queries
+  chromosomeTreeOffset: number
   extHeaderOffset: number
   fileType: string
 }

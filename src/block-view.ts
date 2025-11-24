@@ -3,14 +3,13 @@ import QuickLRU from 'quick-lru'
 
 import Range from './range.ts'
 import { unzip } from './unzip.ts'
-import { checkAbortSignal, groupBlocks } from './util.ts'
+import { groupBlocks } from './util.ts'
 
 import type { Feature } from './types.ts'
 import type { GenericFilehandle } from 'generic-filehandle2'
 import type { Observer } from 'rxjs'
 
-const decoder =
-  typeof TextDecoder !== 'undefined' ? new TextDecoder('utf8') : undefined
+const decoder = new TextDecoder('utf8')
 
 interface CoordRequest {
   chrId: number
@@ -40,7 +39,9 @@ function coordFilter(s1: number, e1: number, s2: number, e2: number): boolean {
  */
 
 export class BlockView {
-  private cirTreePromise?: Promise<Uint8Array>
+  // R-tree index header cache - R-trees are spatial data structures used to
+  // efficiently query genomic intervals by chromosome and position
+  private rTreePromise?: Promise<Uint8Array>
 
   private featureCache = new AbortablePromiseCache<ReadData, Uint8Array>({
     cache: new QuickLRU({ maxSize: 1000 }),
@@ -51,13 +52,16 @@ export class BlockView {
 
   public constructor(
     private bbi: GenericFilehandle,
-    private refsByName: any,
-    private cirTreeOffset: number,
+    private refsByName: Record<string, number>,
+    // Offset to the R-tree index in the file - this is part of the "cirTree"
+    // (combined ID R-tree), which combines a B+ tree for chromosome names
+    // with an R-tree for efficient spatial queries
+    private rTreeOffset: number,
     private isCompressed: boolean,
     private blockType: string,
   ) {
-    if (!(cirTreeOffset >= 0)) {
-      throw new Error('invalid cirTreeOffset!')
+    if (!(rTreeOffset >= 0)) {
+      throw new Error('invalid rTreeOffset!')
     }
   }
 
@@ -72,101 +76,115 @@ export class BlockView {
       const chrId = this.refsByName[chrName]
       if (chrId === undefined) {
         observer.complete()
+        return
       }
       const request = { chrId, start, end }
-      if (!this.cirTreePromise) {
-        this.cirTreePromise = this.bbi.read(48, this.cirTreeOffset, opts)
+      if (!this.rTreePromise) {
+        this.rTreePromise = this.bbi.read(48, this.rTreeOffset, opts)
       }
-      const buffer = await this.cirTreePromise
-      const dataView = new DataView(buffer.buffer)
-      const cirBlockSize = dataView.getUint32(4, true)
-      let blocksToFetch: any[] = []
+      const buffer = await this.rTreePromise
+      const dataView = new DataView(
+        buffer.buffer,
+        buffer.byteOffset,
+        buffer.length,
+      )
+      // Maximum number of children per R-tree node - used to calculate memory bounds
+      const rTreeBlockSize = dataView.getUint32(4, true)
+      const blocksToFetch: ReadData[] = []
       let outstanding = 0
 
-      const cirFobRecur2 = (
-        cirBlockData: Uint8Array,
+      // R-tree leaf nodes contain the actual data blocks to fetch
+      const processLeafNode = (
+        dataView: DataView,
+        startOffset: number,
+        count: number,
+      ) => {
+        let offset = startOffset
+        for (let i = 0; i < count; i++) {
+          const startChrom = dataView.getUint32(offset, true)
+          offset += 4
+          const startBase = dataView.getUint32(offset, true)
+          offset += 4
+          const endChrom = dataView.getUint32(offset, true)
+          offset += 4
+          const endBase = dataView.getUint32(offset, true)
+          offset += 4
+          const blockOffset = Number(dataView.getBigUint64(offset, true))
+          offset += 8
+          const blockSize = Number(dataView.getBigUint64(offset, true))
+          offset += 8
+          if (
+            blockIntersectsQuery({ startChrom, startBase, endBase, endChrom })
+          ) {
+            blocksToFetch.push({
+              offset: blockOffset,
+              length: blockSize,
+            })
+          }
+        }
+      }
+
+      // R-tree non-leaf nodes contain pointers to child nodes
+      const processNonLeafNode = (
+        dataView: DataView,
+        startOffset: number,
+        count: number,
+        level: number,
+      ) => {
+        const recurOffsets = []
+        let offset = startOffset
+        for (let i = 0; i < count; i++) {
+          const startChrom = dataView.getUint32(offset, true)
+          offset += 4
+          const startBase = dataView.getUint32(offset, true)
+          offset += 4
+          const endChrom = dataView.getUint32(offset, true)
+          offset += 4
+          const endBase = dataView.getUint32(offset, true)
+          offset += 4
+          const blockOffset = Number(dataView.getBigUint64(offset, true))
+          offset += 8
+          if (
+            blockIntersectsQuery({ startChrom, startBase, endChrom, endBase })
+          ) {
+            recurOffsets.push(blockOffset)
+          }
+        }
+        if (recurOffsets.length > 0) {
+          traverseRTree(recurOffsets, level + 1)
+        }
+      }
+
+      const processRTreeNode = (
+        rTreeBlockData: Uint8Array,
         offset2: number,
         level: number,
       ) => {
         try {
-          const data = cirBlockData.subarray(offset2)
-
-          const b = data
-          const dataView = new DataView(b.buffer, b.byteOffset, b.length)
+          const data = rTreeBlockData.subarray(offset2)
+          const dataView = new DataView(
+            data.buffer,
+            data.byteOffset,
+            data.length,
+          )
           let offset = 0
 
           const isLeaf = dataView.getUint8(offset)
-          offset += 2 // 1 skip
-          const cnt = dataView.getUint16(offset, true)
+          offset += 2 // 1 skip for reserved byte
+          const count = dataView.getUint16(offset, true)
           offset += 2
+
           if (isLeaf === 1) {
-            const blocksToFetch2 = []
-            for (let i = 0; i < cnt; i++) {
-              const startChrom = dataView.getUint32(offset, true)
-              offset += 4
-              const startBase = dataView.getUint32(offset, true)
-              offset += 4
-              const endChrom = dataView.getUint32(offset, true)
-              offset += 4
-              const endBase = dataView.getUint32(offset, true)
-              offset += 4
-              const blockOffset = Number(dataView.getBigUint64(offset, true))
-              offset += 8
-              const blockSize = Number(dataView.getBigUint64(offset, true))
-              offset += 8
-              blocksToFetch2.push({
-                startChrom,
-                startBase,
-                endBase,
-                endChrom,
-                blockOffset,
-                blockSize,
-                offset,
-              })
-            }
-            blocksToFetch = blocksToFetch.concat(
-              blocksToFetch2
-                .filter(f => filterFeats(f))
-                .map(l => ({
-                  offset: l.blockOffset,
-                  length: l.blockSize,
-                })),
-            )
+            processLeafNode(dataView, offset, count)
           } else if (isLeaf === 0) {
-            const recurOffsets = []
-            for (let i = 0; i < cnt; i++) {
-              const startChrom = dataView.getUint32(offset, true)
-              offset += 4
-              const startBase = dataView.getUint32(offset, true)
-              offset += 4
-              const endChrom = dataView.getUint32(offset, true)
-              offset += 4
-              const endBase = dataView.getUint32(offset, true)
-              offset += 4
-              const blockOffset = Number(dataView.getBigUint64(offset, true))
-              offset += 8
-              recurOffsets.push({
-                startChrom,
-                startBase,
-                endChrom,
-                endBase,
-                blockOffset,
-                offset,
-              })
-            }
-            const recurOffsets2 = recurOffsets
-              .filter(f => filterFeats(f))
-              .map(l => l.blockOffset)
-            if (recurOffsets2.length > 0) {
-              cirFobRecur(recurOffsets2, level + 1)
-            }
+            processNonLeafNode(dataView, offset, count, level)
           }
         } catch (e) {
           observer.error(e)
         }
       }
 
-      const filterFeats = (b: {
+      const blockIntersectsQuery = (b: {
         startChrom: number
         startBase: number
         endChrom: number
@@ -179,22 +197,22 @@ export class BlockView {
         )
       }
 
-      const cirFobStartFetch = async (
-        off: number[],
-        fr: Range,
+      const fetchAndProcessRTreeBlocks = async (
+        offsets: number[],
+        range: Range,
         level: number,
       ) => {
         try {
-          const length = fr.max - fr.min
-          const offset = fr.min
+          const length = range.max - range.min
+          const offset = range.min
           const resultBuffer = await this.featureCache.get(
             `${length}_${offset}`,
             { length, offset },
             opts?.signal,
           )
-          for (const element of off) {
-            if (fr.contains(element)) {
-              cirFobRecur2(resultBuffer, element - offset, level)
+          for (const element of offsets) {
+            if (range.contains(element)) {
+              processRTreeNode(resultBuffer, element - offset, level)
               outstanding -= 1
               if (outstanding === 0) {
                 this.readFeatures(observer, blocksToFetch, {
@@ -210,35 +228,40 @@ export class BlockView {
           observer.error(e)
         }
       }
-      const cirFobRecur = (offset: number[], level: number) => {
+      const traverseRTree = (offsets: number[], level: number) => {
         try {
-          outstanding += offset.length
+          outstanding += offsets.length
 
           // Upper bound on size, based on a completely full leaf node.
-          const maxCirBlockSpan = 4 + cirBlockSize * 32
+          const maxRTreeBlockSpan = 4 + rTreeBlockSize * 32
           let spans = new Range([
             {
-              min: offset[0],
-              max: offset[0] + maxCirBlockSpan,
+              min: offsets[0]!,
+              max: offsets[0]! + maxRTreeBlockSpan,
             },
           ])
-          for (let i = 1; i < offset.length; i += 1) {
+          for (let i = 1; i < offsets.length; i += 1) {
             const blockSpan = new Range([
               {
-                min: offset[i],
-                max: offset[i] + maxCirBlockSpan,
+                min: offsets[i]!,
+                max: offsets[i]! + maxRTreeBlockSpan,
               },
             ])
             spans = spans.union(blockSpan)
           }
-          // eslint-disable-next-line @typescript-eslint/no-floating-promises
-          spans.getRanges().map(fr => cirFobStartFetch(offset, fr, level))
+          spans.getRanges().forEach(range => {
+            fetchAndProcessRTreeBlocks(offsets, range, level).catch(
+              (e: unknown) => {
+                observer.error(e)
+              },
+            )
+          })
         } catch (e) {
           observer.error(e)
         }
       }
 
-      cirFobRecur([this.cirTreeOffset + 48], 1)
+      traverseRTree([this.rTreeOffset + 48], 1)
       return
     } catch (e) {
       observer.error(e)
@@ -250,13 +273,11 @@ export class BlockView {
     startOffset: number,
     request?: CoordRequest,
   ) {
-    const features = [] as any[]
+    const features: Feature[] = []
     let offset = startOffset
 
     const dataView = new DataView(b.buffer, b.byteOffset, b.length)
     while (offset < b.byteLength) {
-      // this was extracted from looking at the runtime code generated by
-      // binary-parser
       const chromId = dataView.getUint32(offset, true)
       offset += 4
       const start = dataView.getUint32(offset, true)
@@ -270,16 +291,12 @@ export class BlockView {
       const maxScore = dataView.getFloat32(offset, true)
       offset += 4
       const sumData = dataView.getFloat32(offset, true)
-      offset += 4
-      // unused
-      // const sumSqData = dataView.getFloat32(offset, true)
-      offset += 4
+      offset += 8
 
       if (
-        request
-          ? chromId === request.chrId &&
-            coordFilter(start, end, request.start, request.end)
-          : true
+        !request ||
+        (chromId === request.chrId &&
+          coordFilter(start, end, request.start, request.end))
       ) {
         features.push({
           start,
@@ -301,10 +318,9 @@ export class BlockView {
     offset: number,
     request?: CoordRequest,
   ) {
-    const items = [] as Feature[]
+    const items: Feature[] = []
     let currOffset = startOffset
-    const b = data
-    const dataView = new DataView(b.buffer, b.byteOffset, b.length)
+    const dataView = new DataView(data.buffer, data.byteOffset, data.length)
     while (currOffset < data.byteLength) {
       const c2 = currOffset
       const chromId = dataView.getUint32(currOffset, true)
@@ -320,22 +336,23 @@ export class BlockView {
         }
       }
       const b = data.subarray(currOffset, i)
-      const rest = decoder?.decode(b) ?? b.toString()
+      const rest = decoder.decode(b)
       currOffset = i + 1
-      items.push({
-        chromId,
-        start,
-        end,
-        rest,
-        uniqueId: `bb-${offset + c2}`,
-      })
+      if (
+        !request ||
+        (chromId === request.chrId &&
+          coordFilter(start, end, request.start, request.end))
+      ) {
+        items.push({
+          start,
+          end,
+          rest,
+          uniqueId: `bb-${offset + c2}`,
+        })
+      }
     }
 
-    return request
-      ? items.filter((f: any) =>
-          coordFilter(f.start, f.end, request.start, request.end),
-        )
-      : items
+    return items
   }
 
   private parseBigWigBlock(
@@ -358,7 +375,7 @@ export class BlockView {
     offset += 2
     const itemCount = dataView.getUint16(offset, true)
     offset += 2
-    const items = new Array(itemCount)
+    const items = []
     switch (blockType) {
       case 1: {
         for (let i = 0; i < itemCount; i++) {
@@ -368,10 +385,12 @@ export class BlockView {
           offset += 4
           const score = dataView.getFloat32(offset, true)
           offset += 4
-          items[i] = {
-            start,
-            end,
-            score,
+          if (!req || coordFilter(start, end, req.start, req.end)) {
+            items.push({
+              start,
+              end,
+              score,
+            })
           }
         }
         break
@@ -382,10 +401,13 @@ export class BlockView {
           offset += 4
           const score = dataView.getFloat32(offset, true)
           offset += 4
-          items[i] = {
-            score,
-            start,
-            end: start + itemSpan,
+          const end = start + itemSpan
+          if (!req || coordFilter(start, end, req.start, req.end)) {
+            items.push({
+              score,
+              start,
+              end,
+            })
           }
         }
         break
@@ -395,19 +417,20 @@ export class BlockView {
           const score = dataView.getFloat32(offset, true)
           offset += 4
           const start = blockStart + i * itemStep
-          items[i] = {
-            score,
-            start,
-            end: start + itemSpan,
+          const end = start + itemSpan
+          if (!req || coordFilter(start, end, req.start, req.end)) {
+            items.push({
+              score,
+              start,
+              end,
+            })
           }
         }
         break
       }
     }
 
-    return req
-      ? items.filter(f => coordFilter(f.start, f.end, req.start, req.end))
-      : items
+    return items
   }
 
   public async readFeatures(
@@ -419,10 +442,8 @@ export class BlockView {
       const { blockType, isCompressed } = this
       const { signal, request } = opts
       const blockGroupsToFetch = groupBlocks(blocks)
-      checkAbortSignal(signal)
       await Promise.all(
         blockGroupsToFetch.map(async blockGroup => {
-          checkAbortSignal(signal)
           const { length, offset } = blockGroup
           const data = await this.featureCache.get(
             `${length}_${offset}`,
@@ -430,12 +451,10 @@ export class BlockView {
             signal,
           )
           for (const block of blockGroup.blocks) {
-            checkAbortSignal(signal)
             let resultData = data.subarray(block.offset - blockGroup.offset)
             if (isCompressed) {
               resultData = unzip(resultData)
             }
-            checkAbortSignal(signal)
 
             switch (blockType) {
               case 'summary': {
