@@ -1,6 +1,3 @@
-import AbortablePromiseCache from '@gmod/abortable-promise-cache'
-import QuickLRU from 'quick-lru'
-
 import Range from './range.ts'
 import { unzip } from './unzip.ts'
 import { groupBlocks } from './util.ts'
@@ -42,13 +39,6 @@ export class BlockView {
   // R-tree index header cache - R-trees are spatial data structures used to
   // efficiently query genomic intervals by chromosome and position
   private rTreePromise?: Promise<Uint8Array>
-
-  private featureCache = new AbortablePromiseCache<ReadData, Uint8Array>({
-    cache: new QuickLRU({ maxSize: 1000 }),
-
-    fill: async ({ length, offset }, signal) =>
-      this.bbi.read(length, offset, { signal }),
-  })
 
   public constructor(
     private bbi: GenericFilehandle,
@@ -205,11 +195,8 @@ export class BlockView {
         try {
           const length = range.max - range.min
           const offset = range.min
-          const resultBuffer = await this.featureCache.get(
-            `${length}_${offset}`,
-            { length, offset },
-            opts?.signal,
-          )
+          const resultBuffer = await this.bbi.read(length, offset, opts)
+
           for (const element of offsets) {
             if (range.contains(element)) {
               processRTreeNode(resultBuffer, element - offset, level)
@@ -440,16 +427,12 @@ export class BlockView {
   ) {
     try {
       const { blockType, isCompressed } = this
-      const { signal, request } = opts
+      const { request } = opts
       const blockGroupsToFetch = groupBlocks(blocks)
       await Promise.all(
         blockGroupsToFetch.map(async blockGroup => {
           const { length, offset } = blockGroup
-          const data = await this.featureCache.get(
-            `${length}_${offset}`,
-            blockGroup,
-            signal,
-          )
+          const data = await this.bbi.read(length, offset, opts)
           for (const block of blockGroup.blocks) {
             let resultData = data.subarray(block.offset - blockGroup.offset)
             if (isCompressed) {

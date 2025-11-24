@@ -9,3 +9,4 @@ esm
 esm_master
 esm_thisbranch
 *.cpuprofile
+esm_*/*

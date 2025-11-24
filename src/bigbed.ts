@@ -1,5 +1,3 @@
-import AbortablePromiseCache from '@gmod/abortable-promise-cache'
-import QuickLRU from 'quick-lru'
 import { Observable, firstValueFrom, merge } from 'rxjs'
 import { map, reduce } from 'rxjs/operators'
 
@@ -156,15 +154,8 @@ async function readBPlusTreeNode(
 }
 
 export class BigBed extends BBI {
-  public readIndicesCache = new AbortablePromiseCache<RequestOptions, Index[]>({
-    cache: new QuickLRU({ maxSize: 1 }),
-    fill: (args: RequestOptions, signal?: AbortSignal) =>
-      this._readIndices({ ...args, signal }),
-  })
-
   public readIndices(opts: RequestOptions = {}) {
-    const { signal, ...rest } = opts
-    return this.readIndicesCache.get(JSON.stringify(rest), opts, signal)
+    return this._readIndices(opts)
   }
 
   /*
