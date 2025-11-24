@@ -6,3 +6,6 @@ dist
 *.swp
 .eslintcache
 esm
+esm_master
+esm_thisbranch
+*.cpuprofile

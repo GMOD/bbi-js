@@ -1,11 +1,22 @@
 import eslint from '@eslint/js'
+import { defineConfig } from 'eslint/config'
 import importPlugin from 'eslint-plugin-import'
 import eslintPluginUnicorn from 'eslint-plugin-unicorn'
 import tseslint from 'typescript-eslint'
 
-export default tseslint.config(
+export default defineConfig(
   {
-    ignores: ['esm/**/*', 'dist/**/*', '*.js', '*.mjs', 'example/*'],
+    ignores: [
+      'esm/*',
+      'esm_thisbranch/*',
+      'esm_master/*',
+      'benchmarks/*',
+      'dist/**/*',
+      '*.js',
+      '*.mjs',
+      'example/*',
+      'vitest.config.ts',
+    ],
   },
   {
     languageOptions: {
@@ -20,7 +31,7 @@ export default tseslint.config(
   ...tseslint.configs.stylisticTypeChecked,
   ...tseslint.configs.strictTypeChecked,
   importPlugin.flatConfigs.recommended,
-  eslintPluginUnicorn.configs['flat/recommended'],
+  eslintPluginUnicorn.configs.recommended,
   {
     rules: {
       '@typescript-eslint/no-unused-vars': [

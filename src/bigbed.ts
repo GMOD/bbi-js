@@ -94,7 +94,7 @@ async function readBPlusTreeNode(
 
     while (left <= right) {
       const mid = Math.floor((left + right) / 2)
-      const cmp = name.localeCompare(leafkeys[mid].key)
+      const cmp = name.localeCompare(leafkeys[mid]!.key)
 
       if (cmp < 0) {
         targetIndex = mid - 1
@@ -105,7 +105,7 @@ async function readBPlusTreeNode(
     }
 
     const childOffset =
-      targetIndex >= 0 ? leafkeys[targetIndex].offset : leafkeys[0].offset
+      targetIndex >= 0 ? leafkeys[targetIndex]!.offset : leafkeys[0]!.offset
     return readBPlusTreeNode(
       bbi,
       childOffset,
@@ -140,10 +140,10 @@ async function readBPlusTreeNode(
 
     while (left <= right) {
       const mid = Math.floor((left + right) / 2)
-      const cmp = name.localeCompare(keys[mid].key)
+      const cmp = name.localeCompare(keys[mid]!.key)
 
       if (cmp === 0) {
-        return { ...keys[mid], field }
+        return { ...keys[mid]!, field }
       } else if (cmp < 0) {
         right = mid - 1
       } else {
