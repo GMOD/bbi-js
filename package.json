@@ -25,8 +25,8 @@
   ],
   "scripts": {
     "test": "vitest",
-    "prebench": "./scripts/build-both-branches.sh",
-    "bench": "vitest bench",
+    "benchonly": "vitest bench",
+    "bench": "./scripts/build-both-branches.sh \"$BRANCH1\" \"$BRANCH2\" && vitest bench",
     "lint": "eslint --report-unused-disable-directives --max-warnings 0",
     "format": "prettier --write .",
     "clean": "rimraf dist esm",
