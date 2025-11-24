@@ -19,7 +19,7 @@ string  geneSymbol;	"Gene Symbol"
 string  spID;		"SWISS-PROT protein Accession number"
 )
 ",
-  "chromTreeOffset": 1027,
+  "chromosomeTreeOffset": 1027,
   "definedFieldCount": 9,
   "extHeaderOffset": 923,
   "fieldCount": 11,
@@ -99,7 +99,7 @@ exports[`loads small bigwig header 1`] = `
 {
   "asOffset": 0,
   "autoSql": "",
-  "chromTreeOffset": 344,
+  "chromosomeTreeOffset": 344,
   "definedFieldCount": 0,
   "extHeaderOffset": 0,
   "fieldCount": 0,
@@ -194,7 +194,7 @@ string  geneSymbol;	"Gene Symbol"
 string  spID;		"SWISS-PROT protein Accession number"
 )
 ",
-  "chromTreeOffset": 1027,
+  "chromosomeTreeOffset": 1027,
   "definedFieldCount": 9,
   "extHeaderOffset": 923,
   "fieldCount": 11,

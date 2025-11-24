@@ -28,6 +28,22 @@ export function filterUndef<T>(ts: (T | undefined)[]): T[] {
   return ts.filter((t: T | undefined): t is T => !!t)
 }
 
+function getTabField(str: string, fieldIndex: number) {
+  if (fieldIndex < 0) {
+    return undefined
+  }
+  let start = 0
+  for (let i = 0; i < fieldIndex; i++) {
+    start = str.indexOf('\t', start)
+    if (start === -1) {
+      return undefined
+    }
+    start++
+  }
+  const end = str.indexOf('\t', start)
+  return end === -1 ? str.slice(start) : str.slice(start, end)
+}
+
 // Parses a null-terminated string key from a B+ tree node
 function parseKey(buffer: Uint8Array, offset: number, keySize: number) {
   const keyEnd = buffer.indexOf(0, offset)
@@ -53,7 +69,7 @@ async function readBPlusTreeNode(
   const dataView = new DataView(buffer.buffer, buffer.byteOffset, buffer.length)
   let offset = 0
   const nodeType = dataView.getInt8(offset)
-  offset += 2 //skip 1
+  offset += 2 // skip nodeType byte + 1 reserved byte
   const cnt = dataView.getInt16(offset, true)
   offset += 2
 
@@ -71,25 +87,28 @@ async function readBPlusTreeNode(
       })
     }
 
-    let lastOffset = 0
-    for (const { key, offset } of leafkeys) {
-      if (name.localeCompare(key) < 0 && lastOffset) {
-        return readBPlusTreeNode(
-          bbi,
-          lastOffset,
-          blockSize,
-          keySize,
-          valSize,
-          name,
-          field,
-          opts,
-        )
+    // Binary search to find the appropriate child node
+    let left = 0
+    let right = leafkeys.length - 1
+    let targetIndex = leafkeys.length - 1
+
+    while (left <= right) {
+      const mid = Math.floor((left + right) / 2)
+      const cmp = name.localeCompare(leafkeys[mid].key)
+
+      if (cmp < 0) {
+        targetIndex = mid - 1
+        right = mid - 1
+      } else {
+        left = mid + 1
       }
-      lastOffset = offset
     }
+
+    const childOffset =
+      targetIndex >= 0 ? leafkeys[targetIndex].offset : leafkeys[0].offset
     return readBPlusTreeNode(
       bbi,
-      lastOffset,
+      childOffset,
       blockSize,
       keySize,
       valSize,
@@ -115,8 +134,24 @@ async function readBPlusTreeNode(
       })
     }
 
-    const found = keys.find(n => n.key === name)
-    return found ? { ...found, field } : undefined
+    // Binary search for exact key match in sorted leaf node
+    let left = 0
+    let right = keys.length - 1
+
+    while (left <= right) {
+      const mid = Math.floor((left + right) / 2)
+      const cmp = name.localeCompare(keys[mid].key)
+
+      if (cmp === 0) {
+        return { ...keys[mid], field }
+      } else if (cmp < 0) {
+        right = mid - 1
+      } else {
+        left = mid + 1
+      }
+    }
+
+    return undefined
   }
 }
 
@@ -179,7 +214,7 @@ export class BigBed extends BBI {
       const fieldcount = dataView.getInt16(offset, true)
       offset += 2
       const dataOffset = Number(dataView.getBigUint64(offset, true))
-      offset += 8 + 4 //4 skip
+      offset += 8 + 4 // skip 8-byte offset + 4 reserved bytes
       const field = dataView.getInt16(offset, true)
       indices.push({
         type,
@@ -263,16 +298,22 @@ export class BigBed extends BBI {
           observer.error(e)
         })
       }).pipe(
-        reduce((acc, curr) => acc.concat(curr)),
-        map(x => {
-          for (const element of x) {
-            element.field = block.field
-          }
-          return x
-        }),
+        reduce((acc, curr) => {
+          acc.push(...curr)
+          return acc
+        }, [] as Feature[]),
+        map(features => features.map(f => ({ ...f, field: block.field }))),
       )
     })
     const ret = await firstValueFrom(merge(...res))
-    return ret.filter(f => f.rest?.split('\t')[(f.field || 0) - 3] === name)
+    // Filter to features where the indexed field matches the search name
+    // field offset is adjusted by -3 to account for chrom, chromStart, chromEnd columns
+    return ret.filter(f => {
+      if (!f.rest) {
+        return false
+      }
+      const fieldIndex = (f.field || 0) - 3
+      return getTabField(f.rest, fieldIndex) === name
+    })
   }
 }

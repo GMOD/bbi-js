@@ -36,7 +36,7 @@ export default class Range {
   }
 
   public getRanges() {
-    return this.ranges.map(r => new Range([{ min: r.min, max: r.max }]))
+    return this.ranges.map(r => new Range([r]))
   }
 
   public toString(): string {
@@ -44,32 +44,24 @@ export default class Range {
   }
 
   public union(s1: Range) {
-    const ranges = [...this.getRanges(), ...s1.getRanges()].sort((a, b) => {
-      if (a.min < b.min) {
-        return -1
-      } else if (a.min > b.min) {
-        return 1
-      } else if (a.max < b.max) {
-        return -1
-      } else if (b.max > a.max) {
-        return 1
-      } else {
-        return 0
-      }
+    const allRanges = [...this.ranges, ...s1.ranges].sort((a, b) => {
+      return a.min !== b.min ? a.min - b.min : a.max - b.max
     })
-    const oranges = [] as Range[]
-    let current = ranges[0]!
 
-    for (const nxt of ranges) {
+    const merged: IRange[] = []
+    let current = allRanges[0]!
+
+    for (let i = 1; i < allRanges.length; i++) {
+      const nxt = allRanges[i]!
       if (nxt.min > current.max + 1) {
-        oranges.push(current)
+        merged.push(current)
         current = nxt
       } else if (nxt.max > current.max) {
-        current = new Range([{ min: current.min, max: nxt.max }])
+        current = { min: current.min, max: nxt.max }
       }
     }
-    oranges.push(current)
+    merged.push(current)
 
-    return oranges.length === 1 ? oranges[0]! : new Range(oranges)
+    return new Range(merged)
   }
 }

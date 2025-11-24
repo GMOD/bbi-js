@@ -7,7 +7,7 @@ export interface ZoomLevel {
 
 export interface Feature {
   offset?: number
-  chromId: number
+  chromId?: number
   start: number
   end: number
   score?: number

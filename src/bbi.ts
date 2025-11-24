@@ -354,7 +354,15 @@ export abstract class BBI {
   ) {
     const ob = await this.getFeatureStream(refName, start, end, opts)
 
-    const ret = await firstValueFrom(ob.pipe(toArray()))
-    return ret.flat()
+    const arrays = await firstValueFrom(ob.pipe(toArray()))
+    const totalLength = arrays.reduce((sum, arr) => sum + arr.length, 0)
+    const result = new Array(totalLength)
+    let index = 0
+    for (const arr of arrays) {
+      for (const item of arr) {
+        result[index++] = item
+      }
+    }
+    return result
   }
 }

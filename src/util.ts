@@ -21,19 +21,18 @@ export function groupBlocks(blocks: Block[]) {
   let lastBlockEnd: number | undefined
   for (const block of blocks) {
     if (lastBlock && lastBlockEnd && block.offset - lastBlockEnd <= 2000) {
-      lastBlock.length =
-        lastBlock.length + block.length - lastBlockEnd + block.offset
+      lastBlock.length = block.offset + block.length - lastBlock.offset
       lastBlock.blocks.push(block)
+      lastBlockEnd = block.offset + block.length
     } else {
-      blockGroups.push(
-        (lastBlock = {
-          blocks: [block],
-          length: block.length,
-          offset: block.offset,
-        }),
-      )
+      lastBlock = {
+        blocks: [block],
+        length: block.length,
+        offset: block.offset,
+      }
+      blockGroups.push(lastBlock)
+      lastBlockEnd = block.offset + block.length
     }
-    lastBlockEnd = lastBlock.offset + lastBlock.length
   }
 
   return blockGroups
