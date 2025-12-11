@@ -125,10 +125,10 @@ export function inflate_raw(input, output_size) {
  * @param {Uint8Array} inputs
  * @param {Uint32Array} input_offsets
  * @param {Uint32Array} input_lengths
- * @param {number} max_output_size
+ * @param {number} max_block_size
  * @returns {Uint8Array}
  */
-export function inflate_raw_batch(inputs, input_offsets, input_lengths, max_output_size) {
+export function inflate_raw_batch(inputs, input_offsets, input_lengths, max_block_size) {
     try {
         const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
         const ptr0 = passArray8ToWasm0(inputs, wasm.__wbindgen_export);
@@ -137,7 +137,7 @@ export function inflate_raw_batch(inputs, input_offsets, input_lengths, max_outp
         const len1 = WASM_VECTOR_LEN;
         const ptr2 = passArray32ToWasm0(input_lengths, wasm.__wbindgen_export);
         const len2 = WASM_VECTOR_LEN;
-        wasm.inflate_raw_batch(retptr, ptr0, len0, ptr1, len1, ptr2, len2, max_output_size);
+        wasm.inflate_raw_batch(retptr, ptr0, len0, ptr1, len1, ptr2, len2, max_block_size);
         var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
         var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
         var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
