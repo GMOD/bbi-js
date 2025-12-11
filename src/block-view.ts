@@ -2,7 +2,15 @@ import AbortablePromiseCache from '@gmod/abortable-promise-cache'
 import QuickLRU from 'quick-lru'
 
 import Range from './range.ts'
-import { unzipBatch } from './unzip.ts'
+import {
+  unzipBatch,
+  decompressAndParseBigWigBlocks,
+  decompressAndParseSummaryBlocks,
+} from './unzip.ts'
+import type {
+  BigWigFeatureArrays,
+  SummaryFeatureArrays,
+} from './unzip.ts'
 import { groupBlocks } from './util.ts'
 
 import type { Feature } from './types.ts'
@@ -510,5 +518,214 @@ export class BlockView {
     } catch (e) {
       observer.error(e)
     }
+  }
+
+  public async readBigWigFeaturesAsArrays(
+    blocks: { offset: number; length: number }[],
+    opts: Options = {},
+  ): Promise<BigWigFeatureArrays> {
+    const { uncompressBufSize } = this
+    const { signal, request } = opts
+    const blockGroupsToFetch = groupBlocks(blocks)
+
+    const allStarts: Int32Array[] = []
+    const allEnds: Int32Array[] = []
+    const allScores: Float32Array[] = []
+    let totalCount = 0
+
+    await Promise.all(
+      blockGroupsToFetch.map(async blockGroup => {
+        const { length, offset } = blockGroup
+        const data = await this.featureCache.get(
+          `${length}_${offset}`,
+          blockGroup,
+          signal,
+        )
+
+        const localBlocks = blockGroup.blocks.map(block => ({
+          offset: block.offset - blockGroup.offset,
+          length: block.length,
+        }))
+
+        if (uncompressBufSize > 0) {
+          const result = await decompressAndParseBigWigBlocks(
+            data,
+            localBlocks,
+            uncompressBufSize,
+            request?.start ?? 0,
+            request?.end ?? 0,
+          )
+          if (result.starts.length > 0) {
+            allStarts.push(result.starts)
+            allEnds.push(result.ends)
+            allScores.push(result.scores)
+            totalCount += result.starts.length
+          }
+        } else {
+          for (const block of localBlocks) {
+            const blockData = data.subarray(block.offset, block.offset + block.length)
+            const features = this.parseBigWigBlock(blockData, 0, request)
+            if (features.length > 0) {
+              const starts = new Int32Array(features.length)
+              const ends = new Int32Array(features.length)
+              const scores = new Float32Array(features.length)
+              for (let i = 0; i < features.length; i++) {
+                const f = features[i]!
+                starts[i] = f.start
+                ends[i] = f.end
+                scores[i] = f.score ?? 0
+              }
+              allStarts.push(starts)
+              allEnds.push(ends)
+              allScores.push(scores)
+              totalCount += features.length
+            }
+          }
+        }
+      }),
+    )
+
+    if (allStarts.length === 0) {
+      return {
+        starts: new Int32Array(0),
+        ends: new Int32Array(0),
+        scores: new Float32Array(0),
+      }
+    }
+
+    if (allStarts.length === 1) {
+      return {
+        starts: allStarts[0]!,
+        ends: allEnds[0]!,
+        scores: allScores[0]!,
+      }
+    }
+
+    const starts = new Int32Array(totalCount)
+    const ends = new Int32Array(totalCount)
+    const scores = new Float32Array(totalCount)
+    let offset = 0
+    for (let i = 0; i < allStarts.length; i++) {
+      starts.set(allStarts[i]!, offset)
+      ends.set(allEnds[i]!, offset)
+      scores.set(allScores[i]!, offset)
+      offset += allStarts[i]!.length
+    }
+
+    return { starts, ends, scores }
+  }
+
+  public async readSummaryFeaturesAsArrays(
+    blocks: { offset: number; length: number }[],
+    opts: Options = {},
+  ): Promise<SummaryFeatureArrays> {
+    const { uncompressBufSize } = this
+    const { signal, request } = opts
+    const blockGroupsToFetch = groupBlocks(blocks)
+
+    const allStarts: Int32Array[] = []
+    const allEnds: Int32Array[] = []
+    const allScores: Float32Array[] = []
+    const allMinScores: Float32Array[] = []
+    const allMaxScores: Float32Array[] = []
+    let totalCount = 0
+
+    await Promise.all(
+      blockGroupsToFetch.map(async blockGroup => {
+        const { length, offset } = blockGroup
+        const data = await this.featureCache.get(
+          `${length}_${offset}`,
+          blockGroup,
+          signal,
+        )
+
+        const localBlocks = blockGroup.blocks.map(block => ({
+          offset: block.offset - blockGroup.offset,
+          length: block.length,
+        }))
+
+        if (uncompressBufSize > 0) {
+          const result = await decompressAndParseSummaryBlocks(
+            data,
+            localBlocks,
+            uncompressBufSize,
+            request?.chrId ?? 0,
+            request?.start ?? 0,
+            request?.end ?? 0,
+          )
+          if (result.starts.length > 0) {
+            allStarts.push(result.starts)
+            allEnds.push(result.ends)
+            allScores.push(result.scores)
+            allMinScores.push(result.minScores)
+            allMaxScores.push(result.maxScores)
+            totalCount += result.starts.length
+          }
+        } else {
+          for (const block of localBlocks) {
+            const blockData = data.subarray(block.offset, block.offset + block.length)
+            const features = this.parseSummaryBlock(blockData, 0, request)
+            if (features.length > 0) {
+              const starts = new Int32Array(features.length)
+              const ends = new Int32Array(features.length)
+              const scores = new Float32Array(features.length)
+              const minScores = new Float32Array(features.length)
+              const maxScores = new Float32Array(features.length)
+              for (let i = 0; i < features.length; i++) {
+                const f = features[i]!
+                starts[i] = f.start
+                ends[i] = f.end
+                scores[i] = f.score ?? 0
+                minScores[i] = f.minScore ?? 0
+                maxScores[i] = f.maxScore ?? 0
+              }
+              allStarts.push(starts)
+              allEnds.push(ends)
+              allScores.push(scores)
+              allMinScores.push(minScores)
+              allMaxScores.push(maxScores)
+              totalCount += features.length
+            }
+          }
+        }
+      }),
+    )
+
+    if (allStarts.length === 0) {
+      return {
+        starts: new Int32Array(0),
+        ends: new Int32Array(0),
+        scores: new Float32Array(0),
+        minScores: new Float32Array(0),
+        maxScores: new Float32Array(0),
+      }
+    }
+
+    if (allStarts.length === 1) {
+      return {
+        starts: allStarts[0]!,
+        ends: allEnds[0]!,
+        scores: allScores[0]!,
+        minScores: allMinScores[0]!,
+        maxScores: allMaxScores[0]!,
+      }
+    }
+
+    const starts = new Int32Array(totalCount)
+    const ends = new Int32Array(totalCount)
+    const scores = new Float32Array(totalCount)
+    const minScores = new Float32Array(totalCount)
+    const maxScores = new Float32Array(totalCount)
+    let offset = 0
+    for (let i = 0; i < allStarts.length; i++) {
+      starts.set(allStarts[i]!, offset)
+      ends.set(allEnds[i]!, offset)
+      scores.set(allScores[i]!, offset)
+      minScores.set(allMinScores[i]!, offset)
+      maxScores.set(allMaxScores[i]!, offset)
+      offset += allStarts[i]!.length
+    }
+
+    return { starts, ends, scores, minScores, maxScores }
   }
 }

@@ -7,6 +7,8 @@ import { BlockView } from './block-view.ts'
 import type {
   BigWigHeader,
   BigWigHeaderWithRefNames,
+  BigWigFeatureArrays,
+  SummaryFeatureArrays,
   Feature,
   RefInfo,
   RequestOptions2,
@@ -364,5 +366,66 @@ export abstract class BBI {
       }
     }
     return result
+  }
+
+  /**
+   * Gets features from a BigWig file as typed arrays (more efficient than getFeatures)
+   *
+   * @param refName - The chromosome name
+   * @param start - The start of a region
+   * @param end - The end of a region
+   * @param opts - Options including basesPerSpan or scale
+   * @returns Promise with typed arrays: starts, ends, scores (and minScores/maxScores for summary data)
+   */
+  public async getFeaturesAsArrays(
+    refName: string,
+    start: number,
+    end: number,
+    opts?: RequestOptions2,
+  ): Promise<BigWigFeatureArrays | SummaryFeatureArrays> {
+    const features = await this.getFeatures(refName, start, end, opts)
+    const count = features.length
+
+    if (count === 0) {
+      return {
+        starts: new Int32Array(0),
+        ends: new Int32Array(0),
+        scores: new Float32Array(0),
+      }
+    }
+
+    const hasSummary = features[0]?.summary === true
+
+    if (hasSummary) {
+      const starts = new Int32Array(count)
+      const ends = new Int32Array(count)
+      const scores = new Float32Array(count)
+      const minScores = new Float32Array(count)
+      const maxScores = new Float32Array(count)
+
+      for (let i = 0; i < count; i++) {
+        const f = features[i]!
+        starts[i] = f.start
+        ends[i] = f.end
+        scores[i] = f.score ?? 0
+        minScores[i] = f.minScore ?? 0
+        maxScores[i] = f.maxScore ?? 0
+      }
+
+      return { starts, ends, scores, minScores, maxScores }
+    }
+
+    const starts = new Int32Array(count)
+    const ends = new Int32Array(count)
+    const scores = new Float32Array(count)
+
+    for (let i = 0; i < count; i++) {
+      const f = features[i]!
+      starts[i] = f.start
+      ends[i] = f.end
+      scores[i] = f.score ?? 0
+    }
+
+    return { starts, ends, scores }
   }
 }

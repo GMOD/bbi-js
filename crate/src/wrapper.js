@@ -61,3 +61,121 @@ export async function inflateRawBatch(
 
   return { data, offsets }
 }
+
+function unpackBigWigFeatures(packed) {
+  const view = new DataView(packed.buffer, packed.byteOffset, packed.byteLength)
+  const count = view.getUint32(0, true)
+
+  if (count === 0) {
+    return {
+      starts: new Int32Array(0),
+      ends: new Int32Array(0),
+      scores: new Float32Array(0),
+    }
+  }
+
+  const startsOffset = 4
+  const endsOffset = startsOffset + count * 4
+  const scoresOffset = endsOffset + count * 4
+
+  return {
+    starts: new Int32Array(
+      packed.buffer,
+      packed.byteOffset + startsOffset,
+      count,
+    ),
+    ends: new Int32Array(packed.buffer, packed.byteOffset + endsOffset, count),
+    scores: new Float32Array(
+      packed.buffer,
+      packed.byteOffset + scoresOffset,
+      count,
+    ),
+  }
+}
+
+function unpackSummaryFeatures(packed) {
+  const view = new DataView(packed.buffer, packed.byteOffset, packed.byteLength)
+  const count = view.getUint32(0, true)
+
+  if (count === 0) {
+    return {
+      starts: new Int32Array(0),
+      ends: new Int32Array(0),
+      scores: new Float32Array(0),
+      minScores: new Float32Array(0),
+      maxScores: new Float32Array(0),
+    }
+  }
+
+  const startsOffset = 4
+  const endsOffset = startsOffset + count * 4
+  const scoresOffset = endsOffset + count * 4
+  const minScoresOffset = scoresOffset + count * 4
+  const maxScoresOffset = minScoresOffset + count * 4
+
+  return {
+    starts: new Int32Array(
+      packed.buffer,
+      packed.byteOffset + startsOffset,
+      count,
+    ),
+    ends: new Int32Array(packed.buffer, packed.byteOffset + endsOffset, count),
+    scores: new Float32Array(
+      packed.buffer,
+      packed.byteOffset + scoresOffset,
+      count,
+    ),
+    minScores: new Float32Array(
+      packed.buffer,
+      packed.byteOffset + minScoresOffset,
+      count,
+    ),
+    maxScores: new Float32Array(
+      packed.buffer,
+      packed.byteOffset + maxScoresOffset,
+      count,
+    ),
+  }
+}
+
+export async function decompressAndParseBigWig(
+  inputs,
+  inputOffsets,
+  inputLengths,
+  maxBlockSize,
+  reqStart,
+  reqEnd,
+) {
+  await init()
+  const packed = bg.decompress_and_parse_bigwig(
+    inputs,
+    inputOffsets,
+    inputLengths,
+    maxBlockSize,
+    reqStart,
+    reqEnd,
+  )
+  return unpackBigWigFeatures(packed)
+}
+
+export async function decompressAndParseSummary(
+  inputs,
+  inputOffsets,
+  inputLengths,
+  maxBlockSize,
+  reqChrId,
+  reqStart,
+  reqEnd,
+) {
+  await init()
+  const packed = bg.decompress_and_parse_summary(
+    inputs,
+    inputOffsets,
+    inputLengths,
+    maxBlockSize,
+    reqChrId,
+    reqStart,
+    reqEnd,
+  )
+  return unpackSummaryFeatures(packed)
+}
