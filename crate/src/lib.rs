@@ -38,36 +38,34 @@ pub fn inflate_raw_unknown_size(input: &[u8]) -> Result<Vec<u8>, JsError> {
     }
 }
 
-fn decompress_into_buffer(
-    input: &[u8],
-    decompressor: &mut Decompressor,
-    output: &mut [u8],
-) -> Result<usize, JsError> {
-    decompressor
-        .deflate_decompress(input, output)
-        .map_err(|e| JsError::new(&format!("decompression failed: {:?}", e)))
-}
-
 #[wasm_bindgen]
 pub fn inflate_raw_batch(
     inputs: &[u8],
     input_offsets: &[u32],
     input_lengths: &[u32],
-    max_output_size: u32,
+    max_block_size: u32,
 ) -> Result<Box<[u8]>, JsError> {
     let mut decompressor = Decompressor::new();
     let num_blocks = input_offsets.len();
-    let max_out = max_output_size as usize;
+    let max_out = max_block_size as usize;
 
     let header_size = 4 + (num_blocks + 1) * 4;
-    let max_data_size = num_blocks * max_out;
-    let mut result = vec![0u8; header_size + max_data_size];
+
+    let mut total_input_size = 0usize;
+    for i in 0..num_blocks {
+        total_input_size += input_lengths[i] as usize;
+    }
+    let estimated_output = total_input_size * 4;
+
+    let mut result = Vec::with_capacity(header_size + estimated_output);
+    result.resize(header_size, 0);
 
     result[0..4].copy_from_slice(&(num_blocks as u32).to_le_bytes());
 
     let offsets_start = 4;
-    let data_start = header_size;
-    let mut data_offset = 0usize;
+    let mut data_offset = 0u32;
+
+    let mut temp_buf = vec![0u8; max_out];
 
     for i in 0..num_blocks {
         let start = input_offsets[i] as usize + ZLIB_HEADER_SIZE;
@@ -75,18 +73,18 @@ pub fn inflate_raw_batch(
         let input = &inputs[start..start + len];
 
         let offset_pos = offsets_start + i * 4;
-        result[offset_pos..offset_pos + 4].copy_from_slice(&(data_offset as u32).to_le_bytes());
+        result[offset_pos..offset_pos + 4].copy_from_slice(&data_offset.to_le_bytes());
 
-        let out_slice = &mut result[data_start + data_offset..data_start + data_offset + max_out];
-        let actual_size = decompress_into_buffer(input, &mut decompressor, out_slice)?;
-        data_offset += actual_size;
+        let actual_size = decompressor
+            .deflate_decompress(input, &mut temp_buf)
+            .map_err(|e| JsError::new(&format!("decompression failed: {:?}", e)))?;
+
+        result.extend_from_slice(&temp_buf[..actual_size]);
+        data_offset += actual_size as u32;
     }
 
     let final_offset_pos = offsets_start + num_blocks * 4;
-    result[final_offset_pos..final_offset_pos + 4]
-        .copy_from_slice(&(data_offset as u32).to_le_bytes());
-
-    result.truncate(header_size + data_offset);
+    result[final_offset_pos..final_offset_pos + 4].copy_from_slice(&data_offset.to_le_bytes());
 
     Ok(result.into_boxed_slice())
 }
