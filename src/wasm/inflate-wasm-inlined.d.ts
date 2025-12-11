@@ -47,16 +47,3 @@ export function decompressAndParseSummary(
   reqStart: number,
   reqEnd: number,
 ): Promise<SummaryFeatureArrays>
-
-export function parseBigWigBlock(
-  data: Uint8Array,
-  reqStart: number,
-  reqEnd: number,
-): Uint8Array
-
-export function parseSummaryBlock(
-  data: Uint8Array,
-  reqChrId: number,
-  reqStart: number,
-  reqEnd: number,
-): Uint8Array

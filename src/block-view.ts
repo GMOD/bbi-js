@@ -5,8 +5,6 @@ import Range from './range.ts'
 import {
   decompressAndParseBigWigBlocks,
   decompressAndParseSummaryBlocks,
-  parseBigWigBlockAsArrays,
-  parseSummaryBlockAsArrays,
   unzipBatch,
 } from './unzip.ts'
 import { groupBlocks } from './util.ts'
@@ -555,15 +553,13 @@ export class BlockView {
           length: block.length,
         }))
 
-        const reqStart = request?.start ?? 0
-        const reqEnd = request?.end ?? 0
         if (uncompressBufSize > 0) {
           const result = await decompressAndParseBigWigBlocks(
             data,
             localBlocks,
             uncompressBufSize,
-            reqStart,
-            reqEnd,
+            request?.start ?? 0,
+            request?.end ?? 0,
           )
           if (result.starts.length > 0) {
             allStarts.push(result.starts)
@@ -577,12 +573,21 @@ export class BlockView {
               block.offset,
               block.offset + block.length,
             )
-            const result = parseBigWigBlockAsArrays(blockData, reqStart, reqEnd)
-            if (result.starts.length > 0) {
-              allStarts.push(result.starts)
-              allEnds.push(result.ends)
-              allScores.push(result.scores)
-              totalCount += result.starts.length
+            const features = this.parseBigWigBlock(blockData, 0, request)
+            if (features.length > 0) {
+              const starts = new Int32Array(features.length)
+              const ends = new Int32Array(features.length)
+              const scores = new Float32Array(features.length)
+              for (let i = 0; i < features.length; i++) {
+                const f = features[i]!
+                starts[i] = f.start
+                ends[i] = f.end
+                scores[i] = f.score
+              }
+              allStarts.push(starts)
+              allEnds.push(ends)
+              allScores.push(scores)
+              totalCount += features.length
             }
           }
         }
@@ -648,17 +653,14 @@ export class BlockView {
           length: block.length,
         }))
 
-        const reqChrId = request?.chrId ?? 0
-        const reqStart = request?.start ?? 0
-        const reqEnd = request?.end ?? 0
         if (uncompressBufSize > 0) {
           const result = await decompressAndParseSummaryBlocks(
             data,
             localBlocks,
             uncompressBufSize,
-            reqChrId,
-            reqStart,
-            reqEnd,
+            request?.chrId ?? 0,
+            request?.start ?? 0,
+            request?.end ?? 0,
           )
           if (result.starts.length > 0) {
             allStarts.push(result.starts)
@@ -674,19 +676,27 @@ export class BlockView {
               block.offset,
               block.offset + block.length,
             )
-            const result = parseSummaryBlockAsArrays(
-              blockData,
-              reqChrId,
-              reqStart,
-              reqEnd,
-            )
-            if (result.starts.length > 0) {
-              allStarts.push(result.starts)
-              allEnds.push(result.ends)
-              allScores.push(result.scores)
-              allMinScores.push(result.minScores)
-              allMaxScores.push(result.maxScores)
-              totalCount += result.starts.length
+            const features = this.parseSummaryBlock(blockData, 0, request)
+            if (features.length > 0) {
+              const starts = new Int32Array(features.length)
+              const ends = new Int32Array(features.length)
+              const scores = new Float32Array(features.length)
+              const minScores = new Float32Array(features.length)
+              const maxScores = new Float32Array(features.length)
+              for (let i = 0; i < features.length; i++) {
+                const f = features[i]!
+                starts[i] = f.start
+                ends[i] = f.end
+                scores[i] = f.score ?? 0
+                minScores[i] = f.minScore ?? 0
+                maxScores[i] = f.maxScore ?? 0
+              }
+              allStarts.push(starts)
+              allEnds.push(ends)
+              allScores.push(scores)
+              allMinScores.push(minScores)
+              allMaxScores.push(maxScores)
+              totalCount += features.length
             }
           }
         }
