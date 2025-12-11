@@ -9,8 +9,6 @@ import type {
   SummaryFeatureArrays,
 } from './wasm/inflate-wasm-inlined.js'
 
-
-
 export interface UnzipBatchResult {
   data: Uint8Array
   offsets: number[]

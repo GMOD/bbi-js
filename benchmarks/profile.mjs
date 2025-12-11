@@ -32,7 +32,10 @@ async function main() {
   const files = [
     ['cDC.bw', 'test/data/cDC.bw'],
     ['ENCFF826FLP.bw', 'test/data/ENCFF826FLP.bw'],
-    ['example_bigwig_unsorted_with_error_small.bw', 'test/data/example_bigwig_unsorted_with_error_small.bw'],
+    [
+      'example_bigwig_unsorted_with_error_small.bw',
+      'test/data/example_bigwig_unsorted_with_error_small.bw',
+    ],
   ]
 
   for (const [name, path] of files) {

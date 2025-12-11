@@ -10,10 +10,7 @@ import {
 import { groupBlocks } from './util.ts'
 
 import type { Feature } from './types.ts'
-import type {
-  BigWigFeatureArrays,
-  SummaryFeatureArrays,
-} from './unzip.ts'
+import type { BigWigFeatureArrays, SummaryFeatureArrays } from './unzip.ts'
 import type { GenericFilehandle } from 'generic-filehandle2'
 import type { Observer } from 'rxjs'
 
@@ -563,7 +560,10 @@ export class BlockView {
           }
         } else {
           for (const block of localBlocks) {
-            const blockData = data.subarray(block.offset, block.offset + block.length)
+            const blockData = data.subarray(
+              block.offset,
+              block.offset + block.length,
+            )
             const features = this.parseBigWigBlock(blockData, 0, request)
             if (features.length > 0) {
               const starts = new Int32Array(features.length)
@@ -663,7 +663,10 @@ export class BlockView {
           }
         } else {
           for (const block of localBlocks) {
-            const blockData = data.subarray(block.offset, block.offset + block.length)
+            const blockData = data.subarray(
+              block.offset,
+              block.offset + block.length,
+            )
             const features = this.parseSummaryBlock(blockData, 0, request)
             if (features.length > 0) {
               const starts = new Int32Array(features.length)
