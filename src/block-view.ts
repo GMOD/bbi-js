@@ -453,7 +453,7 @@ export class BlockView {
           for (const block of blockGroup.blocks) {
             let resultData = data.subarray(block.offset - blockGroup.offset)
             if (isCompressed) {
-              resultData = unzip(resultData)
+              resultData = await unzip(resultData)
             }
 
             switch (blockType) {

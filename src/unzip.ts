@@ -1,5 +1,5 @@
-import { inflateRaw } from 'pako-esm2'
+import { inflateRawUnknownSize } from './wasm/inflate-wasm-inlined.js'
 
-export function unzip(input: Uint8Array) {
-  return inflateRaw(input.subarray(2), undefined)
+export async function unzip(input: Uint8Array) {
+  return inflateRawUnknownSize(input.subarray(2))
 }
