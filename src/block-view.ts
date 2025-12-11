@@ -460,7 +460,11 @@ export class BlockView {
           let decompressedOffsets: number[]
 
           if (uncompressBufSize > 0) {
-            const result = await unzipBatch(data, localBlocks, uncompressBufSize)
+            const result = await unzipBatch(
+              data,
+              localBlocks,
+              uncompressBufSize,
+            )
             decompressedData = result.data
             decompressedOffsets = result.offsets
           } else {

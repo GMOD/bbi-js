@@ -33,9 +33,19 @@ export async function inflateRawUnknownSize(input) {
   return bg.inflate_raw_unknown_size(input)
 }
 
-export async function inflateRawBatch(inputs, inputOffsets, inputLengths, maxOutputSize) {
+export async function inflateRawBatch(
+  inputs,
+  inputOffsets,
+  inputLengths,
+  maxOutputSize,
+) {
   await init()
-  const packed = bg.inflate_raw_batch(inputs, inputOffsets, inputLengths, maxOutputSize)
+  const packed = bg.inflate_raw_batch(
+    inputs,
+    inputOffsets,
+    inputLengths,
+    maxOutputSize,
+  )
 
   const view = new DataView(packed.buffer, packed.byteOffset, packed.byteLength)
   const numBlocks = view.getUint32(0, true)

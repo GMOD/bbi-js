@@ -1,4 +1,3 @@
-/* tslint:disable */
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
 export const inflate_raw: (a: number, b: number, c: number, d: number) => void;
