@@ -5,6 +5,8 @@ import Range from './range.ts'
 import {
   decompressAndParseBigWigBlocks,
   decompressAndParseSummaryBlocks,
+  parseBigWigBlockAsArrays,
+  parseSummaryBlockAsArrays,
   unzipBatch,
 } from './unzip.ts'
 import { groupBlocks } from './util.ts'
@@ -239,28 +241,37 @@ export class BlockView {
 
           // Upper bound on size, based on a completely full leaf node.
           const maxRTreeBlockSpan = 4 + rTreeBlockSize * 32
-          let spans = new Range([
-            {
-              min: offsets[0]!,
-              max: offsets[0]! + maxRTreeBlockSpan,
-            },
-          ])
-          for (let i = 1; i < offsets.length; i += 1) {
-            const blockSpan = new Range([
-              {
-                min: offsets[i]!,
-                max: offsets[i]! + maxRTreeBlockSpan,
-              },
-            ])
-            spans = spans.union(blockSpan)
+
+          // Sort offsets and merge overlapping ranges in a single pass
+          const sortedOffsets = offsets.slice().sort((a, b) => a - b)
+          const mergedRanges: { min: number; max: number }[] = []
+          let currentMin = sortedOffsets[0]!
+          let currentMax = currentMin + maxRTreeBlockSpan
+
+          for (let i = 1; i < sortedOffsets.length; i++) {
+            const offset = sortedOffsets[i]!
+            const nextMax = offset + maxRTreeBlockSpan
+            // Merge if ranges overlap or are adjacent (gap <= 1)
+            if (offset <= currentMax + 1) {
+              if (nextMax > currentMax) {
+                currentMax = nextMax
+              }
+            } else {
+              mergedRanges.push({ min: currentMin, max: currentMax })
+              currentMin = offset
+              currentMax = nextMax
+            }
           }
-          spans.getRanges().forEach(range => {
+          mergedRanges.push({ min: currentMin, max: currentMax })
+
+          for (const r of mergedRanges) {
+            const range = new Range([r])
             fetchAndProcessRTreeBlocks(offsets, range, level).catch(
               (e: unknown) => {
                 observer.error(e)
               },
             )
-          })
+          }
         } catch (e) {
           observer.error(e)
         }
@@ -544,13 +555,15 @@ export class BlockView {
           length: block.length,
         }))
 
+        const reqStart = request?.start ?? 0
+        const reqEnd = request?.end ?? 0
         if (uncompressBufSize > 0) {
           const result = await decompressAndParseBigWigBlocks(
             data,
             localBlocks,
             uncompressBufSize,
-            request?.start ?? 0,
-            request?.end ?? 0,
+            reqStart,
+            reqEnd,
           )
           if (result.starts.length > 0) {
             allStarts.push(result.starts)
@@ -564,21 +577,12 @@ export class BlockView {
               block.offset,
               block.offset + block.length,
             )
-            const features = this.parseBigWigBlock(blockData, 0, request)
-            if (features.length > 0) {
-              const starts = new Int32Array(features.length)
-              const ends = new Int32Array(features.length)
-              const scores = new Float32Array(features.length)
-              for (let i = 0; i < features.length; i++) {
-                const f = features[i]!
-                starts[i] = f.start
-                ends[i] = f.end
-                scores[i] = f.score
-              }
-              allStarts.push(starts)
-              allEnds.push(ends)
-              allScores.push(scores)
-              totalCount += features.length
+            const result = parseBigWigBlockAsArrays(blockData, reqStart, reqEnd)
+            if (result.starts.length > 0) {
+              allStarts.push(result.starts)
+              allEnds.push(result.ends)
+              allScores.push(result.scores)
+              totalCount += result.starts.length
             }
           }
         }
@@ -644,14 +648,17 @@ export class BlockView {
           length: block.length,
         }))
 
+        const reqChrId = request?.chrId ?? 0
+        const reqStart = request?.start ?? 0
+        const reqEnd = request?.end ?? 0
         if (uncompressBufSize > 0) {
           const result = await decompressAndParseSummaryBlocks(
             data,
             localBlocks,
             uncompressBufSize,
-            request?.chrId ?? 0,
-            request?.start ?? 0,
-            request?.end ?? 0,
+            reqChrId,
+            reqStart,
+            reqEnd,
           )
           if (result.starts.length > 0) {
             allStarts.push(result.starts)
@@ -667,27 +674,19 @@ export class BlockView {
               block.offset,
               block.offset + block.length,
             )
-            const features = this.parseSummaryBlock(blockData, 0, request)
-            if (features.length > 0) {
-              const starts = new Int32Array(features.length)
-              const ends = new Int32Array(features.length)
-              const scores = new Float32Array(features.length)
-              const minScores = new Float32Array(features.length)
-              const maxScores = new Float32Array(features.length)
-              for (let i = 0; i < features.length; i++) {
-                const f = features[i]!
-                starts[i] = f.start
-                ends[i] = f.end
-                scores[i] = f.score ?? 0
-                minScores[i] = f.minScore ?? 0
-                maxScores[i] = f.maxScore ?? 0
-              }
-              allStarts.push(starts)
-              allEnds.push(ends)
-              allScores.push(scores)
-              allMinScores.push(minScores)
-              allMaxScores.push(maxScores)
-              totalCount += features.length
+            const result = parseSummaryBlockAsArrays(
+              blockData,
+              reqChrId,
+              reqStart,
+              reqEnd,
+            )
+            if (result.starts.length > 0) {
+              allStarts.push(result.starts)
+              allEnds.push(result.ends)
+              allScores.push(result.scores)
+              allMinScores.push(result.minScores)
+              allMaxScores.push(result.maxScores)
+              totalCount += result.starts.length
             }
           }
         }

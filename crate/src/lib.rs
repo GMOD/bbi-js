@@ -114,101 +114,124 @@ fn read_f32_le(data: &[u8], offset: usize) -> f32 {
 #[wasm_bindgen]
 pub fn parse_bigwig_block(data: &[u8], req_start: i32, req_end: i32) -> Box<[u8]> {
     if data.len() < 24 {
-        // Return empty result
         let mut result = vec![0u8; 4];
         result[0..4].copy_from_slice(&0u32.to_le_bytes());
         return result.into_boxed_slice();
     }
 
-    // Parse header (24 bytes)
-    // let chrom_id = read_u32_le(data, 0);
     let block_start = read_i32_le(data, 4);
-    // let block_end = read_i32_le(data, 8);
     let item_step = read_u32_le(data, 12) as i32;
     let item_span = read_u32_le(data, 16) as i32;
     let block_type = data[20];
     let item_count = read_u16_le(data, 22) as usize;
 
-    // Pre-allocate for worst case (all items pass filter)
-    let mut starts: Vec<i32> = Vec::with_capacity(item_count);
-    let mut ends: Vec<i32> = Vec::with_capacity(item_count);
-    let mut scores: Vec<f32> = Vec::with_capacity(item_count);
-
-    let mut offset = 24usize;
     let filter = req_start != 0 || req_end != 0;
+
+    // First pass: count items that pass filter to allocate exact size
+    let mut count = 0usize;
+    let mut offset = 24usize;
 
     match block_type {
         1 => {
-            // bedGraph: start(i32), end(i32), score(f32) per item
             for _ in 0..item_count {
                 let start = read_i32_le(data, offset);
-                offset += 4;
-                let end = read_i32_le(data, offset);
-                offset += 4;
-                let score = read_f32_le(data, offset);
-                offset += 4;
-
+                let end = read_i32_le(data, offset + 4);
+                offset += 12;
                 if !filter || (start < req_end && end > req_start) {
-                    starts.push(start);
-                    ends.push(end);
-                    scores.push(score);
+                    count += 1;
                 }
             }
         }
         2 => {
-            // varstep: start(i32), score(f32) per item, end = start + item_span
             for _ in 0..item_count {
                 let start = read_i32_le(data, offset);
-                offset += 4;
-                let score = read_f32_le(data, offset);
-                offset += 4;
+                offset += 8;
                 let end = start + item_span;
-
                 if !filter || (start < req_end && end > req_start) {
-                    starts.push(start);
-                    ends.push(end);
-                    scores.push(score);
+                    count += 1;
                 }
             }
         }
         3 => {
-            // fixedstep: score(f32) per item, start/end computed from block_start + i*item_step
             for i in 0..item_count {
-                let score = read_f32_le(data, offset);
-                offset += 4;
                 let start = block_start + (i as i32) * item_step;
                 let end = start + item_span;
-
                 if !filter || (start < req_end && end > req_start) {
-                    starts.push(start);
-                    ends.push(end);
-                    scores.push(score);
+                    count += 1;
                 }
             }
         }
         _ => {}
     }
 
-    let count = starts.len() as u32;
-    let result_size = 4 + count as usize * 12; // 4 bytes count + 4*3 bytes per feature
-    let mut result = Vec::with_capacity(result_size);
+    // Allocate exact size: 4 bytes count + 12 bytes per feature (start + end + score)
+    let result_size = 4 + count * 12;
+    let mut result = vec![0u8; result_size];
 
-    // Write count
-    result.extend_from_slice(&count.to_le_bytes());
+    result[0..4].copy_from_slice(&(count as u32).to_le_bytes());
 
-    // Write starts as i32 array
-    for &s in &starts {
-        result.extend_from_slice(&s.to_le_bytes());
-    }
+    // Calculate offsets for each array in result buffer
+    let starts_offset = 4;
+    let ends_offset = 4 + count * 4;
+    let scores_offset = 4 + count * 8;
 
-    // Write ends as i32 array
-    for &e in &ends {
-        result.extend_from_slice(&e.to_le_bytes());
-    }
+    // Second pass: write directly to result buffer
+    let mut write_idx = 0usize;
+    offset = 24;
 
-    // Write scores as f32 array
-    for &sc in &scores {
-        result.extend_from_slice(&sc.to_le_bytes());
+    match block_type {
+        1 => {
+            for _ in 0..item_count {
+                let start = read_i32_le(data, offset);
+                let end = read_i32_le(data, offset + 4);
+                let score = read_f32_le(data, offset + 8);
+                offset += 12;
+                if !filter || (start < req_end && end > req_start) {
+                    let s_pos = starts_offset + write_idx * 4;
+                    let e_pos = ends_offset + write_idx * 4;
+                    let sc_pos = scores_offset + write_idx * 4;
+                    result[s_pos..s_pos + 4].copy_from_slice(&start.to_le_bytes());
+                    result[e_pos..e_pos + 4].copy_from_slice(&end.to_le_bytes());
+                    result[sc_pos..sc_pos + 4].copy_from_slice(&score.to_le_bytes());
+                    write_idx += 1;
+                }
+            }
+        }
+        2 => {
+            for _ in 0..item_count {
+                let start = read_i32_le(data, offset);
+                let score = read_f32_le(data, offset + 4);
+                offset += 8;
+                let end = start + item_span;
+                if !filter || (start < req_end && end > req_start) {
+                    let s_pos = starts_offset + write_idx * 4;
+                    let e_pos = ends_offset + write_idx * 4;
+                    let sc_pos = scores_offset + write_idx * 4;
+                    result[s_pos..s_pos + 4].copy_from_slice(&start.to_le_bytes());
+                    result[e_pos..e_pos + 4].copy_from_slice(&end.to_le_bytes());
+                    result[sc_pos..sc_pos + 4].copy_from_slice(&score.to_le_bytes());
+                    write_idx += 1;
+                }
+            }
+        }
+        3 => {
+            for i in 0..item_count {
+                let score = read_f32_le(data, offset);
+                offset += 4;
+                let start = block_start + (i as i32) * item_step;
+                let end = start + item_span;
+                if !filter || (start < req_end && end > req_start) {
+                    let s_pos = starts_offset + write_idx * 4;
+                    let e_pos = ends_offset + write_idx * 4;
+                    let sc_pos = scores_offset + write_idx * 4;
+                    result[s_pos..s_pos + 4].copy_from_slice(&start.to_le_bytes());
+                    result[e_pos..e_pos + 4].copy_from_slice(&end.to_le_bytes());
+                    result[sc_pos..sc_pos + 4].copy_from_slice(&score.to_le_bytes());
+                    write_idx += 1;
+                }
+            }
+        }
+        _ => {}
     }
 
     result.into_boxed_slice()
@@ -220,71 +243,63 @@ pub fn parse_bigwig_block(data: &[u8], req_start: i32, req_end: i32) -> Box<[u8]
 /// Returns: [count: u32][starts: i32*n][ends: i32*n][scores: f32*n][minScores: f32*n][maxScores: f32*n]
 #[wasm_bindgen]
 pub fn parse_summary_block(data: &[u8], req_chr_id: u32, req_start: i32, req_end: i32) -> Box<[u8]> {
-    let record_size = 32usize; // 8 u32/i32 fields = 32 bytes
+    let record_size = 32usize;
     let num_records = data.len() / record_size;
-
-    let mut starts: Vec<i32> = Vec::with_capacity(num_records);
-    let mut ends: Vec<i32> = Vec::with_capacity(num_records);
-    let mut scores: Vec<f32> = Vec::with_capacity(num_records);
-    let mut min_scores: Vec<f32> = Vec::with_capacity(num_records);
-    let mut max_scores: Vec<f32> = Vec::with_capacity(num_records);
-
     let filter = req_start != 0 || req_end != 0;
-    let mut offset = 0usize;
 
-    for _ in 0..num_records {
+    // First pass: count records that pass filter
+    let mut count = 0usize;
+    for i in 0..num_records {
+        let offset = i * record_size;
         let chrom_id = read_u32_le(data, offset);
-        offset += 4;
-        let start = read_u32_le(data, offset) as i32;
-        offset += 4;
-        let end = read_u32_le(data, offset) as i32;
-        offset += 4;
-        let valid_cnt = read_u32_le(data, offset);
-        offset += 4;
-        let min_score = read_f32_le(data, offset);
-        offset += 4;
-        let max_score = read_f32_le(data, offset);
-        offset += 4;
-        let sum_data = read_f32_le(data, offset);
-        offset += 8; // skip sumSqData
-
-        let passes_filter = !filter || (chrom_id == req_chr_id && start < req_end && end > req_start);
-
-        if passes_filter {
-            starts.push(start);
-            ends.push(end);
-            let score = if valid_cnt > 0 {
-                sum_data / valid_cnt as f32
-            } else {
-                sum_data
-            };
-            scores.push(score);
-            min_scores.push(min_score);
-            max_scores.push(max_score);
+        let start = read_u32_le(data, offset + 4) as i32;
+        let end = read_u32_le(data, offset + 8) as i32;
+        if !filter || (chrom_id == req_chr_id && start < req_end && end > req_start) {
+            count += 1;
         }
     }
 
-    let count = starts.len() as u32;
-    // 4 bytes count + 4 bytes * 5 arrays * count
-    let result_size = 4 + count as usize * 20;
-    let mut result = Vec::with_capacity(result_size);
+    // Allocate exact size: 4 bytes count + 20 bytes per feature (5 arrays * 4 bytes)
+    let result_size = 4 + count * 20;
+    let mut result = vec![0u8; result_size];
 
-    result.extend_from_slice(&count.to_le_bytes());
+    result[0..4].copy_from_slice(&(count as u32).to_le_bytes());
 
-    for &s in &starts {
-        result.extend_from_slice(&s.to_le_bytes());
-    }
-    for &e in &ends {
-        result.extend_from_slice(&e.to_le_bytes());
-    }
-    for &sc in &scores {
-        result.extend_from_slice(&sc.to_le_bytes());
-    }
-    for &m in &min_scores {
-        result.extend_from_slice(&m.to_le_bytes());
-    }
-    for &m in &max_scores {
-        result.extend_from_slice(&m.to_le_bytes());
+    // Calculate offsets for each array in result buffer
+    let starts_offset = 4;
+    let ends_offset = 4 + count * 4;
+    let scores_offset = 4 + count * 8;
+    let min_scores_offset = 4 + count * 12;
+    let max_scores_offset = 4 + count * 16;
+
+    // Second pass: write directly to result buffer
+    let mut write_idx = 0usize;
+    for i in 0..num_records {
+        let offset = i * record_size;
+        let chrom_id = read_u32_le(data, offset);
+        let start = read_u32_le(data, offset + 4) as i32;
+        let end = read_u32_le(data, offset + 8) as i32;
+        let valid_cnt = read_u32_le(data, offset + 12);
+        let min_score = read_f32_le(data, offset + 16);
+        let max_score = read_f32_le(data, offset + 20);
+        let sum_data = read_f32_le(data, offset + 24);
+
+        if !filter || (chrom_id == req_chr_id && start < req_end && end > req_start) {
+            let score = if valid_cnt > 0 { sum_data / valid_cnt as f32 } else { sum_data };
+
+            let s_pos = starts_offset + write_idx * 4;
+            let e_pos = ends_offset + write_idx * 4;
+            let sc_pos = scores_offset + write_idx * 4;
+            let min_pos = min_scores_offset + write_idx * 4;
+            let max_pos = max_scores_offset + write_idx * 4;
+
+            result[s_pos..s_pos + 4].copy_from_slice(&start.to_le_bytes());
+            result[e_pos..e_pos + 4].copy_from_slice(&end.to_le_bytes());
+            result[sc_pos..sc_pos + 4].copy_from_slice(&score.to_le_bytes());
+            result[min_pos..min_pos + 4].copy_from_slice(&min_score.to_le_bytes());
+            result[max_pos..max_pos + 4].copy_from_slice(&max_score.to_le_bytes());
+            write_idx += 1;
+        }
     }
 
     result.into_boxed_slice()
@@ -326,19 +341,28 @@ pub fn decompress_and_parse_bigwig(
         parse_bigwig_block_into(data, req_start, req_end, &mut starts, &mut ends, &mut scores);
     }
 
-    let count = starts.len() as u32;
-    let result_size = 4 + count as usize * 12;
-    let mut result = Vec::with_capacity(result_size);
+    let count = starts.len();
+    let result_size = 4 + count * 12;
+    let mut result = vec![0u8; result_size];
 
-    result.extend_from_slice(&count.to_le_bytes());
-    for &s in &starts {
-        result.extend_from_slice(&s.to_le_bytes());
+    result[0..4].copy_from_slice(&(count as u32).to_le_bytes());
+
+    // Write arrays directly using byte slices for better performance
+    let starts_offset = 4;
+    let ends_offset = 4 + count * 4;
+    let scores_offset = 4 + count * 8;
+
+    for (i, &s) in starts.iter().enumerate() {
+        let pos = starts_offset + i * 4;
+        result[pos..pos + 4].copy_from_slice(&s.to_le_bytes());
     }
-    for &e in &ends {
-        result.extend_from_slice(&e.to_le_bytes());
+    for (i, &e) in ends.iter().enumerate() {
+        let pos = ends_offset + i * 4;
+        result[pos..pos + 4].copy_from_slice(&e.to_le_bytes());
     }
-    for &sc in &scores {
-        result.extend_from_slice(&sc.to_le_bytes());
+    for (i, &sc) in scores.iter().enumerate() {
+        let pos = scores_offset + i * 4;
+        result[pos..pos + 4].copy_from_slice(&sc.to_le_bytes());
     }
 
     Ok(result.into_boxed_slice())
@@ -483,16 +507,38 @@ pub fn decompress_and_parse_summary(
         }
     }
 
-    let count = starts.len() as u32;
-    let result_size = 4 + count as usize * 20;
-    let mut result = Vec::with_capacity(result_size);
+    let count = starts.len();
+    let result_size = 4 + count * 20;
+    let mut result = vec![0u8; result_size];
 
-    result.extend_from_slice(&count.to_le_bytes());
-    for &s in &starts { result.extend_from_slice(&s.to_le_bytes()); }
-    for &e in &ends { result.extend_from_slice(&e.to_le_bytes()); }
-    for &sc in &scores { result.extend_from_slice(&sc.to_le_bytes()); }
-    for &m in &min_scores { result.extend_from_slice(&m.to_le_bytes()); }
-    for &m in &max_scores { result.extend_from_slice(&m.to_le_bytes()); }
+    result[0..4].copy_from_slice(&(count as u32).to_le_bytes());
+
+    let starts_offset = 4;
+    let ends_offset = 4 + count * 4;
+    let scores_offset = 4 + count * 8;
+    let min_scores_offset = 4 + count * 12;
+    let max_scores_offset = 4 + count * 16;
+
+    for (i, &s) in starts.iter().enumerate() {
+        let pos = starts_offset + i * 4;
+        result[pos..pos + 4].copy_from_slice(&s.to_le_bytes());
+    }
+    for (i, &e) in ends.iter().enumerate() {
+        let pos = ends_offset + i * 4;
+        result[pos..pos + 4].copy_from_slice(&e.to_le_bytes());
+    }
+    for (i, &sc) in scores.iter().enumerate() {
+        let pos = scores_offset + i * 4;
+        result[pos..pos + 4].copy_from_slice(&sc.to_le_bytes());
+    }
+    for (i, &m) in min_scores.iter().enumerate() {
+        let pos = min_scores_offset + i * 4;
+        result[pos..pos + 4].copy_from_slice(&m.to_le_bytes());
+    }
+    for (i, &m) in max_scores.iter().enumerate() {
+        let pos = max_scores_offset + i * 4;
+        result[pos..pos + 4].copy_from_slice(&m.to_le_bytes());
+    }
 
     Ok(result.into_boxed_slice())
 }

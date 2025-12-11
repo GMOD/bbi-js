@@ -2,12 +2,77 @@ import {
   decompressAndParseBigWig,
   decompressAndParseSummary,
   inflateRawBatch,
+  parseBigWigBlock as wasmParseBigWigBlock,
+  parseSummaryBlock as wasmParseSummaryBlock,
 } from './wasm/inflate-wasm-inlined.js'
 
 import type {
   BigWigFeatureArrays,
   SummaryFeatureArrays,
 } from './wasm/inflate-wasm-inlined.js'
+
+function unpackBigWigResult(result: Uint8Array): BigWigFeatureArrays {
+  const view = new DataView(result.buffer, result.byteOffset, result.byteLength)
+  const count = view.getUint32(0, true)
+  const starts = new Int32Array(result.buffer, result.byteOffset + 4, count)
+  const ends = new Int32Array(
+    result.buffer,
+    result.byteOffset + 4 + count * 4,
+    count,
+  )
+  const scores = new Float32Array(
+    result.buffer,
+    result.byteOffset + 4 + count * 8,
+    count,
+  )
+  return { starts, ends, scores }
+}
+
+function unpackSummaryResult(result: Uint8Array): SummaryFeatureArrays {
+  const view = new DataView(result.buffer, result.byteOffset, result.byteLength)
+  const count = view.getUint32(0, true)
+  const starts = new Int32Array(result.buffer, result.byteOffset + 4, count)
+  const ends = new Int32Array(
+    result.buffer,
+    result.byteOffset + 4 + count * 4,
+    count,
+  )
+  const scores = new Float32Array(
+    result.buffer,
+    result.byteOffset + 4 + count * 8,
+    count,
+  )
+  const minScores = new Float32Array(
+    result.buffer,
+    result.byteOffset + 4 + count * 12,
+    count,
+  )
+  const maxScores = new Float32Array(
+    result.buffer,
+    result.byteOffset + 4 + count * 16,
+    count,
+  )
+  return { starts, ends, scores, minScores, maxScores }
+}
+
+export function parseBigWigBlockAsArrays(
+  data: Uint8Array,
+  reqStart: number,
+  reqEnd: number,
+): BigWigFeatureArrays {
+  const result = wasmParseBigWigBlock(data, reqStart, reqEnd)
+  return unpackBigWigResult(result)
+}
+
+export function parseSummaryBlockAsArrays(
+  data: Uint8Array,
+  reqChrId: number,
+  reqStart: number,
+  reqEnd: number,
+): SummaryFeatureArrays {
+  const result = wasmParseSummaryBlock(data, reqChrId, reqStart, reqEnd)
+  return unpackSummaryResult(result)
+}
 
 export interface UnzipBatchResult {
   data: Uint8Array
