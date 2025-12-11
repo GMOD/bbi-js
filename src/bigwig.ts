@@ -25,7 +25,7 @@ export class BigWig extends BBI {
           this.bbi,
           refsByName,
           zh.indexOffset,
-          uncompressBufSize > 0,
+          uncompressBufSize,
           'summary',
         )
       }

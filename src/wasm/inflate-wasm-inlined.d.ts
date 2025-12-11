@@ -12,4 +12,5 @@ export function inflateRawBatch(
   inputs: Uint8Array,
   inputOffsets: Uint32Array,
   inputLengths: Uint32Array,
+  maxOutputSize: number,
 ): Promise<BatchResult>

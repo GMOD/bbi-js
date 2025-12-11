@@ -293,7 +293,7 @@ export abstract class BBI {
       this.bbi,
       refsByName,
       unzoomedIndexOffset,
-      uncompressBufSize > 0,
+      uncompressBufSize,
       fileType,
     )
   }

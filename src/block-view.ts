@@ -57,7 +57,7 @@ export class BlockView {
     // (combined ID R-tree), which combines a B+ tree for chromosome names
     // with an R-tree for efficient spatial queries
     private rTreeOffset: number,
-    private isCompressed: boolean,
+    private uncompressBufSize: number,
     private blockType: string,
   ) {
     if (!(rTreeOffset >= 0)) {
@@ -439,7 +439,7 @@ export class BlockView {
     opts: Options = {},
   ) {
     try {
-      const { blockType, isCompressed } = this
+      const { blockType, uncompressBufSize } = this
       const { signal, request } = opts
       const blockGroupsToFetch = groupBlocks(blocks)
       await Promise.all(
@@ -459,8 +459,8 @@ export class BlockView {
           let decompressedData: Uint8Array
           let decompressedOffsets: number[]
 
-          if (isCompressed) {
-            const result = await unzipBatch(data, localBlocks)
+          if (uncompressBufSize > 0) {
+            const result = await unzipBatch(data, localBlocks, uncompressBufSize)
             decompressedData = result.data
             decompressedOffsets = result.offsets
           } else {
