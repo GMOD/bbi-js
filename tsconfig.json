@@ -10,7 +10,8 @@
     "noUncheckedIndexedAccess": true,
     "allowImportingTsExtensions": true,
     "rewriteRelativeImportExtensions": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "allowJs": true
   },
   "include": ["src"]
 }

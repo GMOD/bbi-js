@@ -8,8 +8,9 @@ export default defineConfig(
   {
     ignores: [
       'esm/*',
-      'esm_thisbranch/*',
-      'esm_master/*',
+      'esm_*/*',
+      'crate/',
+      'src/wasm/*',
       'benchmarks/*',
       'dist/**/*',
       '*.js',

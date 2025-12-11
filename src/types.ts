@@ -67,3 +67,17 @@ export interface RequestOptions2 extends RequestOptions {
   scale?: number
   basesPerSpan?: number
 }
+
+export interface BigWigFeatureArrays {
+  starts: Int32Array
+  ends: Int32Array
+  scores: Float32Array
+}
+
+export interface SummaryFeatureArrays {
+  starts: Int32Array
+  ends: Int32Array
+  scores: Float32Array
+  minScores: Float32Array
+  maxScores: Float32Array
+}
