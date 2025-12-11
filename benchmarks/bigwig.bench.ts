@@ -1,30 +1,34 @@
+import { readFileSync } from 'node:fs'
 import { bench, describe } from 'vitest'
 
 import {
-  BigWig as BigWigMaster,
-  parseBigWig as parseBigWigMaster,
-} from '../esm_master/index.js'
+  BigWig as BigWigBranch1,
+  parseBigWig as parseBigWigBranch1,
+} from '../esm_branch1/index.js'
 import {
-  BigWig as BigWigOptimized,
-  parseBigWig as parseBigWigOptimized,
-} from '../esm_thisbranch/index.js'
+  BigWig as BigWigBranch2,
+  parseBigWig as parseBigWigBranch2,
+} from '../esm_branch2/index.js'
+
+const branch1Name = readFileSync('esm_branch1/branchname.txt', 'utf8').trim()
+const branch2Name = readFileSync('esm_branch2/branchname.txt', 'utf8').trim()
 
 function benchBigWig(name: string, path: string, opts?: { time?: number }) {
   describe(name, () => {
     bench(
-      'master',
+      branch1Name,
       async () => {
-        const bw = new BigWigMaster({ path })
-        await parseBigWigMaster(bw)
+        const bw = new BigWigBranch1({ path })
+        await parseBigWigBranch1(bw)
       },
       opts,
     )
 
     bench(
-      'optimized',
+      branch2Name,
       async () => {
-        const bw = new BigWigOptimized({ path })
-        await parseBigWigOptimized(bw)
+        const bw = new BigWigBranch2({ path })
+        await parseBigWigBranch2(bw)
       },
       opts,
     )
