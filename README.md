@@ -123,6 +123,65 @@ observer.subscribe(
 )
 ```
 
+#### getFeaturesAsArrays(refName, start, end, opts)
+
+Same parameters as getFeatures, but returns typed arrays instead of an array of
+objects. This is more memory-efficient and reduces garbage collection pressure
+for large datasets.
+
+```typescript
+const result = await bigwig.getFeaturesAsArrays('chr1', 0, 100000)
+// For regular BigWig data:
+// { starts: Int32Array, ends: Int32Array, scores: Float32Array }
+
+// For summary/zoomed data (when using scale parameter):
+// { starts: Int32Array, ends: Int32Array, scores: Float32Array,
+//   minScores: Float32Array, maxScores: Float32Array }
+```
+
+Example usage:
+
+```typescript
+const { starts, ends, scores } = await bigwig.getFeaturesAsArrays(
+  'chr1',
+  0,
+  100000,
+)
+for (let i = 0; i < starts.length; i++) {
+  console.log(`Feature at ${starts[i]}-${ends[i]} with score ${scores[i]}`)
+}
+
+// Check if it's summary data
+const result = await bigwig.getFeaturesAsArrays('chr1', 0, 100000, {
+  scale: 0.01,
+})
+if ('minScores' in result) {
+  // Summary data with min/max scores
+  const { minScores, maxScores } = result
+  for (let i = 0; i < starts.length; i++) {
+    console.log(`Range: ${minScores[i]} - ${maxScores[i]}`)
+  }
+}
+```
+
+TypeScript types:
+
+```typescript
+interface BigWigFeatureArrays {
+  starts: Int32Array
+  ends: Int32Array
+  scores: Float32Array
+}
+
+interface SummaryFeatureArrays {
+  starts: Int32Array
+  ends: Int32Array
+  scores: Float32Array
+  minScores: Float32Array
+  maxScores: Float32Array
+}
+```
+
 ### BigBed
 
 #### getFeatures(refName, start, end, opts)
