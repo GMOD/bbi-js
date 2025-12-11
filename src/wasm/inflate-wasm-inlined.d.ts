@@ -52,11 +52,11 @@ export function parseBigWigBlock(
   data: Uint8Array,
   reqStart: number,
   reqEnd: number,
-): BigWigFeatureArrays
+): Uint8Array
 
 export function parseSummaryBlock(
   data: Uint8Array,
   reqChrId: number,
   reqStart: number,
   reqEnd: number,
-): SummaryFeatureArrays
+): Uint8Array
