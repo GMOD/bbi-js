@@ -2,7 +2,7 @@ import AbortablePromiseCache from '@gmod/abortable-promise-cache'
 import QuickLRU from 'quick-lru'
 
 import Range from './range.ts'
-import { unzip } from './unzip.ts'
+import { unzipBatch } from './unzip.ts'
 import { groupBlocks } from './util.ts'
 
 import type { Feature } from './types.ts'
@@ -450,11 +450,30 @@ export class BlockView {
             blockGroup,
             signal,
           )
-          for (const block of blockGroup.blocks) {
-            let resultData = data.subarray(block.offset - blockGroup.offset)
-            if (isCompressed) {
-              resultData = await unzip(resultData)
-            }
+
+          const localBlocks = blockGroup.blocks.map(block => ({
+            offset: block.offset - blockGroup.offset,
+            length: block.length,
+          }))
+
+          let decompressedData: Uint8Array
+          let decompressedOffsets: number[]
+
+          if (isCompressed) {
+            const result = await unzipBatch(data, localBlocks)
+            decompressedData = result.data
+            decompressedOffsets = result.offsets
+          } else {
+            decompressedData = data
+            decompressedOffsets = localBlocks.map(b => b.offset)
+            decompressedOffsets.push(data.length)
+          }
+
+          for (let i = 0; i < blockGroup.blocks.length; i++) {
+            const block = blockGroup.blocks[i]!
+            const start = decompressedOffsets[i]!
+            const end = decompressedOffsets[i + 1]!
+            const resultData = decompressedData.subarray(start, end)
 
             switch (blockType) {
               case 'summary': {
