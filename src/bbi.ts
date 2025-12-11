@@ -5,15 +5,15 @@ import { toArray } from 'rxjs/operators'
 import { BlockView } from './block-view.ts'
 
 import type {
+  BigWigFeatureArrays,
   BigWigHeader,
   BigWigHeaderWithRefNames,
-  BigWigFeatureArrays,
-  SummaryFeatureArrays,
   Feature,
   RefInfo,
   RequestOptions2,
   RequestOptions,
   Statistics,
+  SummaryFeatureArrays,
   ZoomLevel,
 } from './types.ts'
 import type { GenericFilehandle } from 'generic-filehandle2'

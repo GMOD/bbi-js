@@ -3,9 +3,9 @@ export { BigWig } from './bigwig.ts'
 export { BigBed } from './bigbed.ts'
 export { parseBigWig } from './parse-bigwig.ts'
 export type {
+  BigWigFeatureArrays,
   BigWigHeader,
   Feature,
   RequestOptions,
-  BigWigFeatureArrays,
   SummaryFeatureArrays,
 } from './types.ts'

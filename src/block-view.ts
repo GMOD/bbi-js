@@ -3,17 +3,17 @@ import QuickLRU from 'quick-lru'
 
 import Range from './range.ts'
 import {
-  unzipBatch,
   decompressAndParseBigWigBlocks,
   decompressAndParseSummaryBlocks,
-} from './unzip.ts'
-import type {
-  BigWigFeatureArrays,
-  SummaryFeatureArrays,
+  unzipBatch,
 } from './unzip.ts'
 import { groupBlocks } from './util.ts'
 
 import type { Feature } from './types.ts'
+import type {
+  BigWigFeatureArrays,
+  SummaryFeatureArrays,
+} from './unzip.ts'
 import type { GenericFilehandle } from 'generic-filehandle2'
 import type { Observer } from 'rxjs'
 
@@ -573,7 +573,7 @@ export class BlockView {
                 const f = features[i]!
                 starts[i] = f.start
                 ends[i] = f.end
-                scores[i] = f.score ?? 0
+                scores[i] = f.score
               }
               allStarts.push(starts)
               allEnds.push(ends)

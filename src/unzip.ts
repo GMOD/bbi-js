@@ -1,7 +1,7 @@
 import {
-  inflateRawBatch,
   decompressAndParseBigWig,
   decompressAndParseSummary,
+  inflateRawBatch,
 } from './wasm/inflate-wasm-inlined.js'
 
 import type {
@@ -9,7 +9,7 @@ import type {
   SummaryFeatureArrays,
 } from './wasm/inflate-wasm-inlined.js'
 
-export type { BigWigFeatureArrays, SummaryFeatureArrays }
+
 
 export interface UnzipBatchResult {
   data: Uint8Array
@@ -86,3 +86,5 @@ export async function decompressAndParseSummaryBlocks(
     reqEnd,
   )
 }
+
+export type { BigWigFeatureArrays, SummaryFeatureArrays } from './types.ts'
