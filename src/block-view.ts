@@ -239,37 +239,28 @@ export class BlockView {
 
           // Upper bound on size, based on a completely full leaf node.
           const maxRTreeBlockSpan = 4 + rTreeBlockSize * 32
-
-          // Sort offsets and merge overlapping ranges in a single pass
-          const sortedOffsets = offsets.slice().sort((a, b) => a - b)
-          const mergedRanges: { min: number; max: number }[] = []
-          let currentMin = sortedOffsets[0]!
-          let currentMax = currentMin + maxRTreeBlockSpan
-
-          for (let i = 1; i < sortedOffsets.length; i++) {
-            const offset = sortedOffsets[i]!
-            const nextMax = offset + maxRTreeBlockSpan
-            // Merge if ranges overlap or are adjacent (gap <= 1)
-            if (offset <= currentMax + 1) {
-              if (nextMax > currentMax) {
-                currentMax = nextMax
-              }
-            } else {
-              mergedRanges.push({ min: currentMin, max: currentMax })
-              currentMin = offset
-              currentMax = nextMax
-            }
+          let spans = new Range([
+            {
+              min: offsets[0]!,
+              max: offsets[0]! + maxRTreeBlockSpan,
+            },
+          ])
+          for (let i = 1; i < offsets.length; i += 1) {
+            const blockSpan = new Range([
+              {
+                min: offsets[i]!,
+                max: offsets[i]! + maxRTreeBlockSpan,
+              },
+            ])
+            spans = spans.union(blockSpan)
           }
-          mergedRanges.push({ min: currentMin, max: currentMax })
-
-          for (const r of mergedRanges) {
-            const range = new Range([r])
+          spans.getRanges().forEach(range => {
             fetchAndProcessRTreeBlocks(offsets, range, level).catch(
               (e: unknown) => {
                 observer.error(e)
               },
             )
-          }
+          })
         } catch (e) {
           observer.error(e)
         }

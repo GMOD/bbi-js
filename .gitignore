@@ -9,3 +9,4 @@ esm
 crate/target
 esm_*/
 *.cpuprofile
+bench-results.json

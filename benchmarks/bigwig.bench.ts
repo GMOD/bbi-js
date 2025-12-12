@@ -13,6 +13,11 @@ import {
 const branch1Name = readFileSync('esm_branch1/branchname.txt', 'utf8').trim()
 const branch2Name = readFileSync('esm_branch2/branchname.txt', 'utf8').trim()
 
+const defaultOpts = {
+  iterations: 50,
+  warmupIterations: 10,
+}
+
 function benchBigWig(name: string, path: string, opts?: { time?: number }) {
   describe(name, () => {
     bench(
@@ -21,7 +26,7 @@ function benchBigWig(name: string, path: string, opts?: { time?: number }) {
         const bw = new BigWigBranch1({ path })
         await parseBigWigBranch1(bw)
       },
-      opts,
+      { ...defaultOpts, ...opts },
     )
 
     bench(
@@ -30,7 +35,7 @@ function benchBigWig(name: string, path: string, opts?: { time?: number }) {
         const bw = new BigWigBranch2({ path })
         await parseBigWigBranch2(bw)
       },
-      opts,
+      { ...defaultOpts, ...opts },
     )
   })
 }
@@ -44,9 +49,12 @@ benchBigWig('variable_step.bw (19KB)', 'test/data/variable_step.bw')
 benchBigWig('fixedStep.bw (698KB)', 'test/data/fixedStep.bw')
 benchBigWig('uncompressed.bw (1.0MB)', 'test/data/uncompressed.bw')
 benchBigWig('cow.bw (638KB)', 'test/data/cow.bw')
-benchBigWig('ENCFF826FLP.bw (2.7MB)', 'test/data/ENCFF826FLP.bw')
+benchBigWig('ENCFF826FLP.bw (2.7MB)', 'test/data/ENCFF826FLP.bw', {
+  iterations: 20,
+})
 benchBigWig(
   'example_bigwig_unsorted_with_error_small.bw (22MB)',
   'test/data/example_bigwig_unsorted_with_error_small.bw',
+  { iterations: 10 },
 )
-benchBigWig('cDC.bw (67MB)', 'test/data/cDC.bw', { time: 10000 })
+benchBigWig('cDC.bw (67MB)', 'test/data/cDC.bw', { iterations: 5 })
