@@ -1829,10 +1829,10 @@ generator-function@^2.0.0:
   resolved "https://registry.yarnpkg.com/generator-function/-/generator-function-2.0.1.tgz#0e75dd410d1243687a0ba2e951b94eedb8f737a2"
   integrity sha512-SFdFmIJi+ybC0vjlHN0ZGVGHc3lgE0DxPAT0djjVg+kjOnSqclqmj0KQ7ykTOLP6YxoqOvuAODGdcHJn+43q3g==
 
-generic-filehandle2@^2.0.10:
-  version "2.0.14"
-  resolved "https://registry.yarnpkg.com/generic-filehandle2/-/generic-filehandle2-2.0.14.tgz#bf56dbba9bd39ae8375d5c6b0b9bf8d070ca8180"
-  integrity sha512-Gg0EQY2Rd3wlusat7wbmAozxADzmsHKcko+b3/hRM/mh6eGheeyyVEpXoYpFbhlov2QTbjnBOSsPCP8gwywJHQ==
+generic-filehandle2@^2.0.16:
+  version "2.0.16"
+  resolved "https://registry.yarnpkg.com/generic-filehandle2/-/generic-filehandle2-2.0.16.tgz#17ac244e278b5ffcb98a165538045024eff52c90"
+  integrity sha512-MwmxPCTvcgS72nL7JEYQpV7QE4vbbUaFX4TqO7zUq5RusOqwUGB8ag2Bnd9+Qm8jnX7kzwteLsSpJ4f1mr+0zw==
 
 get-intrinsic@^1.2.4, get-intrinsic@^1.2.5, get-intrinsic@^1.2.6, get-intrinsic@^1.2.7, get-intrinsic@^1.3.0:
   version "1.3.0"
