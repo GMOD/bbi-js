@@ -151,14 +151,14 @@ for (let i = 0; i < starts.length; i++) {
   console.log(`Feature at ${starts[i]}-${ends[i]} with score ${scores[i]}`)
 }
 
-// Check if it's summary data
+// Check if it's summary data using the isSummary discriminant
 const result = await bigwig.getFeaturesAsArrays('chr1', 0, 100000, {
   scale: 0.01,
 })
-if ('minScores' in result) {
+if (result.isSummary) {
   // Summary data with min/max scores
   const { minScores, maxScores } = result
-  for (let i = 0; i < starts.length; i++) {
+  for (let i = 0; i < result.starts.length; i++) {
     console.log(`Range: ${minScores[i]} - ${maxScores[i]}`)
   }
 }
@@ -171,6 +171,7 @@ interface BigWigFeatureArrays {
   starts: Int32Array
   ends: Int32Array
   scores: Float32Array
+  isSummary: false
 }
 
 interface SummaryFeatureArrays {
@@ -179,8 +180,13 @@ interface SummaryFeatureArrays {
   scores: Float32Array
   minScores: Float32Array
   maxScores: Float32Array
+  isSummary: true
 }
 ```
+
+The `isSummary` discriminant allows TypeScript to properly narrow the union
+type, making it easier to safely access `minScores` and `maxScores` only when
+they exist.
 
 ### BigBed
 

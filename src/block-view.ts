@@ -701,6 +701,7 @@ export class BlockView {
         starts: new Int32Array(0),
         ends: new Int32Array(0),
         scores: new Float32Array(0),
+        isSummary: false as const,
       }
     }
 
@@ -709,6 +710,7 @@ export class BlockView {
         starts: allStarts[0]!,
         ends: allEnds[0]!,
         scores: allScores[0]!,
+        isSummary: false as const,
       }
     }
 
@@ -723,7 +725,7 @@ export class BlockView {
       offset += allStarts[i]!.length
     }
 
-    return { starts, ends, scores }
+    return { starts, ends, scores, isSummary: false as const }
   }
 
   public async readSummaryFeaturesAsArrays(
@@ -812,6 +814,7 @@ export class BlockView {
         scores: new Float32Array(0),
         minScores: new Float32Array(0),
         maxScores: new Float32Array(0),
+        isSummary: true as const,
       }
     }
 
@@ -822,6 +825,7 @@ export class BlockView {
         scores: allScores[0]!,
         minScores: allMinScores[0]!,
         maxScores: allMaxScores[0]!,
+        isSummary: true as const,
       }
     }
 
@@ -840,6 +844,13 @@ export class BlockView {
       offset += allStarts[i]!.length
     }
 
-    return { starts, ends, scores, minScores, maxScores }
+    return {
+      starts,
+      ends,
+      scores,
+      minScores,
+      maxScores,
+      isSummary: true as const,
+    }
   }
 }

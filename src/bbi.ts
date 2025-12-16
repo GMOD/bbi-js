@@ -415,7 +415,14 @@ export abstract class BBI {
         maxScores[i] = f.maxScore ?? 0
       }
 
-      return { starts, ends, scores, minScores, maxScores, isSummary: true as const }
+      return {
+        starts,
+        ends,
+        scores,
+        minScores,
+        maxScores,
+        isSummary: true as const,
+      }
     }
 
     const starts = new Int32Array(count)

@@ -29,6 +29,15 @@ export interface SummaryFeatureArrays {
   maxScores: Float32Array
 }
 
+// Discriminated union types for consumers
+export interface BigWigFeatureArraysWithFlag extends BigWigFeatureArrays {
+  isSummary: false
+}
+
+export interface SummaryFeatureArraysWithFlag extends SummaryFeatureArrays {
+  isSummary: true
+}
+
 export function decompressAndParseBigWig(
   inputs: Uint8Array,
   inputOffsets: Uint32Array,

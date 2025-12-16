@@ -5,8 +5,8 @@ import {
 } from './wasm/inflate-wasm-inlined.js'
 
 import type {
-  BigWigFeatureArrays,
-  SummaryFeatureArrays,
+  BigWigFeatureArrays as WasmBigWigFeatureArrays,
+  SummaryFeatureArrays as WasmSummaryFeatureArrays,
 } from './wasm/inflate-wasm-inlined.js'
 
 export interface UnzipBatchResult {
@@ -37,7 +37,7 @@ export async function decompressAndParseBigWigBlocks(
   maxOutputSize: number,
   reqStart: number,
   reqEnd: number,
-): Promise<BigWigFeatureArrays> {
+): Promise<WasmBigWigFeatureArrays> {
   const inputOffsets = new Uint32Array(blocks.length)
   const inputLengths = new Uint32Array(blocks.length)
 
@@ -64,7 +64,7 @@ export async function decompressAndParseSummaryBlocks(
   reqChrId: number,
   reqStart: number,
   reqEnd: number,
-): Promise<SummaryFeatureArrays> {
+): Promise<WasmSummaryFeatureArrays> {
   const inputOffsets = new Uint32Array(blocks.length)
   const inputLengths = new Uint32Array(blocks.length)
 
