@@ -438,6 +438,126 @@ export class BlockView {
     return items
   }
 
+  private parseBigWigBlockAsArrays(
+    buffer: Uint8Array,
+    startOffset: number,
+    req?: CoordRequest,
+  ): { starts: Int32Array; ends: Int32Array; scores: Float32Array } {
+    const dataView = new DataView(
+      buffer.buffer,
+      buffer.byteOffset + startOffset,
+      buffer.length - startOffset,
+    )
+    const blockStart = dataView.getInt32(4, true)
+    const itemStep = dataView.getUint32(12, true)
+    const itemSpan = dataView.getUint32(16, true)
+    const blockType = dataView.getUint8(20)
+    const itemCount = dataView.getUint16(22, true)
+
+    const starts = new Int32Array(itemCount)
+    const ends = new Int32Array(itemCount)
+    const scores = new Float32Array(itemCount)
+
+    if (!req) {
+      switch (blockType) {
+        case 1: {
+          let offset = 24
+          for (let i = 0; i < itemCount; i++) {
+            starts[i] = dataView.getInt32(offset, true)
+            ends[i] = dataView.getInt32(offset + 4, true)
+            scores[i] = dataView.getFloat32(offset + 8, true)
+            offset += 12
+          }
+          return { starts, ends, scores }
+        }
+        case 2: {
+          let offset = 24
+          for (let i = 0; i < itemCount; i++) {
+            const start = dataView.getInt32(offset, true)
+            starts[i] = start
+            ends[i] = start + itemSpan
+            scores[i] = dataView.getFloat32(offset + 4, true)
+            offset += 8
+          }
+          return { starts, ends, scores }
+        }
+        case 3: {
+          let offset = 24
+          for (let i = 0; i < itemCount; i++) {
+            const start = blockStart + i * itemStep
+            starts[i] = start
+            ends[i] = start + itemSpan
+            scores[i] = dataView.getFloat32(offset, true)
+            offset += 4
+          }
+          return { starts, ends, scores }
+        }
+      }
+      return { starts, ends, scores }
+    }
+
+    const reqStart = req.start
+    const reqEnd = req.end
+    let idx = 0
+
+    switch (blockType) {
+      case 1: {
+        let offset = 24
+        for (let i = 0; i < itemCount; i++) {
+          const start = dataView.getInt32(offset, true)
+          const end = dataView.getInt32(offset + 4, true)
+          if (start < reqEnd && end >= reqStart) {
+            starts[idx] = start
+            ends[idx] = end
+            scores[idx] = dataView.getFloat32(offset + 8, true)
+            idx++
+          }
+          offset += 12
+        }
+        break
+      }
+      case 2: {
+        let offset = 24
+        for (let i = 0; i < itemCount; i++) {
+          const start = dataView.getInt32(offset, true)
+          const end = start + itemSpan
+          if (start < reqEnd && end >= reqStart) {
+            starts[idx] = start
+            ends[idx] = end
+            scores[idx] = dataView.getFloat32(offset + 4, true)
+            idx++
+          }
+          offset += 8
+        }
+        break
+      }
+      case 3: {
+        let offset = 24
+        for (let i = 0; i < itemCount; i++) {
+          const start = blockStart + i * itemStep
+          const end = start + itemSpan
+          if (start < reqEnd && end >= reqStart) {
+            starts[idx] = start
+            ends[idx] = end
+            scores[idx] = dataView.getFloat32(offset, true)
+            idx++
+          }
+          offset += 4
+        }
+        break
+      }
+    }
+
+    if (idx < itemCount) {
+      return {
+        starts: starts.subarray(0, idx),
+        ends: ends.subarray(0, idx),
+        scores: scores.subarray(0, idx),
+      }
+    }
+    return { starts, ends, scores }
+  }
+
   public async readFeatures(
     observer: Observer<Feature[]>,
     blocks: { offset: number; length: number }[],
@@ -564,21 +684,12 @@ export class BlockView {
               block.offset,
               block.offset + block.length,
             )
-            const features = this.parseBigWigBlock(blockData, 0, request)
-            if (features.length > 0) {
-              const starts = new Int32Array(features.length)
-              const ends = new Int32Array(features.length)
-              const scores = new Float32Array(features.length)
-              for (let i = 0; i < features.length; i++) {
-                const f = features[i]!
-                starts[i] = f.start
-                ends[i] = f.end
-                scores[i] = f.score
-              }
-              allStarts.push(starts)
-              allEnds.push(ends)
-              allScores.push(scores)
-              totalCount += features.length
+            const result = this.parseBigWigBlockAsArrays(blockData, 0, request)
+            if (result.starts.length > 0) {
+              allStarts.push(result.starts)
+              allEnds.push(result.ends)
+              allScores.push(result.scores)
+              totalCount += result.starts.length
             }
           }
         }
