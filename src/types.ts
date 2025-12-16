@@ -72,6 +72,7 @@ export interface BigWigFeatureArrays {
   starts: Int32Array
   ends: Int32Array
   scores: Float32Array
+  isSummary: false
 }
 
 export interface SummaryFeatureArrays {
@@ -80,4 +81,5 @@ export interface SummaryFeatureArrays {
   scores: Float32Array
   minScores: Float32Array
   maxScores: Float32Array
+  isSummary: true
 }

@@ -393,6 +393,7 @@ export abstract class BBI {
         starts: new Int32Array(0),
         ends: new Int32Array(0),
         scores: new Float32Array(0),
+        isSummary: false as const,
       }
     }
 
@@ -414,7 +415,7 @@ export abstract class BBI {
         maxScores[i] = f.maxScore ?? 0
       }
 
-      return { starts, ends, scores, minScores, maxScores }
+      return { starts, ends, scores, minScores, maxScores, isSummary: true as const }
     }
 
     const starts = new Int32Array(count)
@@ -428,6 +429,6 @@ export abstract class BBI {
       scores[i] = f.score ?? 0
     }
 
-    return { starts, ends, scores }
+    return { starts, ends, scores, isSummary: false as const }
   }
 }
