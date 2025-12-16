@@ -244,9 +244,11 @@ export abstract class BBI {
 
         for (let n = 0; n < count; n++) {
           const keyEnd = b.indexOf(0, offset)
-          const key = decoder.decode(
-            b.subarray(offset, keyEnd !== -1 ? keyEnd : offset + keySize),
-          )
+          const effectiveKeyEnd =
+            keyEnd !== -1 && keyEnd < offset + keySize
+              ? keyEnd
+              : offset + keySize
+          const key = decoder.decode(b.subarray(offset, effectiveKeyEnd))
           offset += keySize
           const refId = dataView.getUint32(offset, true)
           offset += 4

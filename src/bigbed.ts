@@ -47,9 +47,9 @@ function getTabField(str: string, fieldIndex: number) {
 // Parses a null-terminated string key from a B+ tree node
 function parseKey(buffer: Uint8Array, offset: number, keySize: number) {
   const keyEnd = buffer.indexOf(0, offset)
-  return decoder.decode(
-    buffer.subarray(offset, keyEnd !== -1 ? keyEnd : offset + keySize),
-  )
+  const effectiveKeyEnd =
+    keyEnd !== -1 && keyEnd < offset + keySize ? keyEnd : offset + keySize
+  return decoder.decode(buffer.subarray(offset, effectiveKeyEnd))
 }
 
 // Recursively traverses a B+ tree to search for a specific name in the BigBed extraIndex
