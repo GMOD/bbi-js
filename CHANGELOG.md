@@ -1,3 +1,7 @@
+## [8.0.2](https://github.com/GMOD/bbi-js/compare/v8.0.1...v8.0.2) (2025-12-16)
+
+
+
 ## [8.0.1](https://github.com/GMOD/bbi-js/compare/v8.0.0...v8.0.1) (2025-12-16)
 
 
