@@ -25,6 +25,6 @@ module.exports = {
     extensions: ['.js', '.wasm'],
   },
   optimization: {
-    minimize: true,
+    minimize: false,
   },
 }
