@@ -50,9 +50,9 @@
   ],
   "dependencies": {
     "@gmod/abortable-promise-cache": "^3.0.1",
+    "@jbrowse/quick-lru": "^7.0.0",
     "generic-filehandle2": "^2.0.16",
     "pako-esm2": "^2.0.2",
-    "quick-lru": "^4.0.0",
     "rxjs": "^7.8.0"
   },
   "devDependencies": {

@@ -1,5 +1,5 @@
 import AbortablePromiseCache from '@gmod/abortable-promise-cache'
-import QuickLRU from 'quick-lru'
+import QuickLRU from '@jbrowse/quick-lru'
 import { Observable, firstValueFrom, merge } from 'rxjs'
 import { map, reduce } from 'rxjs/operators'
 
