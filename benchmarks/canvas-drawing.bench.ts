@@ -75,7 +75,9 @@ function wrapFeaturesAsClass(
 ): FeatureWithMethods[] {
   const result: FeatureWithMethods[] = []
   for (const f of feats) {
-    result.push(new FeatureWithMethods(f.start, f.end, f.score, source, refName))
+    result.push(
+      new FeatureWithMethods(f.start, f.end, f.score, source, refName),
+    )
   }
   return result
 }
@@ -228,7 +230,9 @@ describe('Wrapper overhead only (data pre-fetched): fixedStep.bw', async () => {
   const features = await bw.getFeatures(refName, start, end)
   const arrays = await bw.getFeaturesAsArrays(refName, start, end)
 
-  console.log(`Pre-fetched ${features.length} features for wrapper overhead test`)
+  console.log(
+    `Pre-fetched ${features.length} features for wrapper overhead test`,
+  )
 
   bench(
     'iterate Feature[] (raw)',
