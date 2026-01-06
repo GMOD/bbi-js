@@ -6,6 +6,7 @@ export { ArrayFeatureView } from './array-feature-view.ts'
 export type {
   BigWigFeatureArrays,
   BigWigHeader,
+  BigWigHeaderWithRefNames,
   Feature,
   RequestOptions,
   SummaryFeatureArrays,
