@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@gmod/bbi Example</title>
+    <style>
+      body {
+        font-family:
+          system-ui,
+          -apple-system,
+          sans-serif;
+        max-width: 800px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+        line-height: 1.6;
+      }
+      pre {
+        background: #f4f4f4;
+        padding: 1rem;
+        overflow-x: auto;
+        border-radius: 4px;
+      }
+      button {
+        padding: 0.5rem 1rem;
+        font-size: 1rem;
+        cursor: pointer;
+      }
+      #output {
+        margin-top: 1rem;
+      }
+      .loading {
+        color: #666;
+      }
+      .error {
+        color: red;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>@gmod/bbi Example</h1>
+    <p>
+      This example demonstrates loading BigWig data using
+      <code>@gmod/bbi</code> from an npm CDN.
+    </p>
+
+    <div>
+      <label for="url">BigWig URL:</label><br />
+      <input
+        type="text"
+        id="url"
+        style="width: 100%; margin: 0.5rem 0"
+        value="https://jbrowse.org/code/jb2/main/test_data/volvox/volvox_microarray.bw"
+      />
+    </div>
+
+    <div
+      style="
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 1rem;
+        margin: 1rem 0;
+      "
+    >
+      <div>
+        <label for="chr">Chromosome:</label>
+        <input type="text" id="chr" value="ctgA" style="width: 100%" />
+      </div>
+      <div>
+        <label for="start">Start:</label>
+        <input type="number" id="start" value="0" style="width: 100%" />
+      </div>
+      <div>
+        <label for="end">End:</label>
+        <input type="number" id="end" value="40000" style="width: 100%" />
+      </div>
+    </div>
+
+    <button id="fetch">Fetch BigWig Data</button>
+    <button id="header">Get Header</button>
+
+    <div id="output"></div>
+
+    <script type="module">
+      import { BigWig } from 'https://esm.sh/@gmod/bbi'
+
+      const output = document.getElementById('output')
+
+      function showLoading(message) {
+        output.innerHTML = `<p class="loading">${message}</p>`
+      }
+
+      function showError(error) {
+        output.innerHTML = `<pre class="error">${error.message || error}</pre>`
+        console.error(error)
+      }
+
+      function showResult(data) {
+        output.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`
+      }
+
+      document.getElementById('fetch').addEventListener('click', async () => {
+        const url = document.getElementById('url').value
+        const chr = document.getElementById('chr').value
+        const start = parseInt(document.getElementById('start').value, 10)
+        const end = parseInt(document.getElementById('end').value, 10)
+
+        showLoading(`Fetching features from ${chr}:${start}-${end}...`)
+
+        try {
+          const bigwig = new BigWig({ url })
+          const features = await bigwig.getFeatures(chr, start, end)
+
+          showResult({
+            region: `${chr}:${start}-${end}`,
+            featureCount: features.length,
+            features: features.slice(0, 20),
+            note:
+              features.length > 20
+                ? `Showing first 20 of ${features.length} features`
+                : undefined,
+          })
+        } catch (error) {
+          showError(error)
+        }
+      })
+
+      document.getElementById('header').addEventListener('click', async () => {
+        const url = document.getElementById('url').value
+
+        showLoading('Fetching header...')
+
+        try {
+          const bigwig = new BigWig({ url })
+          const header = await bigwig.getHeader()
+
+          showResult({
+            fileType: header.fileType,
+            version: header.version,
+            numZoomLevels: header.numZoomLevels,
+            chromosomes: header.refsByNumber,
+            totalSummary: header.totalSummary,
+            zoomLevels: header.zoomLevels,
+          })
+        } catch (error) {
+          showError(error)
+        }
+      })
+    </script>
+  </body>
+</html>

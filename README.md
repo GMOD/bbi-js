@@ -6,46 +6,68 @@
 
 A parser for bigwig and bigbed file formats
 
+## Installation
+
+```bash
+npm install @gmod/bbi
+```
+
 ## Usage
 
-If using locally
+### Local files
 
 ```typescript
-const { BigWig } = require('@gmod/bbi')
-const file = new BigWig({
-  path: 'volvox.bw',
-})
-;(async () => {
-  await file.getHeader()
-  const feats = await file.getFeatures('chr1', 0, 100, { scale: 1 })
-})()
+import { BigWig } from '@gmod/bbi'
+
+const file = new BigWig({ path: 'volvox.bw' })
+const header = await file.getHeader()
+const features = await file.getFeatures('chr1', 0, 100, { scale: 1 })
 ```
 
-If using remotely, you can use it in combination with generic-filehandle2 or
-your own implementation of something like generic-filehandle2
-https://github.com/GMOD/generic-filehandle2/
+### Remote files
+
+You can use the `url` option or provide a custom filehandle from
+[generic-filehandle2](https://github.com/GMOD/generic-filehandle2/):
 
 ```typescript
-const { BigWig } = require('@gmod/bbi')
-const { RemoteFile } = require('generic-filehandle2')
+import { BigWig } from '@gmod/bbi'
 
-// if running in the browser or newer versions of node.js, RemoteFile will use
-// the the global fetch
+// Using url directly
 const file = new BigWig({
-  filehandle: new RemoteFile('volvox.bw'),
+  url: 'https://example.com/file.bw',
 })
 
-// old versions of node.js without a global fetch, supply custom fetch function
-const fetch = require('node-fetch')
+// Or with a custom RemoteFile instance
+import { RemoteFile } from 'generic-filehandle2'
+
 const file = new BigWig({
-  filehandle: new RemoteFile('volvox.bw', { fetch }),
+  filehandle: new RemoteFile('https://example.com/file.bw'),
 })
 
-;(async () => {
-  await file.getHeader()
-  const feats = await file.getFeatures('chr1', 0, 100, { scale: 1 })
-})()
+const header = await file.getHeader()
+const features = await file.getFeatures('chr1', 0, 100, { scale: 1 })
 ```
+
+### Using without npm (CDN)
+
+You can use this library directly in the browser without npm by importing from
+an ESM CDN like [esm.sh](https://esm.sh) (note that we don't necessarily
+recommend CDN usage, it is just a way to test things easily):
+
+```html
+<script type="module">
+  import { BigWig } from 'https://esm.sh/@gmod/bbi'
+
+  const file = new BigWig({
+    url: 'https://example.com/file.bw',
+  })
+  const header = await file.getHeader()
+  const features = await file.getFeatures('chr1', 0, 100)
+  console.log(features)
+</script>
+```
+
+See the [example](./example/) folder for a complete working demo.
 
 ## Documentation
 
@@ -233,11 +255,9 @@ this module, but can be combined with it as follows
 import { BigBed } from '@gmod/bbi'
 import BED from '@gmod/bed'
 
-const ti = new BigBed({
-  filehandle: new LocalFile(require.resolve('./data/hg18.bb')),
-})
-const { autoSql } = await ti.getHeader()
-const feats = await ti.getFeatures('chr7', 0, 100000)
+const file = new BigBed({ path: './data/hg18.bb' })
+const { autoSql } = await file.getHeader()
+const feats = await file.getFeatures('chr7', 0, 100000)
 const parser = new BED({ autoSql })
 const lines = feats.map(f => {
   const { start, end, rest, uniqueId } = f

@@ -1,0 +1,13 @@
+{
+  "name": "bbi-example",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Example usage of @gmod/bbi",
+  "scripts": {
+    "start": "npx serve .",
+    "fetch": "node fetch-bigwig.mjs"
+  },
+  "dependencies": {
+    "@gmod/bbi": "^8.1.1"
+  }
+}
