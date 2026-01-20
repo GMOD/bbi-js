@@ -69,11 +69,20 @@ export class BlockView {
   private rTreePromise?: Promise<Uint8Array>
 
   private featureCache = new AbortablePromiseCache<ReadData, Uint8Array>({
-    cache: new QuickLRU({ maxSize: 1000 }),
+    cache: new QuickLRU({ maxSize: 100 }),
 
     fill: async ({ length, offset }, signal) =>
       this.bbi.read(length, offset, { signal }),
   })
+
+  public clearCache() {
+    this.featureCache = new AbortablePromiseCache<ReadData, Uint8Array>({
+      cache: new QuickLRU({ maxSize: 100 }),
+      fill: async ({ length, offset }, signal) =>
+        this.bbi.read(length, offset, { signal }),
+    })
+    this.rTreePromise = undefined
+  }
 
   public constructor(
     private bbi: GenericFilehandle,
@@ -449,123 +458,6 @@ export class BlockView {
     return items
   }
 
-  private parseBigWigBlockAsArrays(
-    buffer: Uint8Array,
-    startOffset: number,
-    req?: CoordRequest,
-  ): { starts: Int32Array; ends: Int32Array; scores: Float32Array } {
-    const dataView = new DataView(
-      buffer.buffer,
-      buffer.byteOffset + startOffset,
-      buffer.length - startOffset,
-    )
-    const { blockStart, itemStep, itemSpan, blockType, itemCount } =
-      parseBigWigBlockHeader(dataView)
-
-    const starts = new Int32Array(itemCount)
-    const ends = new Int32Array(itemCount)
-    const scores = new Float32Array(itemCount)
-
-    if (!req) {
-      switch (blockType) {
-        case 1: {
-          let offset = 24
-          for (let i = 0; i < itemCount; i++) {
-            starts[i] = dataView.getInt32(offset, true)
-            ends[i] = dataView.getInt32(offset + 4, true)
-            scores[i] = dataView.getFloat32(offset + 8, true)
-            offset += 12
-          }
-          return { starts, ends, scores }
-        }
-        case 2: {
-          let offset = 24
-          for (let i = 0; i < itemCount; i++) {
-            const start = dataView.getInt32(offset, true)
-            starts[i] = start
-            ends[i] = start + itemSpan
-            scores[i] = dataView.getFloat32(offset + 4, true)
-            offset += 8
-          }
-          return { starts, ends, scores }
-        }
-        case 3: {
-          let offset = 24
-          for (let i = 0; i < itemCount; i++) {
-            const start = blockStart + i * itemStep
-            starts[i] = start
-            ends[i] = start + itemSpan
-            scores[i] = dataView.getFloat32(offset, true)
-            offset += 4
-          }
-          return { starts, ends, scores }
-        }
-      }
-      return { starts, ends, scores }
-    }
-
-    const reqStart = req.start
-    const reqEnd = req.end
-    let idx = 0
-
-    switch (blockType) {
-      case 1: {
-        let offset = 24
-        for (let i = 0; i < itemCount; i++) {
-          const start = dataView.getInt32(offset, true)
-          const end = dataView.getInt32(offset + 4, true)
-          if (start < reqEnd && end >= reqStart) {
-            starts[idx] = start
-            ends[idx] = end
-            scores[idx] = dataView.getFloat32(offset + 8, true)
-            idx++
-          }
-          offset += 12
-        }
-        break
-      }
-      case 2: {
-        let offset = 24
-        for (let i = 0; i < itemCount; i++) {
-          const start = dataView.getInt32(offset, true)
-          const end = start + itemSpan
-          if (start < reqEnd && end >= reqStart) {
-            starts[idx] = start
-            ends[idx] = end
-            scores[idx] = dataView.getFloat32(offset + 4, true)
-            idx++
-          }
-          offset += 8
-        }
-        break
-      }
-      case 3: {
-        let offset = 24
-        for (let i = 0; i < itemCount; i++) {
-          const start = blockStart + i * itemStep
-          const end = start + itemSpan
-          if (start < reqEnd && end >= reqStart) {
-            starts[idx] = start
-            ends[idx] = end
-            scores[idx] = dataView.getFloat32(offset, true)
-            idx++
-          }
-          offset += 4
-        }
-        break
-      }
-    }
-
-    if (idx < itemCount) {
-      return {
-        starts: starts.subarray(0, idx),
-        ends: ends.subarray(0, idx),
-        scores: scores.subarray(0, idx),
-      }
-    }
-    return { starts, ends, scores }
-  }
-
   public async readFeatures(
     observer: Observer<Feature[]>,
     blocks: { offset: number; length: number }[],
@@ -575,70 +467,70 @@ export class BlockView {
       const { blockType, uncompressBufSize } = this
       const { signal, request } = opts
       const blockGroupsToFetch = groupBlocks(blocks)
-      await Promise.all(
-        blockGroupsToFetch.map(async blockGroup => {
-          const { length, offset } = blockGroup
-          const data = await this.featureCache.get(
-            `${length}_${offset}`,
-            blockGroup,
-            signal,
+
+      // Process sequentially to reduce peak memory usage
+      for (const blockGroup of blockGroupsToFetch) {
+        const { length, offset } = blockGroup
+        const data = await this.featureCache.get(
+          `${length}_${offset}`,
+          blockGroup,
+          signal,
+        )
+
+        const localBlocks = blockGroup.blocks.map(block => ({
+          offset: block.offset - blockGroup.offset,
+          length: block.length,
+        }))
+
+        let decompressedData: Uint8Array
+        let decompressedOffsets: number[]
+
+        if (uncompressBufSize > 0) {
+          const result = await unzipBatch(
+            data,
+            localBlocks,
+            uncompressBufSize,
           )
+          decompressedData = result.data
+          decompressedOffsets = result.offsets
+        } else {
+          decompressedData = data
+          decompressedOffsets = localBlocks.map(b => b.offset)
+          decompressedOffsets.push(data.length)
+        }
 
-          const localBlocks = blockGroup.blocks.map(block => ({
-            offset: block.offset - blockGroup.offset,
-            length: block.length,
-          }))
+        for (let i = 0; i < blockGroup.blocks.length; i++) {
+          const block = blockGroup.blocks[i]!
+          const start = decompressedOffsets[i]!
+          const end = decompressedOffsets[i + 1]!
+          const resultData = decompressedData.subarray(start, end)
 
-          let decompressedData: Uint8Array
-          let decompressedOffsets: number[]
-
-          if (uncompressBufSize > 0) {
-            const result = await unzipBatch(
-              data,
-              localBlocks,
-              uncompressBufSize,
-            )
-            decompressedData = result.data
-            decompressedOffsets = result.offsets
-          } else {
-            decompressedData = data
-            decompressedOffsets = localBlocks.map(b => b.offset)
-            decompressedOffsets.push(data.length)
-          }
-
-          for (let i = 0; i < blockGroup.blocks.length; i++) {
-            const block = blockGroup.blocks[i]!
-            const start = decompressedOffsets[i]!
-            const end = decompressedOffsets[i + 1]!
-            const resultData = decompressedData.subarray(start, end)
-
-            switch (blockType) {
-              case 'summary': {
-                observer.next(this.parseSummaryBlock(resultData, 0, request))
-                break
-              }
-              case 'bigwig': {
-                observer.next(this.parseBigWigBlock(resultData, 0, request))
-                break
-              }
-              case 'bigbed': {
-                observer.next(
-                  this.parseBigBedBlock(
-                    resultData,
-                    0,
-                    block.offset * (1 << 8),
-                    request,
-                  ),
-                )
-                break
-              }
-              default: {
-                console.warn(`Don't know what to do with ${blockType}`)
-              }
+          switch (blockType) {
+            case 'summary': {
+              observer.next(this.parseSummaryBlock(resultData, 0, request))
+              break
+            }
+            case 'bigwig': {
+              observer.next(this.parseBigWigBlock(resultData, 0, request))
+              break
+            }
+            case 'bigbed': {
+              observer.next(
+                this.parseBigBedBlock(
+                  resultData,
+                  0,
+                  block.offset * (1 << 8),
+                  request,
+                ),
+              )
+              break
+            }
+            default: {
+              console.warn(`Don't know what to do with ${blockType}`)
             }
           }
-        }),
-      )
+        }
+      }
       observer.complete()
     } catch (e) {
       observer.error(e)
@@ -653,98 +545,45 @@ export class BlockView {
     const { signal, request } = opts
     const blockGroupsToFetch = groupBlocks(blocks)
 
-    // Fetch all block group data in parallel
-    const fetchedGroups = await Promise.all(
-      blockGroupsToFetch.map(async blockGroup => {
-        const { length, offset } = blockGroup
-        const data = await this.featureCache.get(
-          `${length}_${offset}`,
-          blockGroup,
-          signal,
-        )
-        return { blockGroup, data }
-      }),
-    )
+    // Process each block group separately to avoid huge combined buffers
+    const allResults: { starts: Int32Array; ends: Int32Array; scores: Float32Array }[] = []
+    let totalCount = 0
 
-    if (uncompressBufSize > 0) {
-      // Batch all blocks into a single WASM call
-      // Calculate total size needed for combined buffer
-      let totalSize = 0
-      for (const { data } of fetchedGroups) {
-        totalSize += data.length
-      }
-
-      // Combine all data into single buffer and collect all blocks with adjusted offsets
-      const combinedData = new Uint8Array(totalSize)
-      const allBlocks: { offset: number; length: number }[] = []
-      let currentOffset = 0
-
-      for (const { blockGroup, data } of fetchedGroups) {
-        combinedData.set(data, currentOffset)
-        for (const block of blockGroup.blocks) {
-          allBlocks.push({
-            offset: currentOffset + (block.offset - blockGroup.offset),
-            length: block.length,
-          })
-        }
-        currentOffset += data.length
-      }
-
-      // Single WASM call for all blocks
-      const result = await decompressAndParseBigWigBlocks(
-        combinedData,
-        allBlocks,
-        uncompressBufSize,
-        request?.start ?? 0,
-        request?.end ?? 0,
+    for (const blockGroup of blockGroupsToFetch) {
+      const { length, offset } = blockGroup
+      const data = await this.featureCache.get(
+        `${length}_${offset}`,
+        blockGroup,
+        signal,
       )
 
-      if (result.starts.length === 0) {
-        return {
-          starts: new Int32Array(0),
-          ends: new Int32Array(0),
-          scores: new Float32Array(0),
-          isSummary: false as const,
-        }
-      }
+      const localBlocks = blockGroup.blocks.map(block => ({
+        offset: block.offset - blockGroup.offset,
+        length: block.length,
+      }))
 
-      return {
-        starts: result.starts,
-        ends: result.ends,
-        scores: result.scores,
-        isSummary: false as const,
+      const result = uncompressBufSize > 0
+        ? await decompressAndParseBigWigBlocks(
+            data,
+            localBlocks,
+            uncompressBufSize,
+            request?.start ?? 0,
+            request?.end ?? 0,
+          )
+        : await parseBigWigBlocksWasm(
+            data,
+            localBlocks,
+            request?.start ?? 0,
+            request?.end ?? 0,
+          )
+
+      if (result.starts.length > 0) {
+        allResults.push(result)
+        totalCount += result.starts.length
       }
     }
 
-    // Uncompressed path - also use WASM for parsing
-    let totalSize = 0
-    for (const { data } of fetchedGroups) {
-      totalSize += data.length
-    }
-
-    const combinedData = new Uint8Array(totalSize)
-    const allBlocks: { offset: number; length: number }[] = []
-    let currentOffset = 0
-
-    for (const { blockGroup, data } of fetchedGroups) {
-      combinedData.set(data, currentOffset)
-      for (const block of blockGroup.blocks) {
-        allBlocks.push({
-          offset: currentOffset + (block.offset - blockGroup.offset),
-          length: block.length,
-        })
-      }
-      currentOffset += data.length
-    }
-
-    const result = await parseBigWigBlocksWasm(
-      combinedData,
-      allBlocks,
-      request?.start ?? 0,
-      request?.end ?? 0,
-    )
-
-    if (result.starts.length === 0) {
+    if (allResults.length === 0) {
       return {
         starts: new Int32Array(0),
         ends: new Int32Array(0),
@@ -753,12 +592,30 @@ export class BlockView {
       }
     }
 
-    return {
-      starts: result.starts,
-      ends: result.ends,
-      scores: result.scores,
-      isSummary: false as const,
+    if (allResults.length === 1) {
+      return {
+        starts: allResults[0]!.starts,
+        ends: allResults[0]!.ends,
+        scores: allResults[0]!.scores,
+        isSummary: false as const,
+      }
     }
+
+    // Merge results - clear references after copying to allow GC
+    const starts = new Int32Array(totalCount)
+    const ends = new Int32Array(totalCount)
+    const scores = new Float32Array(totalCount)
+    let offset = 0
+    for (let i = 0; i < allResults.length; i++) {
+      const result = allResults[i]!
+      starts.set(result.starts, offset)
+      ends.set(result.ends, offset)
+      scores.set(result.scores, offset)
+      offset += result.starts.length
+      allResults[i] = undefined!
+    }
+
+    return { starts, ends, scores, isSummary: false as const }
   }
 
   public async readSummaryFeaturesAsArrays(
@@ -769,102 +626,53 @@ export class BlockView {
     const { signal, request } = opts
     const blockGroupsToFetch = groupBlocks(blocks)
 
-    // Fetch all block group data in parallel
-    const fetchedGroups = await Promise.all(
-      blockGroupsToFetch.map(async blockGroup => {
-        const { length, offset } = blockGroup
-        const data = await this.featureCache.get(
-          `${length}_${offset}`,
-          blockGroup,
-          signal,
-        )
-        return { blockGroup, data }
-      }),
-    )
+    // Process each block group separately to avoid huge combined buffers
+    const allResults: {
+      starts: Int32Array
+      ends: Int32Array
+      scores: Float32Array
+      minScores: Float32Array
+      maxScores: Float32Array
+    }[] = []
+    let totalCount = 0
 
-    if (uncompressBufSize > 0) {
-      // Batch all blocks into a single WASM call
-      let totalSize = 0
-      for (const { data } of fetchedGroups) {
-        totalSize += data.length
-      }
-
-      const combinedData = new Uint8Array(totalSize)
-      const allBlocks: { offset: number; length: number }[] = []
-      let currentOffset = 0
-
-      for (const { blockGroup, data } of fetchedGroups) {
-        combinedData.set(data, currentOffset)
-        for (const block of blockGroup.blocks) {
-          allBlocks.push({
-            offset: currentOffset + (block.offset - blockGroup.offset),
-            length: block.length,
-          })
-        }
-        currentOffset += data.length
-      }
-
-      // Single WASM call for all blocks
-      const result = await decompressAndParseSummaryBlocks(
-        combinedData,
-        allBlocks,
-        uncompressBufSize,
-        request?.chrId ?? 0,
-        request?.start ?? 0,
-        request?.end ?? 0,
+    for (const blockGroup of blockGroupsToFetch) {
+      const { length, offset } = blockGroup
+      const data = await this.featureCache.get(
+        `${length}_${offset}`,
+        blockGroup,
+        signal,
       )
 
-      if (result.starts.length === 0) {
-        return {
-          starts: new Int32Array(0),
-          ends: new Int32Array(0),
-          scores: new Float32Array(0),
-          minScores: new Float32Array(0),
-          maxScores: new Float32Array(0),
-          isSummary: true as const,
-        }
-      }
+      const localBlocks = blockGroup.blocks.map(block => ({
+        offset: block.offset - blockGroup.offset,
+        length: block.length,
+      }))
 
-      return {
-        starts: result.starts,
-        ends: result.ends,
-        scores: result.scores,
-        minScores: result.minScores,
-        maxScores: result.maxScores,
-        isSummary: true as const,
+      const result = uncompressBufSize > 0
+        ? await decompressAndParseSummaryBlocks(
+            data,
+            localBlocks,
+            uncompressBufSize,
+            request?.chrId ?? 0,
+            request?.start ?? 0,
+            request?.end ?? 0,
+          )
+        : await parseSummaryBlocksWasm(
+            data,
+            localBlocks,
+            request?.chrId ?? 0,
+            request?.start ?? 0,
+            request?.end ?? 0,
+          )
+
+      if (result.starts.length > 0) {
+        allResults.push(result)
+        totalCount += result.starts.length
       }
     }
 
-    // Uncompressed path - also use WASM for parsing
-    let totalSize = 0
-    for (const { data } of fetchedGroups) {
-      totalSize += data.length
-    }
-
-    const combinedData = new Uint8Array(totalSize)
-    const allBlocks: { offset: number; length: number }[] = []
-    let currentOffset = 0
-
-    for (const { blockGroup, data } of fetchedGroups) {
-      combinedData.set(data, currentOffset)
-      for (const block of blockGroup.blocks) {
-        allBlocks.push({
-          offset: currentOffset + (block.offset - blockGroup.offset),
-          length: block.length,
-        })
-      }
-      currentOffset += data.length
-    }
-
-    const result = await parseSummaryBlocksWasm(
-      combinedData,
-      allBlocks,
-      request?.chrId ?? 0,
-      request?.start ?? 0,
-      request?.end ?? 0,
-    )
-
-    if (result.starts.length === 0) {
+    if (allResults.length === 0) {
       return {
         starts: new Int32Array(0),
         ends: new Int32Array(0),
@@ -875,13 +683,35 @@ export class BlockView {
       }
     }
 
-    return {
-      starts: result.starts,
-      ends: result.ends,
-      scores: result.scores,
-      minScores: result.minScores,
-      maxScores: result.maxScores,
-      isSummary: true as const,
+    if (allResults.length === 1) {
+      return {
+        starts: allResults[0]!.starts,
+        ends: allResults[0]!.ends,
+        scores: allResults[0]!.scores,
+        minScores: allResults[0]!.minScores,
+        maxScores: allResults[0]!.maxScores,
+        isSummary: true as const,
+      }
     }
+
+    // Merge results - clear references after copying to allow GC
+    const starts = new Int32Array(totalCount)
+    const ends = new Int32Array(totalCount)
+    const scores = new Float32Array(totalCount)
+    const minScores = new Float32Array(totalCount)
+    const maxScores = new Float32Array(totalCount)
+    let offset = 0
+    for (let i = 0; i < allResults.length; i++) {
+      const result = allResults[i]!
+      starts.set(result.starts, offset)
+      ends.set(result.ends, offset)
+      scores.set(result.scores, offset)
+      minScores.set(result.minScores, offset)
+      maxScores.set(result.maxScores, offset)
+      offset += result.starts.length
+      allResults[i] = undefined!
+    }
+
+    return { starts, ends, scores, minScores, maxScores, isSummary: true as const }
   }
 }
