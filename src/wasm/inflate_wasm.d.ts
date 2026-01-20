@@ -27,9 +27,20 @@ export function inflate_raw_unknown_size(input: Uint8Array): Uint8Array;
 export function parse_bigwig_block(data: Uint8Array, req_start: number, req_end: number): Uint8Array;
 
 /**
+ * Parse multiple uncompressed BigWig blocks
+ * Same as decompress_and_parse_bigwig but skips decompression
+ */
+export function parse_bigwig_blocks(inputs: Uint8Array, input_offsets: Uint32Array, input_lengths: Uint32Array, req_start: number, req_end: number): Uint8Array;
+
+/**
  * Parse a BigWig summary block and return packed typed arrays
  * Summary blocks contain: chromId, start, end, validCnt, minScore, maxScore, sumData, sumSqData
  *
  * Returns: [count: u32][starts: i32*n][ends: i32*n][scores: f32*n][minScores: f32*n][maxScores: f32*n]
  */
 export function parse_summary_block(data: Uint8Array, req_chr_id: number, req_start: number, req_end: number): Uint8Array;
+
+/**
+ * Parse multiple uncompressed summary blocks
+ */
+export function parse_summary_blocks(inputs: Uint8Array, input_offsets: Uint32Array, input_lengths: Uint32Array, req_chr_id: number, req_start: number, req_end: number): Uint8Array;

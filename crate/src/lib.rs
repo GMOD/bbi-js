@@ -415,6 +415,116 @@ fn parse_bigwig_block_into(
     }
 }
 
+/// Parse multiple uncompressed BigWig blocks
+/// Same as decompress_and_parse_bigwig but skips decompression
+#[wasm_bindgen]
+pub fn parse_bigwig_blocks(
+    inputs: &[u8],
+    input_offsets: &[u32],
+    input_lengths: &[u32],
+    req_start: i32,
+    req_end: i32,
+) -> Box<[u8]> {
+    let num_blocks = input_offsets.len();
+    let mut starts: Vec<i32> = Vec::new();
+    let mut ends: Vec<i32> = Vec::new();
+    let mut scores: Vec<f32> = Vec::new();
+
+    for i in 0..num_blocks {
+        let offset = input_offsets[i] as usize;
+        let length = input_lengths[i] as usize;
+        let data = &inputs[offset..offset + length];
+        parse_bigwig_block_into(data, req_start, req_end, &mut starts, &mut ends, &mut scores);
+    }
+
+    let count = starts.len() as u32;
+    let result_size = 4 + count as usize * 12;
+    let mut result = Vec::with_capacity(result_size);
+
+    result.extend_from_slice(&count.to_le_bytes());
+    for &s in &starts {
+        result.extend_from_slice(&s.to_le_bytes());
+    }
+    for &e in &ends {
+        result.extend_from_slice(&e.to_le_bytes());
+    }
+    for &sc in &scores {
+        result.extend_from_slice(&sc.to_le_bytes());
+    }
+
+    result.into_boxed_slice()
+}
+
+/// Parse multiple uncompressed summary blocks
+#[wasm_bindgen]
+pub fn parse_summary_blocks(
+    inputs: &[u8],
+    input_offsets: &[u32],
+    input_lengths: &[u32],
+    req_chr_id: u32,
+    req_start: i32,
+    req_end: i32,
+) -> Box<[u8]> {
+    let num_blocks = input_offsets.len();
+    let filter = req_start != 0 || req_end != 0;
+
+    let mut starts: Vec<i32> = Vec::new();
+    let mut ends: Vec<i32> = Vec::new();
+    let mut scores: Vec<f32> = Vec::new();
+    let mut min_scores: Vec<f32> = Vec::new();
+    let mut max_scores: Vec<f32> = Vec::new();
+
+    for i in 0..num_blocks {
+        let block_offset = input_offsets[i] as usize;
+        let block_length = input_lengths[i] as usize;
+        let data = &inputs[block_offset..block_offset + block_length];
+
+        let record_size = 32usize;
+        let num_records = data.len() / record_size;
+        let mut offset = 0usize;
+
+        for _ in 0..num_records {
+            let chrom_id = read_u32_le(data, offset);
+            offset += 4;
+            let feat_start = read_u32_le(data, offset) as i32;
+            offset += 4;
+            let feat_end = read_u32_le(data, offset) as i32;
+            offset += 4;
+            let valid_cnt = read_u32_le(data, offset);
+            offset += 4;
+            let min_score = read_f32_le(data, offset);
+            offset += 4;
+            let max_score = read_f32_le(data, offset);
+            offset += 4;
+            let sum_data = read_f32_le(data, offset);
+            offset += 8;
+
+            let passes = !filter || (chrom_id == req_chr_id && feat_start < req_end && feat_end > req_start);
+            if passes {
+                starts.push(feat_start);
+                ends.push(feat_end);
+                let score = if valid_cnt > 0 { sum_data / valid_cnt as f32 } else { sum_data };
+                scores.push(score);
+                min_scores.push(min_score);
+                max_scores.push(max_score);
+            }
+        }
+    }
+
+    let count = starts.len() as u32;
+    let result_size = 4 + count as usize * 20;
+    let mut result = Vec::with_capacity(result_size);
+
+    result.extend_from_slice(&count.to_le_bytes());
+    for &s in &starts { result.extend_from_slice(&s.to_le_bytes()); }
+    for &e in &ends { result.extend_from_slice(&e.to_le_bytes()); }
+    for &sc in &scores { result.extend_from_slice(&sc.to_le_bytes()); }
+    for &m in &min_scores { result.extend_from_slice(&m.to_le_bytes()); }
+    for &m in &max_scores { result.extend_from_slice(&m.to_le_bytes()); }
+
+    result.into_boxed_slice()
+}
+
 /// Combined decompress + parse for summary blocks
 #[wasm_bindgen]
 pub fn decompress_and_parse_summary(

@@ -179,3 +179,41 @@ export async function decompressAndParseSummary(
   )
   return unpackSummaryFeatures(packed)
 }
+
+export async function parseBigWigBlocks(
+  inputs,
+  inputOffsets,
+  inputLengths,
+  reqStart,
+  reqEnd,
+) {
+  await init()
+  const packed = bg.parse_bigwig_blocks(
+    inputs,
+    inputOffsets,
+    inputLengths,
+    reqStart,
+    reqEnd,
+  )
+  return unpackBigWigFeatures(packed)
+}
+
+export async function parseSummaryBlocks(
+  inputs,
+  inputOffsets,
+  inputLengths,
+  reqChrId,
+  reqStart,
+  reqEnd,
+) {
+  await init()
+  const packed = bg.parse_summary_blocks(
+    inputs,
+    inputOffsets,
+    inputLengths,
+    reqChrId,
+    reqStart,
+    reqEnd,
+  )
+  return unpackSummaryFeatures(packed)
+}
