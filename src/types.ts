@@ -83,3 +83,10 @@ export interface SummaryFeatureArrays {
   maxScores: Float32Array
   isSummary: true
 }
+
+export interface BigBedFeatureArrays {
+  starts: Int32Array
+  ends: Int32Array
+  uniqueIdOffsets: Uint32Array
+  restStrings: string[]
+}

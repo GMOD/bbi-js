@@ -3,15 +3,17 @@ import QuickLRU from '@jbrowse/quick-lru'
 
 import Range from './range.ts'
 import {
+  decompressAndParseBigBedBlocks,
   decompressAndParseBigWigBlocks,
   decompressAndParseSummaryBlocks,
+  parseBigBedBlocksWasm,
   parseBigWigBlocksWasm,
   parseSummaryBlocksWasm,
   unzipBatch,
 } from './unzip.ts'
 import { groupBlocks } from './util.ts'
 
-import type { Feature } from './types.ts'
+import type { BigBedFeatureArrays, Feature } from './types.ts'
 import type { BigWigFeatureArrays, SummaryFeatureArrays } from './unzip.ts'
 import type { GenericFilehandle } from 'generic-filehandle2'
 import type { Observer } from 'rxjs'
@@ -355,6 +357,7 @@ export class BlockView {
     const items: Feature[] = []
     let currOffset = startOffset
     const dataView = new DataView(data.buffer, data.byteOffset, data.length)
+
     while (currOffset < data.byteLength) {
       const c2 = currOffset
       const chromId = dataView.getUint32(currOffset, true)
@@ -363,15 +366,12 @@ export class BlockView {
       currOffset += 4
       const end = dataView.getInt32(currOffset, true)
       currOffset += 4
-      let i = currOffset
-      for (; i < data.length; i++) {
-        if (data[i] === 0) {
-          break
-        }
-      }
-      const b = data.subarray(currOffset, i)
-      const rest = decoder.decode(b)
-      currOffset = i + 1
+
+      // Find null terminator using native indexOf
+      const nullPos = data.indexOf(0, currOffset)
+      const i = nullPos === -1 ? data.length : nullPos
+
+      // Check coordinate filter BEFORE parsing the rest string (expensive for bigMaf)
       if (
         !request ||
         (chromId === request.chrId &&
@@ -380,10 +380,11 @@ export class BlockView {
         items.push({
           start,
           end,
-          rest,
+          rest: decoder.decode(data.subarray(currOffset, i)),
           uniqueId: `bb-${offset + c2}`,
         })
       }
+      currOffset = i + 1
     }
 
     return items
@@ -713,5 +714,90 @@ export class BlockView {
     }
 
     return { starts, ends, scores, minScores, maxScores, isSummary: true as const }
+  }
+
+  public async readBigBedFeaturesAsArrays(
+    blocks: { offset: number; length: number }[],
+    opts: Options = {},
+  ): Promise<BigBedFeatureArrays> {
+    const { uncompressBufSize } = this
+    const { signal, request } = opts
+    const blockGroupsToFetch = groupBlocks(blocks)
+
+    const allResults: BigBedFeatureArrays[] = []
+    let totalCount = 0
+
+    for (const blockGroup of blockGroupsToFetch) {
+      const { length, offset } = blockGroup
+      const data = await this.featureCache.get(
+        `${length}_${offset}`,
+        blockGroup,
+        signal,
+      )
+
+      const localBlocks = blockGroup.blocks.map(block => ({
+        offset: block.offset - blockGroup.offset,
+        length: block.length,
+      }))
+
+      const blockFileOffsets = blockGroup.blocks.map(block => block.offset)
+
+      const result = uncompressBufSize > 0
+        ? await decompressAndParseBigBedBlocks(
+            data,
+            localBlocks,
+            blockFileOffsets,
+            uncompressBufSize,
+            request?.chrId ?? 0,
+            request?.start ?? 0,
+            request?.end ?? 0,
+          )
+        : await parseBigBedBlocksWasm(
+            data,
+            localBlocks,
+            blockFileOffsets,
+            request?.chrId ?? 0,
+            request?.start ?? 0,
+            request?.end ?? 0,
+          )
+
+      if (result.starts.length > 0) {
+        allResults.push(result)
+        totalCount += result.starts.length
+      }
+    }
+
+    if (allResults.length === 0) {
+      return {
+        starts: new Int32Array(0),
+        ends: new Int32Array(0),
+        uniqueIdOffsets: new Uint32Array(0),
+        restStrings: [],
+      }
+    }
+
+    if (allResults.length === 1) {
+      return allResults[0]!
+    }
+
+    // Merge results
+    const starts = new Int32Array(totalCount)
+    const ends = new Int32Array(totalCount)
+    const uniqueIdOffsets = new Uint32Array(totalCount)
+    const restStrings: string[] = []
+    let offset = 0
+    for (let i = 0; i < allResults.length; i++) {
+      const result = allResults[i]!
+      starts.set(result.starts, offset)
+      ends.set(result.ends, offset)
+      uniqueIdOffsets.set(result.uniqueIdOffsets, offset)
+      for (const s of result.restStrings) {
+        restStrings.push(s)
+      }
+      offset += result.starts.length
+      allResults[i] = undefined!
+    }
+
+    return { starts, ends, uniqueIdOffsets, restStrings }
   }
 }

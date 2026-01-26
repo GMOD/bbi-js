@@ -73,3 +73,31 @@ export function parseSummaryBlocks(
   reqStart: number,
   reqEnd: number,
 ): Promise<SummaryFeatureArrays>
+
+export interface BigBedFeatureArrays {
+  starts: Int32Array
+  ends: Int32Array
+  uniqueIdOffsets: Uint32Array
+  restStrings: string[]
+}
+
+export function parseBigBedBlocks(
+  inputs: Uint8Array,
+  inputOffsets: Uint32Array,
+  inputLengths: Uint32Array,
+  blockFileOffsets: Uint32Array,
+  reqChrId: number,
+  reqStart: number,
+  reqEnd: number,
+): Promise<BigBedFeatureArrays>
+
+export function decompressAndParseBigBed(
+  inputs: Uint8Array,
+  inputOffsets: Uint32Array,
+  inputLengths: Uint32Array,
+  blockFileOffsets: Uint32Array,
+  maxBlockSize: number,
+  reqChrId: number,
+  reqStart: number,
+  reqEnd: number,
+): Promise<BigBedFeatureArrays>

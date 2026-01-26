@@ -1,4 +1,44 @@
 /**
+ * Combined decompress + parse for BigBed blocks
+ * Returns: [count: u32][starts: i32*n][ends: i32*n][uid_offsets: u32*n][string_offsets: u32*(n+1)][string_data: bytes]
+ * @param {Uint8Array} inputs
+ * @param {Uint32Array} input_offsets
+ * @param {Uint32Array} input_lengths
+ * @param {Uint32Array} block_file_offsets
+ * @param {number} max_block_size
+ * @param {number} req_chr_id
+ * @param {number} req_start
+ * @param {number} req_end
+ * @returns {Uint8Array}
+ */
+export function decompress_and_parse_bigbed(inputs, input_offsets, input_lengths, block_file_offsets, max_block_size, req_chr_id, req_start, req_end) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        const ptr0 = passArray8ToWasm0(inputs, wasm.__wbindgen_export);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passArray32ToWasm0(input_offsets, wasm.__wbindgen_export);
+        const len1 = WASM_VECTOR_LEN;
+        const ptr2 = passArray32ToWasm0(input_lengths, wasm.__wbindgen_export);
+        const len2 = WASM_VECTOR_LEN;
+        const ptr3 = passArray32ToWasm0(block_file_offsets, wasm.__wbindgen_export);
+        const len3 = WASM_VECTOR_LEN;
+        wasm.decompress_and_parse_bigbed(retptr, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, max_block_size, req_chr_id, req_start, req_end);
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
+        var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
+        if (r3) {
+            throw takeObject(r2);
+        }
+        var v5 = getArrayU8FromWasm0(r0, r1).slice();
+        wasm.__wbindgen_export2(r0, r1 * 1, 1);
+        return v5;
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
  * Combined decompress + parse for BigWig blocks
  * Returns same format as parse_bigwig_block but handles multiple compressed blocks
  * @param {Uint8Array} inputs
@@ -148,6 +188,40 @@ export function inflate_raw_unknown_size(input) {
         var v2 = getArrayU8FromWasm0(r0, r1).slice();
         wasm.__wbindgen_export2(r0, r1 * 1, 1);
         return v2;
+    } finally {
+        wasm.__wbindgen_add_to_stack_pointer(16);
+    }
+}
+
+/**
+ * Parse multiple uncompressed BigBed blocks
+ * Returns: [count: u32][starts: i32*n][ends: i32*n][uid_offsets: u32*n][string_offsets: u32*(n+1)][string_data: bytes]
+ * @param {Uint8Array} inputs
+ * @param {Uint32Array} input_offsets
+ * @param {Uint32Array} input_lengths
+ * @param {Uint32Array} block_file_offsets
+ * @param {number} req_chr_id
+ * @param {number} req_start
+ * @param {number} req_end
+ * @returns {Uint8Array}
+ */
+export function parse_bigbed_blocks(inputs, input_offsets, input_lengths, block_file_offsets, req_chr_id, req_start, req_end) {
+    try {
+        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
+        const ptr0 = passArray8ToWasm0(inputs, wasm.__wbindgen_export);
+        const len0 = WASM_VECTOR_LEN;
+        const ptr1 = passArray32ToWasm0(input_offsets, wasm.__wbindgen_export);
+        const len1 = WASM_VECTOR_LEN;
+        const ptr2 = passArray32ToWasm0(input_lengths, wasm.__wbindgen_export);
+        const len2 = WASM_VECTOR_LEN;
+        const ptr3 = passArray32ToWasm0(block_file_offsets, wasm.__wbindgen_export);
+        const len3 = WASM_VECTOR_LEN;
+        wasm.parse_bigbed_blocks(retptr, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, req_chr_id, req_start, req_end);
+        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
+        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
+        var v5 = getArrayU8FromWasm0(r0, r1).slice();
+        wasm.__wbindgen_export2(r0, r1 * 1, 1);
+        return v5;
     } finally {
         wasm.__wbindgen_add_to_stack_pointer(16);
     }

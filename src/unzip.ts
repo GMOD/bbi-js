@@ -1,12 +1,15 @@
 import {
+  decompressAndParseBigBed,
   decompressAndParseBigWig,
   decompressAndParseSummary,
   inflateRawBatch,
+  parseBigBedBlocks,
   parseBigWigBlocks,
   parseSummaryBlocks,
 } from './wasm/inflate-wasm-inlined.js'
 
 import type {
+  BigBedFeatureArrays as WasmBigBedFeatureArrays,
   BigWigFeatureArrays as WasmBigWigFeatureArrays,
   SummaryFeatureArrays as WasmSummaryFeatureArrays,
 } from './wasm/inflate-wasm-inlined.js'
@@ -131,4 +134,70 @@ export async function parseSummaryBlocksWasm(
   )
 }
 
-export type { BigWigFeatureArrays, SummaryFeatureArrays } from './types.ts'
+export async function decompressAndParseBigBedBlocks(
+  data: Uint8Array,
+  blocks: { offset: number; length: number }[],
+  blockFileOffsets: number[],
+  maxOutputSize: number,
+  reqChrId: number,
+  reqStart: number,
+  reqEnd: number,
+): Promise<WasmBigBedFeatureArrays> {
+  const inputOffsets = new Uint32Array(blocks.length)
+  const inputLengths = new Uint32Array(blocks.length)
+  const fileOffsets = new Uint32Array(blocks.length)
+
+  for (let i = 0; i < blocks.length; i++) {
+    const block = blocks[i]!
+    inputOffsets[i] = block.offset
+    inputLengths[i] = block.length
+    fileOffsets[i] = blockFileOffsets[i]!
+  }
+
+  return decompressAndParseBigBed(
+    data,
+    inputOffsets,
+    inputLengths,
+    fileOffsets,
+    maxOutputSize,
+    reqChrId,
+    reqStart,
+    reqEnd,
+  )
+}
+
+export async function parseBigBedBlocksWasm(
+  data: Uint8Array,
+  blocks: { offset: number; length: number }[],
+  blockFileOffsets: number[],
+  reqChrId: number,
+  reqStart: number,
+  reqEnd: number,
+): Promise<WasmBigBedFeatureArrays> {
+  const inputOffsets = new Uint32Array(blocks.length)
+  const inputLengths = new Uint32Array(blocks.length)
+  const fileOffsets = new Uint32Array(blocks.length)
+
+  for (let i = 0; i < blocks.length; i++) {
+    const block = blocks[i]!
+    inputOffsets[i] = block.offset
+    inputLengths[i] = block.length
+    fileOffsets[i] = blockFileOffsets[i]!
+  }
+
+  return parseBigBedBlocks(
+    data,
+    inputOffsets,
+    inputLengths,
+    fileOffsets,
+    reqChrId,
+    reqStart,
+    reqEnd,
+  )
+}
+
+export type {
+  BigBedFeatureArrays,
+  BigWigFeatureArrays,
+  SummaryFeatureArrays,
+} from './types.ts'

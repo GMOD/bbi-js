@@ -51,42 +51,83 @@ pub fn inflate_raw_batch(
 
     let header_size = 4 + (num_blocks + 1) * 4;
 
+    // Estimate output size based on compressed input size * typical ratio
+    // Cap at reasonable size to avoid over-allocation for large max_block_size
     let mut total_input_size = 0usize;
     for i in 0..num_blocks {
         total_input_size += input_lengths[i] as usize;
     }
-    let estimated_output = total_input_size * 4;
+    // Estimate 4x compression ratio, but cap per-block estimate at max_block_size
+    let estimated_per_block = (total_input_size * 4 / num_blocks.max(1)).min(max_out);
+    let estimated_output = estimated_per_block * num_blocks;
 
-    let mut result = Vec::with_capacity(header_size + estimated_output);
-    result.resize(header_size, 0);
+    // For small estimates, decompress directly into pre-allocated buffer
+    // For large estimates (>32MB), use temp buffer to avoid over-allocation
+    let use_direct = estimated_output < 32 * 1024 * 1024;
 
-    result[0..4].copy_from_slice(&(num_blocks as u32).to_le_bytes());
+    if use_direct {
+        // Pre-allocate and decompress directly - eliminates temp buffer copy
+        let mut result = vec![0u8; header_size + num_blocks * max_out];
+        result[0..4].copy_from_slice(&(num_blocks as u32).to_le_bytes());
 
-    let offsets_start = 4;
-    let mut data_offset = 0u32;
+        let offsets_start = 4;
+        let mut data_offset = 0u32;
+        let data_start = header_size;
 
-    let mut temp_buf = vec![0u8; max_out];
+        for i in 0..num_blocks {
+            let start = input_offsets[i] as usize + ZLIB_HEADER_SIZE;
+            let len = input_lengths[i] as usize - ZLIB_HEADER_SIZE;
+            let input = &inputs[start..start + len];
 
-    for i in 0..num_blocks {
-        let start = input_offsets[i] as usize + ZLIB_HEADER_SIZE;
-        let len = input_lengths[i] as usize - ZLIB_HEADER_SIZE;
-        let input = &inputs[start..start + len];
+            let offset_pos = offsets_start + i * 4;
+            result[offset_pos..offset_pos + 4].copy_from_slice(&data_offset.to_le_bytes());
 
-        let offset_pos = offsets_start + i * 4;
-        result[offset_pos..offset_pos + 4].copy_from_slice(&data_offset.to_le_bytes());
+            let output_start = data_start + data_offset as usize;
+            let output_slice = &mut result[output_start..output_start + max_out];
 
-        let actual_size = decompressor
-            .deflate_decompress(input, &mut temp_buf)
-            .map_err(|e| JsError::new(&format!("decompression failed: {:?}", e)))?;
+            let actual_size = decompressor
+                .deflate_decompress(input, output_slice)
+                .map_err(|e| JsError::new(&format!("decompression failed: {:?}", e)))?;
 
-        result.extend_from_slice(&temp_buf[..actual_size]);
-        data_offset += actual_size as u32;
+            data_offset += actual_size as u32;
+        }
+
+        let final_offset_pos = offsets_start + num_blocks * 4;
+        result[final_offset_pos..final_offset_pos + 4].copy_from_slice(&data_offset.to_le_bytes());
+
+        result.truncate(header_size + data_offset as usize);
+        Ok(result.into_boxed_slice())
+    } else {
+        // Use temp buffer approach for large blocks to avoid over-allocation
+        let mut result = Vec::with_capacity(header_size + estimated_output);
+        result.resize(header_size, 0);
+        result[0..4].copy_from_slice(&(num_blocks as u32).to_le_bytes());
+
+        let offsets_start = 4;
+        let mut data_offset = 0u32;
+        let mut temp_buf = vec![0u8; max_out];
+
+        for i in 0..num_blocks {
+            let start = input_offsets[i] as usize + ZLIB_HEADER_SIZE;
+            let len = input_lengths[i] as usize - ZLIB_HEADER_SIZE;
+            let input = &inputs[start..start + len];
+
+            let offset_pos = offsets_start + i * 4;
+            result[offset_pos..offset_pos + 4].copy_from_slice(&data_offset.to_le_bytes());
+
+            let actual_size = decompressor
+                .deflate_decompress(input, &mut temp_buf)
+                .map_err(|e| JsError::new(&format!("decompression failed: {:?}", e)))?;
+
+            result.extend_from_slice(&temp_buf[..actual_size]);
+            data_offset += actual_size as u32;
+        }
+
+        let final_offset_pos = offsets_start + num_blocks * 4;
+        result[final_offset_pos..final_offset_pos + 4].copy_from_slice(&data_offset.to_le_bytes());
+
+        Ok(result.into_boxed_slice())
     }
-
-    let final_offset_pos = offsets_start + num_blocks * 4;
-    result[final_offset_pos..final_offset_pos + 4].copy_from_slice(&data_offset.to_le_bytes());
-
-    Ok(result.into_boxed_slice())
 }
 
 // BigWig block parsing functions
@@ -523,6 +564,194 @@ pub fn parse_summary_blocks(
     for &m in &max_scores { result.extend_from_slice(&m.to_le_bytes()); }
 
     result.into_boxed_slice()
+}
+
+/// Parse a single BigBed block
+/// BigBed format: chromId(u32), start(i32), end(i32), rest(null-terminated string)
+///
+/// Returns: [count: u32][starts: i32*n][ends: i32*n][string_offsets: u32*(n+1)][string_data: bytes]
+fn parse_bigbed_block_into(
+    data: &[u8],
+    base_offset: u32,
+    req_chr_id: u32,
+    req_start: i32,
+    req_end: i32,
+    starts: &mut Vec<i32>,
+    ends: &mut Vec<i32>,
+    unique_id_offsets: &mut Vec<u32>,
+    string_offsets: &mut Vec<u32>,
+    string_data: &mut Vec<u8>,
+) {
+    let filter = req_start != 0 || req_end != 0;
+    let mut offset = 0usize;
+
+    while offset + 12 <= data.len() {
+        let record_start_offset = offset;
+        let chrom_id = read_u32_le(data, offset);
+        offset += 4;
+        let start = read_i32_le(data, offset);
+        offset += 4;
+        let end = read_i32_le(data, offset);
+        offset += 4;
+
+        // Find null terminator for rest string
+        let string_start = offset;
+        while offset < data.len() && data[offset] != 0 {
+            offset += 1;
+        }
+        let string_end = offset;
+        offset += 1; // skip null terminator
+
+        let passes = !filter || (chrom_id == req_chr_id && start < req_end && end > req_start);
+        if passes {
+            starts.push(start);
+            ends.push(end);
+            unique_id_offsets.push(base_offset + record_start_offset as u32);
+            string_offsets.push(string_data.len() as u32);
+            string_data.extend_from_slice(&data[string_start..string_end]);
+        }
+    }
+}
+
+/// Parse multiple uncompressed BigBed blocks
+/// Returns: [count: u32][starts: i32*n][ends: i32*n][uid_offsets: u32*n][string_offsets: u32*(n+1)][string_data: bytes]
+#[wasm_bindgen]
+pub fn parse_bigbed_blocks(
+    inputs: &[u8],
+    input_offsets: &[u32],
+    input_lengths: &[u32],
+    block_file_offsets: &[u32],
+    req_chr_id: u32,
+    req_start: i32,
+    req_end: i32,
+) -> Box<[u8]> {
+    let num_blocks = input_offsets.len();
+
+    let mut starts: Vec<i32> = Vec::new();
+    let mut ends: Vec<i32> = Vec::new();
+    let mut unique_id_offsets: Vec<u32> = Vec::new();
+    let mut string_offsets: Vec<u32> = Vec::new();
+    let mut string_data: Vec<u8> = Vec::new();
+
+    for i in 0..num_blocks {
+        let offset = input_offsets[i] as usize;
+        let length = input_lengths[i] as usize;
+        let data = &inputs[offset..offset + length];
+        let base_offset = (block_file_offsets[i] as u32) << 8;
+
+        parse_bigbed_block_into(
+            data,
+            base_offset,
+            req_chr_id,
+            req_start,
+            req_end,
+            &mut starts,
+            &mut ends,
+            &mut unique_id_offsets,
+            &mut string_offsets,
+            &mut string_data,
+        );
+    }
+
+    // Add final string offset
+    string_offsets.push(string_data.len() as u32);
+
+    let count = starts.len() as u32;
+    // Layout: count(4) + starts(4*n) + ends(4*n) + uid_offsets(4*n) + string_offsets(4*(n+1)) + string_data
+    let result_size = 4 + count as usize * 16 + 4 + string_data.len();
+    let mut result = Vec::with_capacity(result_size);
+
+    result.extend_from_slice(&count.to_le_bytes());
+    for &s in &starts {
+        result.extend_from_slice(&s.to_le_bytes());
+    }
+    for &e in &ends {
+        result.extend_from_slice(&e.to_le_bytes());
+    }
+    for &u in &unique_id_offsets {
+        result.extend_from_slice(&u.to_le_bytes());
+    }
+    for &so in &string_offsets {
+        result.extend_from_slice(&so.to_le_bytes());
+    }
+    result.extend_from_slice(&string_data);
+
+    result.into_boxed_slice()
+}
+
+/// Combined decompress + parse for BigBed blocks
+/// Returns: [count: u32][starts: i32*n][ends: i32*n][uid_offsets: u32*n][string_offsets: u32*(n+1)][string_data: bytes]
+#[wasm_bindgen]
+pub fn decompress_and_parse_bigbed(
+    inputs: &[u8],
+    input_offsets: &[u32],
+    input_lengths: &[u32],
+    block_file_offsets: &[u32],
+    max_block_size: u32,
+    req_chr_id: u32,
+    req_start: i32,
+    req_end: i32,
+) -> Result<Box<[u8]>, JsError> {
+    let mut decompressor = Decompressor::new();
+    let num_blocks = input_offsets.len();
+    let max_out = max_block_size as usize;
+
+    let mut temp_buf = vec![0u8; max_out];
+
+    let mut starts: Vec<i32> = Vec::new();
+    let mut ends: Vec<i32> = Vec::new();
+    let mut unique_id_offsets: Vec<u32> = Vec::new();
+    let mut string_offsets: Vec<u32> = Vec::new();
+    let mut string_data: Vec<u8> = Vec::new();
+
+    for i in 0..num_blocks {
+        let start = input_offsets[i] as usize + ZLIB_HEADER_SIZE;
+        let len = input_lengths[i] as usize - ZLIB_HEADER_SIZE;
+        let input = &inputs[start..start + len];
+        let base_offset = (block_file_offsets[i] as u32) << 8;
+
+        let actual_size = decompressor
+            .deflate_decompress(input, &mut temp_buf)
+            .map_err(|e| JsError::new(&format!("decompression failed: {:?}", e)))?;
+
+        let data = &temp_buf[..actual_size];
+        parse_bigbed_block_into(
+            data,
+            base_offset,
+            req_chr_id,
+            req_start,
+            req_end,
+            &mut starts,
+            &mut ends,
+            &mut unique_id_offsets,
+            &mut string_offsets,
+            &mut string_data,
+        );
+    }
+
+    // Add final string offset
+    string_offsets.push(string_data.len() as u32);
+
+    let count = starts.len() as u32;
+    let result_size = 4 + count as usize * 16 + 4 + string_data.len();
+    let mut result = Vec::with_capacity(result_size);
+
+    result.extend_from_slice(&count.to_le_bytes());
+    for &s in &starts {
+        result.extend_from_slice(&s.to_le_bytes());
+    }
+    for &e in &ends {
+        result.extend_from_slice(&e.to_le_bytes());
+    }
+    for &u in &unique_id_offsets {
+        result.extend_from_slice(&u.to_le_bytes());
+    }
+    for &so in &string_offsets {
+        result.extend_from_slice(&so.to_le_bytes());
+    }
+    result.extend_from_slice(&string_data);
+
+    Ok(result.into_boxed_slice())
 }
 
 /// Combined decompress + parse for summary blocks
