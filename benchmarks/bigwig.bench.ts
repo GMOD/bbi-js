@@ -44,9 +44,6 @@ function benchBigWig(
   })
 }
 
-benchBigWig('fixedStep.bw (698KB)', 'test/data/fixedStep.bw')
-benchBigWig('uncompressed.bw (1.0MB)', 'test/data/uncompressed.bw')
-benchBigWig('cow.bw (638KB)', 'test/data/cow.bw')
 benchBigWig('ENCFF826FLP.bw (2.7MB)', 'test/data/ENCFF826FLP.bw', {
   iterations: 20,
 })
