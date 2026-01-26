@@ -17,46 +17,6 @@ const defaultOpts = {
 // 2. Split rest string by tabs
 // 3. Process each feature
 
-describe('BigBed jbrowse simulation - clinvarCnv.bb (3.5MB)', () => {
-  const path = 'test/data/clinvarCnv.bb'
-  const chr = 'chr1'
-  const start = 0
-  const end = 10000000
-
-  // Current approach: getFeatures() returns Feature objects
-  bench(
-    `${branch1Name} getFeatures`,
-    async () => {
-      const bb = new BigBedBranch1({ path })
-      const features = await bb.getFeatures(chr, start, end)
-      // Simulate jbrowse processing
-      let count = 0
-      for (const feat of features) {
-        const fields = feat.rest?.split('\t') || []
-        count += fields.length + feat.start + feat.end
-      }
-      return count
-    },
-    defaultOpts,
-  )
-
-  bench(
-    `${branch2Name} getFeatures`,
-    async () => {
-      const bb = new BigBedBranch2({ path })
-      const features = await bb.getFeatures(chr, start, end)
-      // Simulate jbrowse processing
-      let count = 0
-      for (const feat of features) {
-        const fields = feat.rest?.split('\t') || []
-        count += fields.length + feat.start + feat.end
-      }
-      return count
-    },
-    defaultOpts,
-  )
-})
-
 describe('BigBed jbrowse simulation - bigMafSlice.bb (4.4MB)', () => {
   const path = 'test/data/bigMafSlice.bb'
   const chr = 'chr1'

@@ -41,10 +41,6 @@ function benchBigBed(
   })
 }
 
-benchBigBed('clinvarCnv.bb (3.5MB)', 'test/data/clinvarCnv.bb', 'chr1', 0, 10000000, {
-  iterations: 20,
-})
-
 // BigMaf slice - tests large rest strings (~16KB each)
 benchBigBed(
   'bigMafSlice.bb full region (4.4MB, 2442 features)',
