@@ -8,8 +8,8 @@ const branch1Name = readFileSync('esm_branch1/branchname.txt', 'utf8').trim()
 const branch2Name = readFileSync('esm_branch2/branchname.txt', 'utf8').trim()
 
 const defaultOpts = {
-  iterations: 20,
-  warmupIterations: 5,
+  iterations: 30,
+  warmupIterations: 10,
 }
 
 // Simulate what jbrowse-components BigBedAdapter does:
@@ -17,17 +17,22 @@ const defaultOpts = {
 // 2. Split rest string by tabs
 // 3. Process each feature
 
-describe('BigBed jbrowse simulation - bigMafSlice.bb (4.4MB)', () => {
-  const path = 'test/data/bigMafSlice.bb'
-  const chr = 'chr1'
-  const start = 57149977
-  const end = 57160722
+const path = 'test/data/bigMafSlice.bb'
+const chr = 'chr1'
+const start = 57149977
+const end = 57160722
 
+// Pre-create instances and warm up headers
+const bb1 = new BigBedBranch1({ path })
+const bb2 = new BigBedBranch2({ path })
+await bb1.getHeader()
+await bb2.getHeader()
+
+describe('BigBed jbrowse simulation - bigMafSlice.bb (4.4MB)', () => {
   bench(
     `${branch1Name} getFeatures`,
     async () => {
-      const bb = new BigBedBranch1({ path })
-      const features = await bb.getFeatures(chr, start, end)
+      const features = await bb1.getFeatures(chr, start, end)
       let count = 0
       for (const feat of features) {
         const fields = feat.rest?.split('\t') || []
@@ -41,8 +46,7 @@ describe('BigBed jbrowse simulation - bigMafSlice.bb (4.4MB)', () => {
   bench(
     `${branch2Name} getFeatures`,
     async () => {
-      const bb = new BigBedBranch2({ path })
-      const features = await bb.getFeatures(chr, start, end)
+      const features = await bb2.getFeatures(chr, start, end)
       let count = 0
       for (const feat of features) {
         const fields = feat.rest?.split('\t') || []

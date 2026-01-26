@@ -9,23 +9,29 @@ const branch2Name = readFileSync('esm_branch2/branchname.txt', 'utf8').trim()
 
 const defaultOpts = {
   iterations: 50,
-  warmupIterations: 10,
+  warmupIterations: 20,
 }
 
-function benchBigBed(
+// Reuse instances to isolate data parsing performance from instance creation
+async function benchBigBed(
   name: string,
   path: string,
   chr: string,
   start: number,
   end: number,
-  opts?: { iterations?: number },
+  opts?: { iterations?: number; warmupIterations?: number },
 ) {
+  // Pre-create instances and warm up headers
+  const bb1 = new BigBedBranch1({ path })
+  const bb2 = new BigBedBranch2({ path })
+  await bb1.getHeader()
+  await bb2.getHeader()
+
   describe(name, () => {
     bench(
       branch1Name,
       async () => {
-        const bb = new BigBedBranch1({ path })
-        await bb.getFeatures(chr, start, end)
+        await bb1.getFeatures(chr, start, end)
       },
       { ...defaultOpts, ...opts },
     )
@@ -33,8 +39,7 @@ function benchBigBed(
     bench(
       branch2Name,
       async () => {
-        const bb = new BigBedBranch2({ path })
-        await bb.getFeatures(chr, start, end)
+        await bb2.getFeatures(chr, start, end)
       },
       { ...defaultOpts, ...opts },
     )
@@ -42,21 +47,21 @@ function benchBigBed(
 }
 
 // BigMaf slice - tests large rest strings (~16KB each)
-benchBigBed(
+await benchBigBed(
   'bigMafSlice.bb full region (4.4MB, 2442 features)',
   'test/data/bigMafSlice.bb',
   'chr1',
   57149977,
   57160722,
-  { iterations: 20 },
+  { iterations: 30, warmupIterations: 10 },
 )
 
 // BigMaf with narrow filter - should show big improvement from filter-before-decode
-benchBigBed(
+await benchBigBed(
   'bigMafSlice.bb narrow filter',
   'test/data/bigMafSlice.bb',
   'chr1',
   57150000,
   57150100,
-  { iterations: 30 },
+  { iterations: 50, warmupIterations: 20 },
 )

@@ -15,20 +15,26 @@ const branch2Name = readFileSync('esm_branch2/branchname.txt', 'utf8').trim()
 
 const defaultOpts = {
   iterations: 50,
-  warmupIterations: 10,
+  warmupIterations: 20,
 }
 
-function benchBigWig(
+// Reuse instances to isolate data parsing performance from instance creation
+async function benchBigWig(
   name: string,
   path: string,
   opts?: { iterations?: number; warmupIterations?: number },
 ) {
+  // Pre-create instances and warm up headers
+  const bw1 = new BigWigBranch1({ path })
+  const bw2 = new BigWigBranch2({ path })
+  await bw1.getHeader()
+  await bw2.getHeader()
+
   describe(name, () => {
     bench(
       branch1Name,
       async () => {
-        const bw = new BigWigBranch1({ path })
-        await parseBigWigBranch1(bw)
+        await parseBigWigBranch1(bw1)
       },
       { ...defaultOpts, ...opts },
     )
@@ -36,20 +42,23 @@ function benchBigWig(
     bench(
       branch2Name,
       async () => {
-        const bw = new BigWigBranch2({ path })
-        await parseBigWigBranch2(bw)
+        await parseBigWigBranch2(bw2)
       },
       { ...defaultOpts, ...opts },
     )
   })
 }
 
-benchBigWig('ENCFF826FLP.bw (2.7MB)', 'test/data/ENCFF826FLP.bw', {
-  iterations: 20,
+await benchBigWig('ENCFF826FLP.bw (2.7MB)', 'test/data/ENCFF826FLP.bw', {
+  iterations: 30,
+  warmupIterations: 10,
 })
-benchBigWig(
+await benchBigWig(
   'example_bigwig_unsorted_with_error_small.bw (22MB)',
   'test/data/example_bigwig_unsorted_with_error_small.bw',
-  { iterations: 10 },
+  { iterations: 15, warmupIterations: 5 },
 )
-benchBigWig('cDC.bw (67MB)', 'test/data/cDC.bw', { iterations: 5 })
+await benchBigWig('cDC.bw (67MB)', 'test/data/cDC.bw', {
+  iterations: 10,
+  warmupIterations: 3,
+})
