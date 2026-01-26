@@ -41,9 +41,6 @@ function benchBigBed(
   })
 }
 
-// Test with existing BigBed test files
-benchBigBed('volvox.bb (27KB)', 'test/data/volvox.bb', 'ctgA', 0, 50000)
-benchBigBed('chr22.bb (280KB)', 'test/data/chr22.bb', 'chr22', 16000000, 17000000)
 benchBigBed('clinvarCnv.bb (3.5MB)', 'test/data/clinvarCnv.bb', 'chr1', 0, 10000000, {
   iterations: 20,
 })
@@ -67,29 +64,3 @@ benchBigBed(
   57150100,
   { iterations: 30 },
 )
-
-// Test with narrow filter (should show bigger improvement from filter-before-decode optimization)
-describe('chr22.bb narrow filter', () => {
-  const path = 'test/data/chr22.bb'
-  const chr = 'chr22'
-  const start = 16500000
-  const end = 16500100 // Very narrow range
-
-  bench(
-    branch1Name,
-    async () => {
-      const bb = new BigBedBranch1({ path })
-      await bb.getFeatures(chr, start, end)
-    },
-    defaultOpts,
-  )
-
-  bench(
-    branch2Name,
-    async () => {
-      const bb = new BigBedBranch2({ path })
-      await bb.getFeatures(chr, start, end)
-    },
-    defaultOpts,
-  )
-})

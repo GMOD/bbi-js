@@ -44,12 +44,6 @@ function benchBigWig(
   })
 }
 
-benchBigWig('volvox.bw (209KB)', 'test/data/volvox.bw')
-benchBigWig(
-  'volvox_microarray.bw (98KB, fixed step)',
-  'test/data/volvox_microarray.bw',
-  { iterations: 200, warmupIterations: 50 },
-)
 benchBigWig('fixedStep.bw (698KB)', 'test/data/fixedStep.bw')
 benchBigWig('uncompressed.bw (1.0MB)', 'test/data/uncompressed.bw')
 benchBigWig('cow.bw (638KB)', 'test/data/cow.bw')
