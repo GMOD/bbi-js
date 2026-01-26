@@ -12,15 +12,15 @@ interface Block {
   length: number
 }
 // sort blocks by file offset and
-// group blocks that are within 32KB of each other to reduce network requests
+// group blocks that are within 2KB of eachother
 export function groupBlocks(blocks: Block[]) {
   blocks.sort((b0, b1) => b0.offset - b1.offset)
 
-  const blockGroups = []
+  const blockGroups: (Block & { blocks: Block[] })[] = []
   let lastBlock: (Block & { blocks: Block[] }) | undefined
   let lastBlockEnd: number | undefined
   for (const block of blocks) {
-    if (lastBlock && lastBlockEnd && block.offset - lastBlockEnd <= 32000) {
+    if (lastBlock && lastBlockEnd && block.offset - lastBlockEnd <= 2000) {
       lastBlock.length = block.offset + block.length - lastBlock.offset
       lastBlock.blocks.push(block)
       lastBlockEnd = block.offset + block.length

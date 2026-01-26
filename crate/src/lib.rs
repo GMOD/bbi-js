@@ -51,83 +51,42 @@ pub fn inflate_raw_batch(
 
     let header_size = 4 + (num_blocks + 1) * 4;
 
-    // Estimate output size based on compressed input size * typical ratio
-    // Cap at reasonable size to avoid over-allocation for large max_block_size
     let mut total_input_size = 0usize;
     for i in 0..num_blocks {
         total_input_size += input_lengths[i] as usize;
     }
-    // Estimate 4x compression ratio, but cap per-block estimate at max_block_size
-    let estimated_per_block = (total_input_size * 4 / num_blocks.max(1)).min(max_out);
-    let estimated_output = estimated_per_block * num_blocks;
+    let estimated_output = total_input_size * 4;
 
-    // For small estimates, decompress directly into pre-allocated buffer
-    // For large estimates (>32MB), use temp buffer to avoid over-allocation
-    let use_direct = estimated_output < 32 * 1024 * 1024;
+    let mut result = Vec::with_capacity(header_size + estimated_output);
+    result.resize(header_size, 0);
 
-    if use_direct {
-        // Pre-allocate and decompress directly - eliminates temp buffer copy
-        let mut result = vec![0u8; header_size + num_blocks * max_out];
-        result[0..4].copy_from_slice(&(num_blocks as u32).to_le_bytes());
+    result[0..4].copy_from_slice(&(num_blocks as u32).to_le_bytes());
 
-        let offsets_start = 4;
-        let mut data_offset = 0u32;
-        let data_start = header_size;
+    let offsets_start = 4;
+    let mut data_offset = 0u32;
 
-        for i in 0..num_blocks {
-            let start = input_offsets[i] as usize + ZLIB_HEADER_SIZE;
-            let len = input_lengths[i] as usize - ZLIB_HEADER_SIZE;
-            let input = &inputs[start..start + len];
+    let mut temp_buf = vec![0u8; max_out];
 
-            let offset_pos = offsets_start + i * 4;
-            result[offset_pos..offset_pos + 4].copy_from_slice(&data_offset.to_le_bytes());
+    for i in 0..num_blocks {
+        let start = input_offsets[i] as usize + ZLIB_HEADER_SIZE;
+        let len = input_lengths[i] as usize - ZLIB_HEADER_SIZE;
+        let input = &inputs[start..start + len];
 
-            let output_start = data_start + data_offset as usize;
-            let output_slice = &mut result[output_start..output_start + max_out];
+        let offset_pos = offsets_start + i * 4;
+        result[offset_pos..offset_pos + 4].copy_from_slice(&data_offset.to_le_bytes());
 
-            let actual_size = decompressor
-                .deflate_decompress(input, output_slice)
-                .map_err(|e| JsError::new(&format!("decompression failed: {:?}", e)))?;
+        let actual_size = decompressor
+            .deflate_decompress(input, &mut temp_buf)
+            .map_err(|e| JsError::new(&format!("decompression failed: {:?}", e)))?;
 
-            data_offset += actual_size as u32;
-        }
-
-        let final_offset_pos = offsets_start + num_blocks * 4;
-        result[final_offset_pos..final_offset_pos + 4].copy_from_slice(&data_offset.to_le_bytes());
-
-        result.truncate(header_size + data_offset as usize);
-        Ok(result.into_boxed_slice())
-    } else {
-        // Use temp buffer approach for large blocks to avoid over-allocation
-        let mut result = Vec::with_capacity(header_size + estimated_output);
-        result.resize(header_size, 0);
-        result[0..4].copy_from_slice(&(num_blocks as u32).to_le_bytes());
-
-        let offsets_start = 4;
-        let mut data_offset = 0u32;
-        let mut temp_buf = vec![0u8; max_out];
-
-        for i in 0..num_blocks {
-            let start = input_offsets[i] as usize + ZLIB_HEADER_SIZE;
-            let len = input_lengths[i] as usize - ZLIB_HEADER_SIZE;
-            let input = &inputs[start..start + len];
-
-            let offset_pos = offsets_start + i * 4;
-            result[offset_pos..offset_pos + 4].copy_from_slice(&data_offset.to_le_bytes());
-
-            let actual_size = decompressor
-                .deflate_decompress(input, &mut temp_buf)
-                .map_err(|e| JsError::new(&format!("decompression failed: {:?}", e)))?;
-
-            result.extend_from_slice(&temp_buf[..actual_size]);
-            data_offset += actual_size as u32;
-        }
-
-        let final_offset_pos = offsets_start + num_blocks * 4;
-        result[final_offset_pos..final_offset_pos + 4].copy_from_slice(&data_offset.to_le_bytes());
-
-        Ok(result.into_boxed_slice())
+        result.extend_from_slice(&temp_buf[..actual_size]);
+        data_offset += actual_size as u32;
     }
+
+    let final_offset_pos = offsets_start + num_blocks * 4;
+    result[final_offset_pos..final_offset_pos + 4].copy_from_slice(&data_offset.to_le_bytes());
+
+    Ok(result.into_boxed_slice())
 }
 
 // BigWig block parsing functions

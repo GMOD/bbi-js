@@ -40,24 +40,6 @@ function coordFilter(s1: number, e1: number, s2: number, e2: number): boolean {
   return s1 < e2 && e1 >= s2
 }
 
-interface BigWigBlockHeader {
-  blockStart: number
-  itemStep: number
-  itemSpan: number
-  blockType: number
-  itemCount: number
-}
-
-function parseBigWigBlockHeader(dataView: DataView): BigWigBlockHeader {
-  return {
-    blockStart: dataView.getInt32(4, true),
-    itemStep: dataView.getUint32(12, true),
-    itemSpan: dataView.getUint32(16, true),
-    blockType: dataView.getUint8(20),
-    itemCount: dataView.getUint16(22, true),
-  }
-}
-
 /**
  * View into a subset of the data in a BigWig file.
  *
@@ -71,7 +53,7 @@ export class BlockView {
   private rTreePromise?: Promise<Uint8Array>
 
   private featureCache = new AbortablePromiseCache<ReadData, Uint8Array>({
-    cache: new QuickLRU({ maxSize: 100 }),
+    cache: new QuickLRU({ maxSize: 1000 }),
 
     fill: async ({ length, offset }, signal) =>
       this.bbi.read(length, offset, { signal }),
@@ -79,7 +61,7 @@ export class BlockView {
 
   public clearCache() {
     this.featureCache = new AbortablePromiseCache<ReadData, Uint8Array>({
-      cache: new QuickLRU({ maxSize: 100 }),
+      cache: new QuickLRU({ maxSize: 1000 }),
       fill: async ({ length, offset }, signal) =>
         this.bbi.read(length, offset, { signal }),
     })
@@ -398,9 +380,18 @@ export class BlockView {
     const b = buffer.subarray(startOffset)
 
     const dataView = new DataView(b.buffer, b.byteOffset, b.length)
-    const { blockStart, itemStep, itemSpan, blockType, itemCount } =
-      parseBigWigBlockHeader(dataView)
-    let offset = 24
+    let offset = 0
+    offset += 4
+    const blockStart = dataView.getInt32(offset, true)
+    offset += 8
+    const itemStep = dataView.getUint32(offset, true)
+    offset += 4
+    const itemSpan = dataView.getUint32(offset, true)
+    offset += 4
+    const blockType = dataView.getUint8(offset)
+    offset += 2
+    const itemCount = dataView.getUint16(offset, true)
+    offset += 2
     const items = []
     switch (blockType) {
       case 1: {
@@ -468,70 +459,70 @@ export class BlockView {
       const { blockType, uncompressBufSize } = this
       const { signal, request } = opts
       const blockGroupsToFetch = groupBlocks(blocks)
-
-      // Process sequentially to reduce peak memory usage
-      for (const blockGroup of blockGroupsToFetch) {
-        const { length, offset } = blockGroup
-        const data = await this.featureCache.get(
-          `${length}_${offset}`,
-          blockGroup,
-          signal,
-        )
-
-        const localBlocks = blockGroup.blocks.map(block => ({
-          offset: block.offset - blockGroup.offset,
-          length: block.length,
-        }))
-
-        let decompressedData: Uint8Array
-        let decompressedOffsets: number[]
-
-        if (uncompressBufSize > 0) {
-          const result = await unzipBatch(
-            data,
-            localBlocks,
-            uncompressBufSize,
+      await Promise.all(
+        blockGroupsToFetch.map(async blockGroup => {
+          const { length, offset } = blockGroup
+          const data = await this.featureCache.get(
+            `${length}_${offset}`,
+            blockGroup,
+            signal,
           )
-          decompressedData = result.data
-          decompressedOffsets = result.offsets
-        } else {
-          decompressedData = data
-          decompressedOffsets = localBlocks.map(b => b.offset)
-          decompressedOffsets.push(data.length)
-        }
 
-        for (let i = 0; i < blockGroup.blocks.length; i++) {
-          const block = blockGroup.blocks[i]!
-          const start = decompressedOffsets[i]!
-          const end = decompressedOffsets[i + 1]!
-          const resultData = decompressedData.subarray(start, end)
+          const localBlocks = blockGroup.blocks.map(block => ({
+            offset: block.offset - blockGroup.offset,
+            length: block.length,
+          }))
 
-          switch (blockType) {
-            case 'summary': {
-              observer.next(this.parseSummaryBlock(resultData, 0, request))
-              break
-            }
-            case 'bigwig': {
-              observer.next(this.parseBigWigBlock(resultData, 0, request))
-              break
-            }
-            case 'bigbed': {
-              observer.next(
-                this.parseBigBedBlock(
-                  resultData,
-                  0,
-                  block.offset * (1 << 8),
-                  request,
-                ),
-              )
-              break
-            }
-            default: {
-              console.warn(`Don't know what to do with ${blockType}`)
+          let decompressedData: Uint8Array
+          let decompressedOffsets: number[]
+
+          if (uncompressBufSize > 0) {
+            const result = await unzipBatch(
+              data,
+              localBlocks,
+              uncompressBufSize,
+            )
+            decompressedData = result.data
+            decompressedOffsets = result.offsets
+          } else {
+            decompressedData = data
+            decompressedOffsets = localBlocks.map(b => b.offset)
+            decompressedOffsets.push(data.length)
+          }
+
+          for (let i = 0; i < blockGroup.blocks.length; i++) {
+            const block = blockGroup.blocks[i]!
+            const start = decompressedOffsets[i]!
+            const end = decompressedOffsets[i + 1]!
+            const resultData = decompressedData.subarray(start, end)
+
+            switch (blockType) {
+              case 'summary': {
+                observer.next(this.parseSummaryBlock(resultData, 0, request))
+                break
+              }
+              case 'bigwig': {
+                observer.next(this.parseBigWigBlock(resultData, 0, request))
+                break
+              }
+              case 'bigbed': {
+                observer.next(
+                  this.parseBigBedBlock(
+                    resultData,
+                    0,
+                    block.offset * (1 << 8),
+                    request,
+                  ),
+                )
+                break
+              }
+              default: {
+                console.warn(`Don't know what to do with ${blockType}`)
+              }
             }
           }
-        }
-      }
+        }),
+      )
       observer.complete()
     } catch (e) {
       observer.error(e)
