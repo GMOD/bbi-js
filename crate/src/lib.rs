@@ -2,6 +2,7 @@ use libdeflater::Decompressor;
 use wasm_bindgen::prelude::*;
 
 const ZLIB_HEADER_SIZE: usize = 2;
+const BIGWIG_HEADER_SIZE: usize = 24;
 
 #[wasm_bindgen]
 pub fn inflate_raw(input: &[u8], output_size: usize) -> Result<Vec<u8>, JsError> {
@@ -68,8 +69,24 @@ pub fn inflate_raw_batch(
     let mut temp_buf = vec![0u8; max_out];
 
     for i in 0..num_blocks {
+        let block_len = input_lengths[i] as usize;
+        if block_len <= ZLIB_HEADER_SIZE {
+            return Err(JsError::new(&format!(
+                "Block {} has invalid length: {} bytes (must be > {})",
+                i, block_len, ZLIB_HEADER_SIZE
+            )));
+        }
+
         let start = input_offsets[i] as usize + ZLIB_HEADER_SIZE;
-        let len = input_lengths[i] as usize - ZLIB_HEADER_SIZE;
+        let len = block_len - ZLIB_HEADER_SIZE;
+
+        if start + len > inputs.len() {
+            return Err(JsError::new(&format!(
+                "Block {} exceeds buffer: offset {} + length {} > buffer size {}",
+                i, start, len, inputs.len()
+            )));
+        }
+
         let input = &inputs[start..start + len];
 
         let offset_pos = offsets_start + i * 4;
@@ -77,7 +94,7 @@ pub fn inflate_raw_batch(
 
         let actual_size = decompressor
             .deflate_decompress(input, &mut temp_buf)
-            .map_err(|e| JsError::new(&format!("decompression failed: {:?}", e)))?;
+            .map_err(|e| JsError::new(&format!("Block {} decompression failed: {:?}", i, e)))?;
 
         result.extend_from_slice(&temp_buf[..actual_size]);
         data_offset += actual_size as u32;
@@ -107,27 +124,59 @@ fn read_f32_le(data: &[u8], offset: usize) -> f32 {
     f32::from_le_bytes([data[offset], data[offset + 1], data[offset + 2], data[offset + 3]])
 }
 
+/// Validates that a BigWig block has enough data for its declared item_count.
+/// Returns Ok(item_count) if valid, or Err with a descriptive message.
+fn validate_bigwig_block(data: &[u8]) -> Result<(usize, u8), String> {
+    if data.len() < BIGWIG_HEADER_SIZE {
+        return Err(format!(
+            "BigWig block too small: {} bytes, need at least {} for header",
+            data.len(),
+            BIGWIG_HEADER_SIZE
+        ));
+    }
+
+    let block_type = data[20];
+    let item_count = read_u16_le(data, 22) as usize;
+
+    let bytes_per_item = match block_type {
+        1 => 12, // bedGraph: start(4) + end(4) + score(4)
+        2 => 8,  // varstep: start(4) + score(4)
+        3 => 4,  // fixedstep: score(4)
+        _ => return Ok((0, block_type)), // Unknown type, return 0 items
+    };
+
+    let required_size = BIGWIG_HEADER_SIZE + item_count * bytes_per_item;
+    if data.len() < required_size {
+        return Err(format!(
+            "BigWig block truncated: {} bytes, but header declares {} items of type {} requiring {} bytes",
+            data.len(),
+            item_count,
+            block_type,
+            required_size
+        ));
+    }
+
+    Ok((item_count, block_type))
+}
+
 /// Parse a BigWig data block and return packed typed arrays
 /// Block types: 1 = bedGraph, 2 = varstep, 3 = fixedstep
 ///
 /// Returns packed binary: [count: u32][starts: i32*count][ends: i32*count][scores: f32*count]
 #[wasm_bindgen]
-pub fn parse_bigwig_block(data: &[u8], req_start: i32, req_end: i32) -> Box<[u8]> {
-    if data.len() < 24 {
-        // Return empty result
+pub fn parse_bigwig_block(data: &[u8], req_start: i32, req_end: i32) -> Result<Box<[u8]>, JsError> {
+    let (item_count, block_type) = validate_bigwig_block(data).map_err(JsError::new)?;
+
+    if item_count == 0 {
         let mut result = vec![0u8; 4];
         result[0..4].copy_from_slice(&0u32.to_le_bytes());
-        return result.into_boxed_slice();
+        return Ok(result.into_boxed_slice());
     }
 
     // Parse header (24 bytes)
-    // let chrom_id = read_u32_le(data, 0);
     let block_start = read_i32_le(data, 4);
-    // let block_end = read_i32_le(data, 8);
     let item_step = read_u32_le(data, 12) as i32;
     let item_span = read_u32_le(data, 16) as i32;
-    let block_type = data[20];
-    let item_count = read_u16_le(data, 22) as usize;
 
     // Pre-allocate for worst case (all items pass filter)
     let mut starts: Vec<i32> = Vec::with_capacity(item_count);
@@ -211,7 +260,7 @@ pub fn parse_bigwig_block(data: &[u8], req_start: i32, req_end: i32) -> Box<[u8]
         result.extend_from_slice(&sc.to_le_bytes());
     }
 
-    result.into_boxed_slice()
+    Ok(result.into_boxed_slice())
 }
 
 /// Parse a BigWig summary block and return packed typed arrays
@@ -314,16 +363,33 @@ pub fn decompress_and_parse_bigwig(
     let mut scores: Vec<f32> = Vec::with_capacity(estimated_features);
 
     for i in 0..num_blocks {
+        let block_len = input_lengths[i] as usize;
+        if block_len <= ZLIB_HEADER_SIZE {
+            return Err(JsError::new(&format!(
+                "Block {} has invalid length: {} bytes (must be > {})",
+                i, block_len, ZLIB_HEADER_SIZE
+            )));
+        }
+
         let start = input_offsets[i] as usize + ZLIB_HEADER_SIZE;
-        let len = input_lengths[i] as usize - ZLIB_HEADER_SIZE;
+        let len = block_len - ZLIB_HEADER_SIZE;
+
+        if start + len > inputs.len() {
+            return Err(JsError::new(&format!(
+                "Block {} exceeds buffer: offset {} + length {} > buffer size {}",
+                i, start, len, inputs.len()
+            )));
+        }
+
         let input = &inputs[start..start + len];
 
         let actual_size = decompressor
             .deflate_decompress(input, &mut temp_buf)
-            .map_err(|e| JsError::new(&format!("decompression failed: {:?}", e)))?;
+            .map_err(|e| JsError::new(&format!("Block {} decompression failed: {:?}", i, e)))?;
 
         let data = &temp_buf[..actual_size];
-        parse_bigwig_block_into(data, req_start, req_end, &mut starts, &mut ends, &mut scores);
+        parse_bigwig_block_into(data, req_start, req_end, &mut starts, &mut ends, &mut scores)
+            .map_err(|e| JsError::new(&format!("Block {} parse error: {}", i, e)))?;
     }
 
     let count = starts.len() as u32;
@@ -351,18 +417,18 @@ fn parse_bigwig_block_into(
     starts: &mut Vec<i32>,
     ends: &mut Vec<i32>,
     scores: &mut Vec<f32>,
-) {
-    if data.len() < 24 {
-        return;
+) -> Result<(), String> {
+    let (item_count, block_type) = validate_bigwig_block(data)?;
+
+    if item_count == 0 {
+        return Ok(());
     }
 
     let block_start = read_i32_le(data, 4);
     let item_step = read_u32_le(data, 12) as i32;
     let item_span = read_u32_le(data, 16) as i32;
-    let block_type = data[20];
-    let item_count = read_u16_le(data, 22) as usize;
 
-    let mut offset = 24usize;
+    let mut offset = BIGWIG_HEADER_SIZE;
     let filter = req_start != 0 || req_end != 0;
 
     match block_type {
@@ -413,6 +479,8 @@ fn parse_bigwig_block_into(
         }
         _ => {}
     }
+
+    Ok(())
 }
 
 /// Parse multiple uncompressed BigWig blocks
@@ -424,7 +492,7 @@ pub fn parse_bigwig_blocks(
     input_lengths: &[u32],
     req_start: i32,
     req_end: i32,
-) -> Box<[u8]> {
+) -> Result<Box<[u8]>, JsError> {
     let num_blocks = input_offsets.len();
     let mut starts: Vec<i32> = Vec::new();
     let mut ends: Vec<i32> = Vec::new();
@@ -433,8 +501,17 @@ pub fn parse_bigwig_blocks(
     for i in 0..num_blocks {
         let offset = input_offsets[i] as usize;
         let length = input_lengths[i] as usize;
+
+        if offset + length > inputs.len() {
+            return Err(JsError::new(&format!(
+                "Block {} exceeds buffer: offset {} + length {} > buffer size {}",
+                i, offset, length, inputs.len()
+            )));
+        }
+
         let data = &inputs[offset..offset + length];
-        parse_bigwig_block_into(data, req_start, req_end, &mut starts, &mut ends, &mut scores);
+        parse_bigwig_block_into(data, req_start, req_end, &mut starts, &mut ends, &mut scores)
+            .map_err(|e| JsError::new(&format!("Block {} parse error: {}", i, e)))?;
     }
 
     let count = starts.len() as u32;
@@ -452,7 +529,7 @@ pub fn parse_bigwig_blocks(
         result.extend_from_slice(&sc.to_le_bytes());
     }
 
-    result.into_boxed_slice()
+    Ok(result.into_boxed_slice())
 }
 
 /// Parse multiple uncompressed summary blocks
@@ -464,7 +541,7 @@ pub fn parse_summary_blocks(
     req_chr_id: u32,
     req_start: i32,
     req_end: i32,
-) -> Box<[u8]> {
+) -> Result<Box<[u8]>, JsError> {
     let num_blocks = input_offsets.len();
     let filter = req_start != 0 || req_end != 0;
 
@@ -477,6 +554,14 @@ pub fn parse_summary_blocks(
     for i in 0..num_blocks {
         let block_offset = input_offsets[i] as usize;
         let block_length = input_lengths[i] as usize;
+
+        if block_offset + block_length > inputs.len() {
+            return Err(JsError::new(&format!(
+                "Summary block {} exceeds buffer: offset {} + length {} > buffer size {}",
+                i, block_offset, block_length, inputs.len()
+            )));
+        }
+
         let data = &inputs[block_offset..block_offset + block_length];
 
         let record_size = 32usize;
@@ -522,7 +607,7 @@ pub fn parse_summary_blocks(
     for &m in &min_scores { result.extend_from_slice(&m.to_le_bytes()); }
     for &m in &max_scores { result.extend_from_slice(&m.to_le_bytes()); }
 
-    result.into_boxed_slice()
+    Ok(result.into_boxed_slice())
 }
 
 /// Combined decompress + parse for summary blocks
@@ -552,13 +637,29 @@ pub fn decompress_and_parse_summary(
     let filter = req_start != 0 || req_end != 0;
 
     for i in 0..num_blocks {
+        let block_len = input_lengths[i] as usize;
+        if block_len <= ZLIB_HEADER_SIZE {
+            return Err(JsError::new(&format!(
+                "Summary block {} has invalid length: {} bytes (must be > {})",
+                i, block_len, ZLIB_HEADER_SIZE
+            )));
+        }
+
         let start = input_offsets[i] as usize + ZLIB_HEADER_SIZE;
-        let len = input_lengths[i] as usize - ZLIB_HEADER_SIZE;
+        let len = block_len - ZLIB_HEADER_SIZE;
+
+        if start + len > inputs.len() {
+            return Err(JsError::new(&format!(
+                "Summary block {} exceeds buffer: offset {} + length {} > buffer size {}",
+                i, start, len, inputs.len()
+            )));
+        }
+
         let input = &inputs[start..start + len];
 
         let actual_size = decompressor
             .deflate_decompress(input, &mut temp_buf)
-            .map_err(|e| JsError::new(&format!("decompression failed: {:?}", e)))?;
+            .map_err(|e| JsError::new(&format!("Summary block {} decompression failed: {:?}", i, e)))?;
 
         let data = &temp_buf[..actual_size];
         let record_size = 32usize;
