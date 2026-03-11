@@ -15,6 +15,7 @@ import type { GenericFilehandle } from 'generic-filehandle2'
 import type { Observer } from 'rxjs'
 
 const decoder = new TextDecoder('utf8')
+const CIR_TREE_MAGIC = 0x2468ace0
 
 interface CoordRequest {
   chrId: number
@@ -93,7 +94,12 @@ export class BlockView {
         buffer.byteOffset,
         buffer.length,
       )
-      // Maximum number of children per R-tree node - used to calculate memory bounds
+      const magic = dataView.getUint32(0, true)
+      if (magic !== CIR_TREE_MAGIC) {
+        throw new Error(
+          `invalid cirTree magic: 0x${magic.toString(16)} (expected 0x${CIR_TREE_MAGIC.toString(16)}) at offset ${this.rTreeOffset}, file may be corrupt or unsupported`,
+        )
+      }
       const rTreeBlockSize = dataView.getUint32(4, true)
       const blocksToFetch: ReadData[] = []
       let outstanding = 0

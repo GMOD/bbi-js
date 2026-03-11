@@ -184,3 +184,19 @@ test('crash from bigtools', async () => {
   const ob = await ti.getFeatures('chr1', 40000, 100100)
   expect(ob.slice(0, 10)).toMatchSnapshot()
 })
+
+test('loads pvalues bigwig at multiple scales', async () => {
+  const ti = new BigWig({ path: 'test/data/pvalues.bw' })
+  const header = await ti.getHeader()
+  expect(header.numZoomLevels).toBe(7)
+  const feats1 = await ti.getFeatures('scaffold_25_1', 0, 100000, { scale: 1 })
+  expect(feats1.length).toBeGreaterThan(0)
+  const feats2 = await ti.getFeatures('scaffold_25_1', 0, 100000, {
+    scale: 0.001,
+  })
+  expect(feats2.length).toBeGreaterThan(0)
+  const feats3 = await ti.getFeatures('scaffold_25_1', 0, 39299130, {
+    scale: 0.00001,
+  })
+  expect(feats3.length).toBeGreaterThan(0)
+})

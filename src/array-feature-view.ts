@@ -61,6 +61,11 @@ export class ArrayFeatureView {
     return `${this._source}:${this._refName}:${this.starts[i]}-${this.ends[i]}`
   }
 
+  get(i: number, key: 'refName' | 'source'): string
+  get(i: number, key: 'start' | 'end' | 'score' | 'minScore' | 'maxScore'): number | undefined
+  get(i: number, key: 'summary'): boolean
+
+  get(i: number, key: string): any
   get(i: number, key: string) {
     switch (key) {
       case 'start':
