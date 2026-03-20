@@ -492,35 +492,41 @@ export class BlockView {
     const { blockType, uncompressBufSize } = this
     const { signal, request } = opts
     const blockGroupsToFetch = groupBlocks(blocks)
-    const results = await Promise.all(
+    const resultArrays = await Promise.all(
       blockGroupsToFetch.map(async blockGroup => {
-        const { length, offset } = blockGroup
-        const data = await this.featureCache.get(
-          `${length}_${offset}`,
-          blockGroup,
-          signal,
+        const data = await this.bbi.read(
+          blockGroup.length,
+          blockGroup.offset,
+          { signal },
         )
-        const localBlocks = blockGroup.blocks.map(block => ({
-          offset: block.offset - blockGroup.offset,
-          length: block.length,
-        }))
+        const groupOffset = blockGroup.offset
+        const subBlocks = blockGroup.blocks
 
         let decompressedData: Uint8Array
         let decompressedOffsets: number[]
 
         if (uncompressBufSize > 0) {
+          const localBlocks: { offset: number; length: number }[] = []
+          for (const block of subBlocks) {
+            localBlocks.push({
+              offset: block.offset - groupOffset,
+              length: block.length,
+            })
+          }
           const result = await unzipBatch(data, localBlocks, uncompressBufSize)
           decompressedData = result.data
           decompressedOffsets = result.offsets
         } else {
           decompressedData = data
-          decompressedOffsets = localBlocks.map(b => b.offset)
+          decompressedOffsets = []
+          for (const block of subBlocks) {
+            decompressedOffsets.push(block.offset - groupOffset)
+          }
           decompressedOffsets.push(data.length)
         }
 
         const groupFeatures: Feature[] = []
-        for (let i = 0; i < blockGroup.blocks.length; i++) {
-          const block = blockGroup.blocks[i]!
+        for (let i = 0; i < subBlocks.length; i++) {
           const start = decompressedOffsets[i]!
           const end = decompressedOffsets[i + 1]!
           const resultData = decompressedData.subarray(start, end)
@@ -536,7 +542,7 @@ export class BlockView {
               features = parseBigBedBlock(
                 resultData,
                 0,
-                block.offset * (1 << 8),
+                subBlocks[i]!.offset * (1 << 8),
                 request,
               )
               break
@@ -551,7 +557,16 @@ export class BlockView {
         return groupFeatures
       }),
     )
-    return results.flat()
+    if (resultArrays.length === 1) {
+      return resultArrays[0]!
+    }
+    const allFeatures: Feature[] = []
+    for (const arr of resultArrays) {
+      for (const f of arr) {
+        allFeatures.push(f)
+      }
+    }
+    return allFeatures
   }
 
   private async _readBigWigFeaturesAsArrays(
@@ -570,11 +585,7 @@ export class BlockView {
     await Promise.all(
       blockGroupsToFetch.map(async blockGroup => {
         const { length, offset } = blockGroup
-        const data = await this.featureCache.get(
-          `${length}_${offset}`,
-          blockGroup,
-          signal,
-        )
+        const data = await this.bbi.read(length, offset, { signal })
 
         const localBlocks = blockGroup.blocks.map(block => ({
           offset: block.offset - blockGroup.offset,
@@ -663,11 +674,7 @@ export class BlockView {
     await Promise.all(
       blockGroupsToFetch.map(async blockGroup => {
         const { length, offset } = blockGroup
-        const data = await this.featureCache.get(
-          `${length}_${offset}`,
-          blockGroup,
-          signal,
-        )
+        const data = await this.bbi.read(length, offset, { signal })
 
         const localBlocks = blockGroup.blocks.map(block => ({
           offset: block.offset - blockGroup.offset,

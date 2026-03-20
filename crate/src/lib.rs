@@ -1,3 +1,4 @@
+use bytemuck;
 use libdeflater::Decompressor;
 use wasm_bindgen::prelude::*;
 
@@ -190,26 +191,13 @@ pub fn parse_bigwig_block(data: &[u8], req_start: i32, req_end: i32) -> Box<[u8]
     }
 
     let count = starts.len() as u32;
-    let result_size = 4 + count as usize * 12; // 4 bytes count + 4*3 bytes per feature
+    let result_size = 4 + count as usize * 12;
     let mut result = Vec::with_capacity(result_size);
 
-    // Write count
     result.extend_from_slice(&count.to_le_bytes());
-
-    // Write starts as i32 array
-    for &s in &starts {
-        result.extend_from_slice(&s.to_le_bytes());
-    }
-
-    // Write ends as i32 array
-    for &e in &ends {
-        result.extend_from_slice(&e.to_le_bytes());
-    }
-
-    // Write scores as f32 array
-    for &sc in &scores {
-        result.extend_from_slice(&sc.to_le_bytes());
-    }
+    result.extend_from_slice(bytemuck::cast_slice(&starts));
+    result.extend_from_slice(bytemuck::cast_slice(&ends));
+    result.extend_from_slice(bytemuck::cast_slice(&scores));
 
     result.into_boxed_slice()
 }
@@ -265,27 +253,15 @@ pub fn parse_summary_block(data: &[u8], req_chr_id: u32, req_start: i32, req_end
     }
 
     let count = starts.len() as u32;
-    // 4 bytes count + 4 bytes * 5 arrays * count
     let result_size = 4 + count as usize * 20;
     let mut result = Vec::with_capacity(result_size);
 
     result.extend_from_slice(&count.to_le_bytes());
-
-    for &s in &starts {
-        result.extend_from_slice(&s.to_le_bytes());
-    }
-    for &e in &ends {
-        result.extend_from_slice(&e.to_le_bytes());
-    }
-    for &sc in &scores {
-        result.extend_from_slice(&sc.to_le_bytes());
-    }
-    for &m in &min_scores {
-        result.extend_from_slice(&m.to_le_bytes());
-    }
-    for &m in &max_scores {
-        result.extend_from_slice(&m.to_le_bytes());
-    }
+    result.extend_from_slice(bytemuck::cast_slice(&starts));
+    result.extend_from_slice(bytemuck::cast_slice(&ends));
+    result.extend_from_slice(bytemuck::cast_slice(&scores));
+    result.extend_from_slice(bytemuck::cast_slice(&min_scores));
+    result.extend_from_slice(bytemuck::cast_slice(&max_scores));
 
     result.into_boxed_slice()
 }
@@ -331,15 +307,9 @@ pub fn decompress_and_parse_bigwig(
     let mut result = Vec::with_capacity(result_size);
 
     result.extend_from_slice(&count.to_le_bytes());
-    for &s in &starts {
-        result.extend_from_slice(&s.to_le_bytes());
-    }
-    for &e in &ends {
-        result.extend_from_slice(&e.to_le_bytes());
-    }
-    for &sc in &scores {
-        result.extend_from_slice(&sc.to_le_bytes());
-    }
+    result.extend_from_slice(bytemuck::cast_slice(&starts));
+    result.extend_from_slice(bytemuck::cast_slice(&ends));
+    result.extend_from_slice(bytemuck::cast_slice(&scores));
 
     Ok(result.into_boxed_slice())
 }
@@ -488,11 +458,11 @@ pub fn decompress_and_parse_summary(
     let mut result = Vec::with_capacity(result_size);
 
     result.extend_from_slice(&count.to_le_bytes());
-    for &s in &starts { result.extend_from_slice(&s.to_le_bytes()); }
-    for &e in &ends { result.extend_from_slice(&e.to_le_bytes()); }
-    for &sc in &scores { result.extend_from_slice(&sc.to_le_bytes()); }
-    for &m in &min_scores { result.extend_from_slice(&m.to_le_bytes()); }
-    for &m in &max_scores { result.extend_from_slice(&m.to_le_bytes()); }
+    result.extend_from_slice(bytemuck::cast_slice(&starts));
+    result.extend_from_slice(bytemuck::cast_slice(&ends));
+    result.extend_from_slice(bytemuck::cast_slice(&scores));
+    result.extend_from_slice(bytemuck::cast_slice(&min_scores));
+    result.extend_from_slice(bytemuck::cast_slice(&max_scores));
 
     Ok(result.into_boxed_slice())
 }
