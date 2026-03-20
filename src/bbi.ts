@@ -1,6 +1,5 @@
 import { LocalFile, RemoteFile } from 'generic-filehandle2'
-import { Observable, firstValueFrom } from 'rxjs'
-import { toArray } from 'rxjs/operators'
+import { of } from 'rxjs'
 
 import { BlockView } from './block-view.ts'
 
@@ -322,7 +321,7 @@ export abstract class BBI {
    * @param opts - An object containing basesPerSpan (e.g. pixels per basepair)
    * or scale used to infer the zoomLevel to use
    */
-  public async getFeatureStream(
+  public async getFeatures(
     refName: string,
     start: number,
     end: number,
@@ -330,44 +329,20 @@ export abstract class BBI {
   ) {
     await this.getHeader(opts)
     const chrName = this.renameRefSeqs(refName)
-    let view: BlockView
     const { basesPerSpan, scale } = opts || {}
-
-    if (basesPerSpan) {
-      view = await this.getView(1 / basesPerSpan, opts)
-    } else if (scale) {
-      view = await this.getView(scale, opts)
-    } else {
-      view = await this.getView(1, opts)
-    }
-
-    return new Observable<Feature[]>(observer => {
-      view
-        .readWigData(chrName, start, end, observer, opts)
-        .catch((e: unknown) => {
-          observer.error(e)
-        })
-    })
+    const viewScale = basesPerSpan ? 1 / basesPerSpan : (scale ?? 1)
+    const view = await this.getView(viewScale, opts)
+    return view.readWigData(chrName, start, end, opts)
   }
 
-  public async getFeatures(
+  public async getFeatureStream(
     refName: string,
     start: number,
     end: number,
     opts?: RequestOptions2,
   ) {
-    const ob = await this.getFeatureStream(refName, start, end, opts)
-
-    const arrays = await firstValueFrom(ob.pipe(toArray()))
-    const totalLength = arrays.reduce((sum, arr) => sum + arr.length, 0)
-    const result = new Array(totalLength)
-    let index = 0
-    for (const arr of arrays) {
-      for (const item of arr) {
-        result[index++] = item
-      }
-    }
-    return result
+    const features = await this.getFeatures(refName, start, end, opts)
+    return of(features)
   }
 
   /**

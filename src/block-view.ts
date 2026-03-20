@@ -12,7 +12,6 @@ import { groupBlocks } from './util.ts'
 import type { Feature } from './types.ts'
 import type { BigWigFeatureArrays, SummaryFeatureArrays } from './unzip.ts'
 import type { GenericFilehandle } from 'generic-filehandle2'
-import type { Observer } from 'rxjs'
 
 const decoder = new TextDecoder('utf8')
 const CIR_TREE_MAGIC = 0x2468ace0
@@ -75,145 +74,51 @@ export class BlockView {
     chrName: string,
     start: number,
     end: number,
-    observer: Observer<Feature[]>,
     opts?: Options,
-  ) {
-    try {
-      const chrId = this.refsByName[chrName]
-      if (chrId === undefined) {
-        observer.complete()
-        return
-      }
-      const request = { chrId, start, end }
-      if (!this.rTreePromise) {
-        this.rTreePromise = this.bbi.read(48, this.rTreeOffset, opts)
-      }
-      const buffer = await this.rTreePromise
-      const dataView = new DataView(
-        buffer.buffer,
-        buffer.byteOffset,
-        buffer.length,
+  ): Promise<Feature[]> {
+    const chrId = this.refsByName[chrName]
+    if (chrId === undefined) {
+      return []
+    }
+    const request = { chrId, start, end }
+    if (!this.rTreePromise) {
+      this.rTreePromise = this.bbi.read(48, this.rTreeOffset, opts)
+    }
+    const buffer = await this.rTreePromise
+    const dataView = new DataView(buffer.buffer, buffer.byteOffset, buffer.length)
+    const magic = dataView.getUint32(0, true)
+    if (magic !== CIR_TREE_MAGIC) {
+      throw new Error(
+        `invalid cirTree magic: 0x${magic.toString(16)} (expected 0x${CIR_TREE_MAGIC.toString(16)}) at offset ${this.rTreeOffset}, file may be corrupt or unsupported`,
       )
-      const magic = dataView.getUint32(0, true)
-      if (magic !== CIR_TREE_MAGIC) {
-        throw new Error(
-          `invalid cirTree magic: 0x${magic.toString(16)} (expected 0x${CIR_TREE_MAGIC.toString(16)}) at offset ${this.rTreeOffset}, file may be corrupt or unsupported`,
+    }
+    const rTreeBlockSize = dataView.getUint32(4, true)
+    // Upper bound on size, based on a completely full leaf node.
+    const maxRTreeBlockSpan = 4 + rTreeBlockSize * 32
+
+    const blockIntersectsQuery = (
+      startChrom: number,
+      startBase: number,
+      endChrom: number,
+      endBase: number,
+    ) =>
+      (startChrom < chrId || (startChrom === chrId && startBase <= end)) &&
+      (endChrom > chrId || (endChrom === chrId && endBase >= start))
+
+    const blocksToFetch: ReadData[] = []
+
+    const traverseRTree = async (offsets: number[]) => {
+      let spans = new Range([
+        { min: offsets[0]!, max: offsets[0]! + maxRTreeBlockSpan },
+      ])
+      for (let i = 1; i < offsets.length; i++) {
+        spans = spans.union(
+          new Range([{ min: offsets[i]!, max: offsets[i]! + maxRTreeBlockSpan }]),
         )
       }
-      const rTreeBlockSize = dataView.getUint32(4, true)
-      const blocksToFetch: ReadData[] = []
-      let outstanding = 0
-
-      // R-tree leaf nodes contain the actual data blocks to fetch
-      const processLeafNode = (
-        dataView: DataView,
-        startOffset: number,
-        count: number,
-      ) => {
-        let offset = startOffset
-        for (let i = 0; i < count; i++) {
-          const startChrom = dataView.getUint32(offset, true)
-          offset += 4
-          const startBase = dataView.getUint32(offset, true)
-          offset += 4
-          const endChrom = dataView.getUint32(offset, true)
-          offset += 4
-          const endBase = dataView.getUint32(offset, true)
-          offset += 4
-          const blockOffset = Number(dataView.getBigUint64(offset, true))
-          offset += 8
-          const blockSize = Number(dataView.getBigUint64(offset, true))
-          offset += 8
-          if (
-            blockIntersectsQuery({ startChrom, startBase, endBase, endChrom })
-          ) {
-            blocksToFetch.push({
-              offset: blockOffset,
-              length: blockSize,
-            })
-          }
-        }
-      }
-
-      // R-tree non-leaf nodes contain pointers to child nodes
-      const processNonLeafNode = (
-        dataView: DataView,
-        startOffset: number,
-        count: number,
-        level: number,
-      ) => {
-        const recurOffsets = []
-        let offset = startOffset
-        for (let i = 0; i < count; i++) {
-          const startChrom = dataView.getUint32(offset, true)
-          offset += 4
-          const startBase = dataView.getUint32(offset, true)
-          offset += 4
-          const endChrom = dataView.getUint32(offset, true)
-          offset += 4
-          const endBase = dataView.getUint32(offset, true)
-          offset += 4
-          const blockOffset = Number(dataView.getBigUint64(offset, true))
-          offset += 8
-          if (
-            blockIntersectsQuery({ startChrom, startBase, endChrom, endBase })
-          ) {
-            recurOffsets.push(blockOffset)
-          }
-        }
-        if (recurOffsets.length > 0) {
-          traverseRTree(recurOffsets, level + 1)
-        }
-      }
-
-      const processRTreeNode = (
-        rTreeBlockData: Uint8Array,
-        offset2: number,
-        level: number,
-      ) => {
-        try {
-          const data = rTreeBlockData.subarray(offset2)
-          const dataView = new DataView(
-            data.buffer,
-            data.byteOffset,
-            data.length,
-          )
-          let offset = 0
-
-          const isLeaf = dataView.getUint8(offset)
-          offset += 2 // 1 skip for reserved byte
-          const count = dataView.getUint16(offset, true)
-          offset += 2
-
-          if (isLeaf === 1) {
-            processLeafNode(dataView, offset, count)
-          } else if (isLeaf === 0) {
-            processNonLeafNode(dataView, offset, count, level)
-          }
-        } catch (e) {
-          observer.error(e)
-        }
-      }
-
-      const blockIntersectsQuery = (b: {
-        startChrom: number
-        startBase: number
-        endChrom: number
-        endBase: number
-      }) => {
-        const { startChrom, startBase, endChrom, endBase } = b
-        return (
-          (startChrom < chrId || (startChrom === chrId && startBase <= end)) &&
-          (endChrom > chrId || (endChrom === chrId && endBase >= start))
-        )
-      }
-
-      const fetchAndProcessRTreeBlocks = async (
-        offsets: number[],
-        range: Range,
-        level: number,
-      ) => {
-        try {
+      const childOffsets: number[] = []
+      await Promise.all(
+        spans.getRanges().map(async range => {
           const length = range.max - range.min
           const offset = range.min
           const resultBuffer = await this.featureCache.get(
@@ -223,60 +128,48 @@ export class BlockView {
           )
           for (const element of offsets) {
             if (range.contains(element)) {
-              processRTreeNode(resultBuffer, element - offset, level)
-              outstanding -= 1
-              if (outstanding === 0) {
-                this.readFeatures(observer, blocksToFetch, {
-                  ...opts,
-                  request,
-                }).catch((e: unknown) => {
-                  observer.error(e)
-                })
+              const data = resultBuffer.subarray(element - offset)
+              const dv = new DataView(data.buffer, data.byteOffset, data.length)
+              const isLeaf = dv.getUint8(0)
+              const count = dv.getUint16(2, true)
+              let nodeOffset = 4
+              if (isLeaf === 1) {
+                for (let i = 0; i < count; i++) {
+                  const startChrom = dv.getUint32(nodeOffset, true)
+                  const startBase = dv.getUint32(nodeOffset + 4, true)
+                  const endChrom = dv.getUint32(nodeOffset + 8, true)
+                  const endBase = dv.getUint32(nodeOffset + 12, true)
+                  const blockOffset = Number(dv.getBigUint64(nodeOffset + 16, true))
+                  const blockSize = Number(dv.getBigUint64(nodeOffset + 24, true))
+                  nodeOffset += 32
+                  if (blockIntersectsQuery(startChrom, startBase, endChrom, endBase)) {
+                    blocksToFetch.push({ offset: blockOffset, length: blockSize })
+                  }
+                }
+              } else if (isLeaf === 0) {
+                for (let i = 0; i < count; i++) {
+                  const startChrom = dv.getUint32(nodeOffset, true)
+                  const startBase = dv.getUint32(nodeOffset + 4, true)
+                  const endChrom = dv.getUint32(nodeOffset + 8, true)
+                  const endBase = dv.getUint32(nodeOffset + 12, true)
+                  const childOffset = Number(dv.getBigUint64(nodeOffset + 16, true))
+                  nodeOffset += 24
+                  if (blockIntersectsQuery(startChrom, startBase, endChrom, endBase)) {
+                    childOffsets.push(childOffset)
+                  }
+                }
               }
             }
           }
-        } catch (e) {
-          observer.error(e)
-        }
+        }),
+      )
+      if (childOffsets.length > 0) {
+        await traverseRTree(childOffsets)
       }
-      const traverseRTree = (offsets: number[], level: number) => {
-        try {
-          outstanding += offsets.length
-
-          // Upper bound on size, based on a completely full leaf node.
-          const maxRTreeBlockSpan = 4 + rTreeBlockSize * 32
-          let spans = new Range([
-            {
-              min: offsets[0]!,
-              max: offsets[0]! + maxRTreeBlockSpan,
-            },
-          ])
-          for (let i = 1; i < offsets.length; i += 1) {
-            const blockSpan = new Range([
-              {
-                min: offsets[i]!,
-                max: offsets[i]! + maxRTreeBlockSpan,
-              },
-            ])
-            spans = spans.union(blockSpan)
-          }
-          spans.getRanges().forEach(range => {
-            fetchAndProcessRTreeBlocks(offsets, range, level).catch(
-              (e: unknown) => {
-                observer.error(e)
-              },
-            )
-          })
-        } catch (e) {
-          observer.error(e)
-        }
-      }
-
-      traverseRTree([this.rTreeOffset + 48], 1)
-      return
-    } catch (e) {
-      observer.error(e)
     }
+
+    await traverseRTree([this.rTreeOffset + 48])
+    return this.readFeatures(blocksToFetch, { ...opts, request })
   }
 
   private parseSummaryBlock(
@@ -565,82 +458,72 @@ export class BlockView {
   }
 
   public async readFeatures(
-    observer: Observer<Feature[]>,
     blocks: { offset: number; length: number }[],
     opts: Options = {},
-  ) {
-    try {
-      const { blockType, uncompressBufSize } = this
-      const { signal, request } = opts
-      const blockGroupsToFetch = groupBlocks(blocks)
-      await Promise.all(
-        blockGroupsToFetch.map(async blockGroup => {
-          const { length, offset } = blockGroup
-          const data = await this.featureCache.get(
-            `${length}_${offset}`,
-            blockGroup,
-            signal,
-          )
+  ): Promise<Feature[]> {
+    const { blockType, uncompressBufSize } = this
+    const { signal, request } = opts
+    const blockGroupsToFetch = groupBlocks(blocks)
+    const results = await Promise.all(
+      blockGroupsToFetch.map(async blockGroup => {
+        const { length, offset } = blockGroup
+        const data = await this.featureCache.get(
+          `${length}_${offset}`,
+          blockGroup,
+          signal,
+        )
+        const localBlocks = blockGroup.blocks.map(block => ({
+          offset: block.offset - blockGroup.offset,
+          length: block.length,
+        }))
 
-          const localBlocks = blockGroup.blocks.map(block => ({
-            offset: block.offset - blockGroup.offset,
-            length: block.length,
-          }))
+        let decompressedData: Uint8Array
+        let decompressedOffsets: number[]
 
-          let decompressedData: Uint8Array
-          let decompressedOffsets: number[]
+        if (uncompressBufSize > 0) {
+          const result = await unzipBatch(data, localBlocks, uncompressBufSize)
+          decompressedData = result.data
+          decompressedOffsets = result.offsets
+        } else {
+          decompressedData = data
+          decompressedOffsets = localBlocks.map(b => b.offset)
+          decompressedOffsets.push(data.length)
+        }
 
-          if (uncompressBufSize > 0) {
-            const result = await unzipBatch(
-              data,
-              localBlocks,
-              uncompressBufSize,
-            )
-            decompressedData = result.data
-            decompressedOffsets = result.offsets
-          } else {
-            decompressedData = data
-            decompressedOffsets = localBlocks.map(b => b.offset)
-            decompressedOffsets.push(data.length)
+        const groupFeatures: Feature[] = []
+        for (let i = 0; i < blockGroup.blocks.length; i++) {
+          const block = blockGroup.blocks[i]!
+          const start = decompressedOffsets[i]!
+          const end = decompressedOffsets[i + 1]!
+          const resultData = decompressedData.subarray(start, end)
+          let features: Feature[]
+          switch (blockType) {
+            case 'summary':
+              features = this.parseSummaryBlock(resultData, 0, request)
+              break
+            case 'bigwig':
+              features = this.parseBigWigBlock(resultData, 0, request)
+              break
+            case 'bigbed':
+              features = this.parseBigBedBlock(
+                resultData,
+                0,
+                block.offset * (1 << 8),
+                request,
+              )
+              break
+            default:
+              features = []
+              console.warn(`Don't know what to do with ${blockType}`)
           }
-
-          for (let i = 0; i < blockGroup.blocks.length; i++) {
-            const block = blockGroup.blocks[i]!
-            const start = decompressedOffsets[i]!
-            const end = decompressedOffsets[i + 1]!
-            const resultData = decompressedData.subarray(start, end)
-
-            switch (blockType) {
-              case 'summary': {
-                observer.next(this.parseSummaryBlock(resultData, 0, request))
-                break
-              }
-              case 'bigwig': {
-                observer.next(this.parseBigWigBlock(resultData, 0, request))
-                break
-              }
-              case 'bigbed': {
-                observer.next(
-                  this.parseBigBedBlock(
-                    resultData,
-                    0,
-                    block.offset * (1 << 8),
-                    request,
-                  ),
-                )
-                break
-              }
-              default: {
-                console.warn(`Don't know what to do with ${blockType}`)
-              }
-            }
+          for (const f of features) {
+            groupFeatures.push(f)
           }
-        }),
-      )
-      observer.complete()
-    } catch (e) {
-      observer.error(e)
-    }
+        }
+        return groupFeatures
+      }),
+    )
+    return results.flat()
   }
 
   public async readBigWigFeaturesAsArrays(

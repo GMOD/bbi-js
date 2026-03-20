@@ -1,8 +1,5 @@
 import AbortablePromiseCache from '@gmod/abortable-promise-cache'
 import QuickLRU from '@jbrowse/quick-lru'
-import { Observable, firstValueFrom, merge } from 'rxjs'
-import { map, reduce } from 'rxjs/operators'
-
 import { BBI } from './bbi.ts'
 
 import type { Feature, RequestOptions } from './types.ts'
@@ -292,23 +289,14 @@ export class BigBed extends BBI {
       return []
     }
     const view = await this.getUnzoomedView(opts)
-    const res = blocks.map(block => {
-      return new Observable<Feature[]>(observer => {
-        view.readFeatures(observer, [block], opts).catch((e: unknown) => {
-          observer.error(e)
-        })
-      }).pipe(
-        reduce((acc, curr) => {
-          acc.push(...curr)
-          return acc
-        }, [] as Feature[]),
-        map(features => features.map(f => ({ ...f, field: block.field }))),
-      )
-    })
-    const ret = await firstValueFrom(merge(...res))
-    // Filter to features where the indexed field matches the search name
+    const results = await Promise.all(
+      blocks.map(async block => {
+        const features = await view.readFeatures([block], opts)
+        return features.map(f => ({ ...f, field: block.field }))
+      }),
+    )
     // field offset is adjusted by -3 to account for chrom, chromStart, chromEnd columns
-    return ret.filter(f => {
+    return results.flat().filter(f => {
       if (!f.rest) {
         return false
       }
