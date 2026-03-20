@@ -1,19 +1,17 @@
 import type { BigWig } from './bigwig.ts'
-import type { Feature, RequestOptions2 } from './types.ts'
+import type { BigWigFeatureArrays, RequestOptions2 } from './types.ts'
 
 export async function parseBigWig(
   bigwig: BigWig,
   opts?: RequestOptions2,
-): Promise<Feature[]> {
+): Promise<BigWigFeatureArrays[]> {
   const header = await bigwig.getHeader(opts)
-  const allFeatures: Feature[] = []
-
+  const results: BigWigFeatureArrays[] = []
   for (const ref of Object.values(header.refsByNumber)) {
-    const features = await bigwig.getFeatures(ref.name, 0, ref.length, opts)
-    for (const feature of features) {
-      allFeatures.push(feature)
+    const r = await bigwig.getFeaturesAsArrays(ref.name, 0, ref.length, opts)
+    if (!r.isSummary && r.starts.length > 0) {
+      results.push(r)
     }
   }
-
-  return allFeatures
+  return results
 }

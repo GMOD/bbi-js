@@ -37,7 +37,9 @@ async function main() {
   console.log(`  p25=${sorted[Math.floor(sorted.length * 0.25)]!.toFixed(2)}ms`)
   console.log(`  p50=${sorted[Math.floor(sorted.length * 0.5)]!.toFixed(2)}ms`)
   console.log(`  p75=${sorted[Math.floor(sorted.length * 0.75)]!.toFixed(2)}ms`)
-  console.log(`  mean=${(timings.reduce((a, b) => a + b) / timings.length).toFixed(2)}ms`)
+  console.log(
+    `  mean=${(timings.reduce((a, b) => a + b) / timings.length).toFixed(2)}ms`,
+  )
 }
 
 main().catch(console.error)

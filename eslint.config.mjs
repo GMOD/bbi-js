@@ -10,6 +10,7 @@ export default defineConfig(
       'esm/*',
       'esm_*/*',
       'crate/',
+      'scripts/*',
       'src/wasm/*',
       'benchmarks/*',
       'dist/**/*',

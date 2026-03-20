@@ -25,7 +25,9 @@ async function main() {
 
   const sorted = [...timings].sort((a, b) => a - b)
   console.log(`${path} (${iterations} runs):`)
-  console.log(`  min=${sorted[0]!.toFixed(1)}ms  p50=${sorted[Math.floor(sorted.length / 2)]!.toFixed(1)}ms  max=${sorted[sorted.length - 1]!.toFixed(1)}ms`)
+  console.log(
+    `  min=${sorted[0]!.toFixed(1)}ms  p50=${sorted[Math.floor(sorted.length / 2)]!.toFixed(1)}ms  max=${sorted[sorted.length - 1]!.toFixed(1)}ms`,
+  )
 }
 
 main().catch(console.error)

@@ -378,72 +378,58 @@ export class BlockView {
         currentOffsets.map(o => ({ min: o, max: o + maxRTreeBlockSpan })),
       )
       const nextOffsets: number[] = []
-      await Promise.all(
-        spans.map(async ({ min, max }) => {
-          const length = max - min
-          const offset = min
-          const resultBuffer = await this.featureCache.get(
-            `${length}_${offset}`,
-            { length, offset },
-            opts?.signal,
-          )
-          for (const element of currentOffsets) {
-            if (min <= element && element <= max) {
-              const data = resultBuffer.subarray(element - offset)
-              const dv = new DataView(data.buffer, data.byteOffset, data.length)
-              const isLeaf = dv.getUint8(0)
-              const count = dv.getUint16(2, true)
-              let nodeOffset = 4
-              if (isLeaf === 1) {
-                for (let i = 0; i < count; i++) {
-                  const startChrom = dv.getUint32(nodeOffset, true)
-                  const startBase = dv.getUint32(nodeOffset + 4, true)
-                  const endChrom = dv.getUint32(nodeOffset + 8, true)
-                  const endBase = dv.getUint32(nodeOffset + 12, true)
-                  const blockOffset = Number(
-                    dv.getBigUint64(nodeOffset + 16, true),
-                  )
-                  const blockSize = Number(
-                    dv.getBigUint64(nodeOffset + 24, true),
-                  )
-                  nodeOffset += 32
-                  if (
-                    blockIntersectsQuery(
-                      startChrom,
-                      startBase,
-                      endChrom,
-                      endBase,
-                    )
-                  ) {
-                    blocks.push({ offset: blockOffset, length: blockSize })
-                  }
+      for (const { min, max } of spans) {
+        const length = max - min
+        const offset = min
+        const resultBuffer = await this.featureCache.get(
+          `${length}_${offset}`,
+          { length, offset },
+          opts?.signal,
+        )
+        for (const element of currentOffsets) {
+          if (min <= element && element <= max) {
+            const data = resultBuffer.subarray(element - offset)
+            const dv = new DataView(data.buffer, data.byteOffset, data.length)
+            const isLeaf = dv.getUint8(0)
+            const count = dv.getUint16(2, true)
+            let nodeOffset = 4
+            if (isLeaf === 1) {
+              for (let i = 0; i < count; i++) {
+                const startChrom = dv.getUint32(nodeOffset, true)
+                const startBase = dv.getUint32(nodeOffset + 4, true)
+                const endChrom = dv.getUint32(nodeOffset + 8, true)
+                const endBase = dv.getUint32(nodeOffset + 12, true)
+                const blockOffset = Number(
+                  dv.getBigUint64(nodeOffset + 16, true),
+                )
+                const blockSize = Number(dv.getBigUint64(nodeOffset + 24, true))
+                nodeOffset += 32
+                if (
+                  blockIntersectsQuery(startChrom, startBase, endChrom, endBase)
+                ) {
+                  blocks.push({ offset: blockOffset, length: blockSize })
                 }
-              } else if (isLeaf === 0) {
-                for (let i = 0; i < count; i++) {
-                  const startChrom = dv.getUint32(nodeOffset, true)
-                  const startBase = dv.getUint32(nodeOffset + 4, true)
-                  const endChrom = dv.getUint32(nodeOffset + 8, true)
-                  const endBase = dv.getUint32(nodeOffset + 12, true)
-                  const childOffset = Number(
-                    dv.getBigUint64(nodeOffset + 16, true),
-                  )
-                  nodeOffset += 24
-                  if (
-                    blockIntersectsQuery(
-                      startChrom,
-                      startBase,
-                      endChrom,
-                      endBase,
-                    )
-                  ) {
-                    nextOffsets.push(childOffset)
-                  }
+              }
+            } else if (isLeaf === 0) {
+              for (let i = 0; i < count; i++) {
+                const startChrom = dv.getUint32(nodeOffset, true)
+                const startBase = dv.getUint32(nodeOffset + 4, true)
+                const endChrom = dv.getUint32(nodeOffset + 8, true)
+                const endBase = dv.getUint32(nodeOffset + 12, true)
+                const childOffset = Number(
+                  dv.getBigUint64(nodeOffset + 16, true),
+                )
+                nodeOffset += 24
+                if (
+                  blockIntersectsQuery(startChrom, startBase, endChrom, endBase)
+                ) {
+                  nextOffsets.push(childOffset)
                 }
               }
             }
           }
-        }),
-      )
+        }
+      }
       currentOffsets = nextOffsets
     }
 
@@ -492,78 +478,64 @@ export class BlockView {
     const { blockType, uncompressBufSize } = this
     const { signal, request } = opts
     const blockGroupsToFetch = groupBlocks(blocks)
-    const resultArrays = await Promise.all(
-      blockGroupsToFetch.map(async blockGroup => {
-        const data = await this.bbi.read(
-          blockGroup.length,
-          blockGroup.offset,
-          { signal },
-        )
-        const groupOffset = blockGroup.offset
-        const subBlocks = blockGroup.blocks
-
-        let decompressedData: Uint8Array
-        let decompressedOffsets: number[]
-
-        if (uncompressBufSize > 0) {
-          const localBlocks: { offset: number; length: number }[] = []
-          for (const block of subBlocks) {
-            localBlocks.push({
-              offset: block.offset - groupOffset,
-              length: block.length,
-            })
-          }
-          const result = await unzipBatch(data, localBlocks, uncompressBufSize)
-          decompressedData = result.data
-          decompressedOffsets = result.offsets
-        } else {
-          decompressedData = data
-          decompressedOffsets = []
-          for (const block of subBlocks) {
-            decompressedOffsets.push(block.offset - groupOffset)
-          }
-          decompressedOffsets.push(data.length)
-        }
-
-        const groupFeatures: Feature[] = []
-        for (let i = 0; i < subBlocks.length; i++) {
-          const start = decompressedOffsets[i]!
-          const end = decompressedOffsets[i + 1]!
-          const resultData = decompressedData.subarray(start, end)
-          let features: Feature[]
-          switch (blockType) {
-            case 'summary':
-              features = parseSummaryBlock(resultData, 0, request)
-              break
-            case 'bigwig':
-              features = parseBigWigBlock(resultData, 0, request)
-              break
-            case 'bigbed':
-              features = parseBigBedBlock(
-                resultData,
-                0,
-                subBlocks[i]!.offset * (1 << 8),
-                request,
-              )
-              break
-            default:
-              features = []
-              console.warn(`Don't know what to do with ${blockType}`)
-          }
-          for (const f of features) {
-            groupFeatures.push(f)
-          }
-        }
-        return groupFeatures
-      }),
-    )
-    if (resultArrays.length === 1) {
-      return resultArrays[0]!
-    }
     const allFeatures: Feature[] = []
-    for (const arr of resultArrays) {
-      for (const f of arr) {
-        allFeatures.push(f)
+    for (const blockGroup of blockGroupsToFetch) {
+      const data = await this.bbi.read(blockGroup.length, blockGroup.offset, {
+        signal,
+      })
+      const groupOffset = blockGroup.offset
+      const subBlocks = blockGroup.blocks
+
+      let decompressedData: Uint8Array
+      let decompressedOffsets: number[]
+
+      if (uncompressBufSize > 0) {
+        const localBlocks: { offset: number; length: number }[] = []
+        for (const block of subBlocks) {
+          localBlocks.push({
+            offset: block.offset - groupOffset,
+            length: block.length,
+          })
+        }
+        const result = await unzipBatch(data, localBlocks, uncompressBufSize)
+        decompressedData = result.data
+        decompressedOffsets = result.offsets
+      } else {
+        decompressedData = data
+        decompressedOffsets = []
+        for (const block of subBlocks) {
+          decompressedOffsets.push(block.offset - groupOffset)
+        }
+        decompressedOffsets.push(data.length)
+      }
+
+      for (let i = 0; i < subBlocks.length; i++) {
+        const start = decompressedOffsets[i]!
+        const end = decompressedOffsets[i + 1]!
+        const resultData = decompressedData.subarray(start, end)
+        let features: Feature[]
+        switch (blockType) {
+          case 'summary':
+            features = parseSummaryBlock(resultData, 0, request)
+            break
+          case 'bigwig':
+            features = parseBigWigBlock(resultData, 0, request)
+            break
+          case 'bigbed':
+            features = parseBigBedBlock(
+              resultData,
+              0,
+              subBlocks[i]!.offset * (1 << 8),
+              request,
+            )
+            break
+          default:
+            features = []
+            console.warn(`Don't know what to do with ${blockType}`)
+        }
+        for (const f of features) {
+          allFeatures.push(f)
+        }
       }
     }
     return allFeatures
@@ -582,47 +554,45 @@ export class BlockView {
     const allScores: Float32Array[] = []
     let totalCount = 0
 
-    await Promise.all(
-      blockGroupsToFetch.map(async blockGroup => {
-        const { length, offset } = blockGroup
-        const data = await this.bbi.read(length, offset, { signal })
+    for (const blockGroup of blockGroupsToFetch) {
+      const { length, offset } = blockGroup
+      const data = await this.bbi.read(length, offset, { signal })
 
-        const localBlocks = blockGroup.blocks.map(block => ({
-          offset: block.offset - blockGroup.offset,
-          length: block.length,
-        }))
+      const localBlocks = blockGroup.blocks.map(block => ({
+        offset: block.offset - blockGroup.offset,
+        length: block.length,
+      }))
 
-        if (uncompressBufSize > 0) {
-          const result = await decompressAndParseBigWigBlocks(
-            data,
-            localBlocks,
-            uncompressBufSize,
-            request?.start ?? 0,
-            request?.end ?? 0,
+      if (uncompressBufSize > 0) {
+        const result = await decompressAndParseBigWigBlocks(
+          data,
+          localBlocks,
+          uncompressBufSize,
+          request?.start ?? 0,
+          request?.end ?? 0,
+        )
+        if (result.starts.length > 0) {
+          allStarts.push(result.starts)
+          allEnds.push(result.ends)
+          allScores.push(result.scores)
+          totalCount += result.starts.length
+        }
+      } else {
+        for (const block of localBlocks) {
+          const blockData = data.subarray(
+            block.offset,
+            block.offset + block.length,
           )
+          const result = parseBigWigBlockAsArrays(blockData, 0, request)
           if (result.starts.length > 0) {
             allStarts.push(result.starts)
             allEnds.push(result.ends)
             allScores.push(result.scores)
             totalCount += result.starts.length
           }
-        } else {
-          for (const block of localBlocks) {
-            const blockData = data.subarray(
-              block.offset,
-              block.offset + block.length,
-            )
-            const result = parseBigWigBlockAsArrays(blockData, 0, request)
-            if (result.starts.length > 0) {
-              allStarts.push(result.starts)
-              allEnds.push(result.ends)
-              allScores.push(result.scores)
-              totalCount += result.starts.length
-            }
-          }
         }
-      }),
-    )
+      }
+    }
 
     if (allStarts.length === 0) {
       return {
@@ -671,65 +641,63 @@ export class BlockView {
     const allMaxScores: Float32Array[] = []
     let totalCount = 0
 
-    await Promise.all(
-      blockGroupsToFetch.map(async blockGroup => {
-        const { length, offset } = blockGroup
-        const data = await this.bbi.read(length, offset, { signal })
+    for (const blockGroup of blockGroupsToFetch) {
+      const { length, offset } = blockGroup
+      const data = await this.bbi.read(length, offset, { signal })
 
-        const localBlocks = blockGroup.blocks.map(block => ({
-          offset: block.offset - blockGroup.offset,
-          length: block.length,
-        }))
+      const localBlocks = blockGroup.blocks.map(block => ({
+        offset: block.offset - blockGroup.offset,
+        length: block.length,
+      }))
 
-        if (uncompressBufSize > 0) {
-          const result = await decompressAndParseSummaryBlocks(
-            data,
-            localBlocks,
-            uncompressBufSize,
-            request?.chrId ?? 0,
-            request?.start ?? 0,
-            request?.end ?? 0,
+      if (uncompressBufSize > 0) {
+        const result = await decompressAndParseSummaryBlocks(
+          data,
+          localBlocks,
+          uncompressBufSize,
+          request?.chrId ?? 0,
+          request?.start ?? 0,
+          request?.end ?? 0,
+        )
+        if (result.starts.length > 0) {
+          allStarts.push(result.starts)
+          allEnds.push(result.ends)
+          allScores.push(result.scores)
+          allMinScores.push(result.minScores)
+          allMaxScores.push(result.maxScores)
+          totalCount += result.starts.length
+        }
+      } else {
+        for (const block of localBlocks) {
+          const blockData = data.subarray(
+            block.offset,
+            block.offset + block.length,
           )
-          if (result.starts.length > 0) {
-            allStarts.push(result.starts)
-            allEnds.push(result.ends)
-            allScores.push(result.scores)
-            allMinScores.push(result.minScores)
-            allMaxScores.push(result.maxScores)
-            totalCount += result.starts.length
-          }
-        } else {
-          for (const block of localBlocks) {
-            const blockData = data.subarray(
-              block.offset,
-              block.offset + block.length,
-            )
-            const features = parseSummaryBlock(blockData, 0, request)
-            if (features.length > 0) {
-              const starts = new Int32Array(features.length)
-              const ends = new Int32Array(features.length)
-              const scores = new Float32Array(features.length)
-              const minScores = new Float32Array(features.length)
-              const maxScores = new Float32Array(features.length)
-              for (let i = 0; i < features.length; i++) {
-                const f = features[i]!
-                starts[i] = f.start
-                ends[i] = f.end
-                scores[i] = f.score ?? 0
-                minScores[i] = f.minScore ?? 0
-                maxScores[i] = f.maxScore ?? 0
-              }
-              allStarts.push(starts)
-              allEnds.push(ends)
-              allScores.push(scores)
-              allMinScores.push(minScores)
-              allMaxScores.push(maxScores)
-              totalCount += features.length
+          const features = parseSummaryBlock(blockData, 0, request)
+          if (features.length > 0) {
+            const starts = new Int32Array(features.length)
+            const ends = new Int32Array(features.length)
+            const scores = new Float32Array(features.length)
+            const minScores = new Float32Array(features.length)
+            const maxScores = new Float32Array(features.length)
+            for (let i = 0; i < features.length; i++) {
+              const f = features[i]!
+              starts[i] = f.start
+              ends[i] = f.end
+              scores[i] = f.score ?? 0
+              minScores[i] = f.minScore ?? 0
+              maxScores[i] = f.maxScore ?? 0
             }
+            allStarts.push(starts)
+            allEnds.push(ends)
+            allScores.push(scores)
+            allMinScores.push(minScores)
+            allMaxScores.push(maxScores)
+            totalCount += features.length
           }
         }
-      }),
-    )
+      }
+    }
 
     if (allStarts.length === 0) {
       return {
