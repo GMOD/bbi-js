@@ -125,26 +125,6 @@ reductionLevel<2/opts.scale) when scanning backwards through this list
         { reductionLevel: 40960, ... },
         { reductionLevel: 163840, ... } ]
 
-#### getFeatureStream(refName, start, end, opts)
-
-Same as getFeatures but returns an RxJS observable stream, useful for very large
-queries
-
-```typescript
-const observer = await bigwig.getFeatureStream('chr1', 0, 100)
-observer.subscribe(
-  chunk => {
-    /* chunk contains array of features with start, end, score */
-  },
-  error => {
-    /* process error */
-  },
-  () => {
-    /* completed */
-  },
-)
-```
-
 #### getFeaturesAsArrays(refName, start, end, opts)
 
 Same parameters as getFeatures, but returns typed arrays instead of an array of
@@ -221,10 +201,6 @@ they exist.
 
 returns a promise to an array of features. no concept of zoom levels is used
 with bigwig data
-
-#### getFeatureStream(refName, start, end, opts)
-
-Similar to BigWig, returns an RxJS observable for a observable stream
 
 #### searchExtraIndex(name, opts)
 
