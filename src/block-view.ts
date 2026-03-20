@@ -37,13 +37,12 @@ function coordFilter(s1: number, e1: number, s2: number, e2: number): boolean {
 }
 
 function parseSummaryBlock(
+  out: Feature[],
   b: Uint8Array,
   startOffset: number,
   request?: CoordRequest,
 ) {
-  const features: Feature[] = []
   let offset = startOffset
-
   const dataView = new DataView(b.buffer, b.byteOffset, b.length)
   while (offset < b.byteLength) {
     const chromId = dataView.getUint32(offset, true)
@@ -66,7 +65,7 @@ function parseSummaryBlock(
       (chromId === request.chrId &&
         coordFilter(start, end, request.start, request.end))
     ) {
-      features.push({
+      out.push({
         start,
         end,
         maxScore,
@@ -76,17 +75,15 @@ function parseSummaryBlock(
       })
     }
   }
-
-  return features
 }
 
 function parseBigBedBlock(
+  out: Feature[],
   data: Uint8Array,
   startOffset: number,
   offset: number,
   request?: CoordRequest,
 ) {
-  const items: Feature[] = []
   let currOffset = startOffset
   const dataView = new DataView(data.buffer, data.byteOffset, data.length)
   while (currOffset < data.byteLength) {
@@ -111,7 +108,7 @@ function parseBigBedBlock(
       (chromId === request.chrId &&
         coordFilter(start, end, request.start, request.end))
     ) {
-      items.push({
+      out.push({
         start,
         end,
         rest,
@@ -119,11 +116,10 @@ function parseBigBedBlock(
       })
     }
   }
-
-  return items
 }
 
 function parseBigWigBlock(
+  out: Feature[],
   buffer: Uint8Array,
   startOffset: number,
   req?: CoordRequest,
@@ -136,7 +132,6 @@ function parseBigWigBlock(
   const blockType = dataView.getUint8(20)
   const itemCount = dataView.getUint16(22, true)
   let offset = 24
-  const items = []
   switch (blockType) {
     case 1: {
       for (let i = 0; i < itemCount; i++) {
@@ -147,11 +142,7 @@ function parseBigWigBlock(
         const score = dataView.getFloat32(offset, true)
         offset += 4
         if (!req || coordFilter(start, end, req.start, req.end)) {
-          items.push({
-            start,
-            end,
-            score,
-          })
+          out.push({ start, end, score })
         }
       }
       break
@@ -164,11 +155,7 @@ function parseBigWigBlock(
         offset += 4
         const end = start + itemSpan
         if (!req || coordFilter(start, end, req.start, req.end)) {
-          items.push({
-            score,
-            start,
-            end,
-          })
+          out.push({ score, start, end })
         }
       }
       break
@@ -180,18 +167,12 @@ function parseBigWigBlock(
         const start = blockStart + i * itemStep
         const end = start + itemSpan
         if (!req || coordFilter(start, end, req.start, req.end)) {
-          items.push({
-            score,
-            start,
-            end,
-          })
+          out.push({ score, start, end })
         }
       }
       break
     }
   }
-
-  return items
 }
 
 function parseBigWigBlockAsArrays(
@@ -387,12 +368,13 @@ export class BlockView {
       (endChrom > chrId || (endChrom === chrId && endBase >= start))
 
     const blocks: ReadData[] = []
+    let currentOffsets = [this.rTreeOffset + 48]
 
-    const traverseRTree = async (offsets: number[]) => {
+    while (currentOffsets.length > 0) {
       const spans = mergeRanges(
-        offsets.map(o => ({ min: o, max: o + maxRTreeBlockSpan })),
+        currentOffsets.map(o => ({ min: o, max: o + maxRTreeBlockSpan })),
       )
-      const childOffsets: number[] = []
+      const nextOffsets: number[] = []
       await Promise.all(
         spans.map(async ({ min, max }) => {
           const length = max - min
@@ -402,7 +384,7 @@ export class BlockView {
             { length, offset },
             opts?.signal,
           )
-          for (const element of offsets) {
+          for (const element of currentOffsets) {
             if (min <= element && element <= max) {
               const data = resultBuffer.subarray(element - offset)
               const dv = new DataView(data.buffer, data.byteOffset, data.length)
@@ -451,7 +433,7 @@ export class BlockView {
                       endBase,
                     )
                   ) {
-                    childOffsets.push(childOffset)
+                    nextOffsets.push(childOffset)
                   }
                 }
               }
@@ -459,12 +441,9 @@ export class BlockView {
           }
         }),
       )
-      if (childOffsets.length > 0) {
-        await traverseRTree(childOffsets)
-      }
+      currentOffsets = nextOffsets
     }
 
-    await traverseRTree([this.rTreeOffset + 48])
     return { blocks, chrId }
   }
 
@@ -510,7 +489,8 @@ export class BlockView {
     const { blockType, uncompressBufSize } = this
     const { signal, request } = opts
     const blockGroupsToFetch = groupBlocks(blocks)
-    const results = await Promise.all(
+    const allFeatures: Feature[] = []
+    await Promise.all(
       blockGroupsToFetch.map(async blockGroup => {
         const { length, offset } = blockGroup
         const data = await this.featureCache.get(
@@ -536,22 +516,21 @@ export class BlockView {
           decompressedOffsets.push(data.length)
         }
 
-        const groupFeatures: Feature[] = []
         for (let i = 0; i < blockGroup.blocks.length; i++) {
           const block = blockGroup.blocks[i]!
           const start = decompressedOffsets[i]!
           const end = decompressedOffsets[i + 1]!
           const resultData = decompressedData.subarray(start, end)
-          let features: Feature[]
           switch (blockType) {
             case 'summary':
-              features = parseSummaryBlock(resultData, 0, request)
+              parseSummaryBlock(allFeatures, resultData, 0, request)
               break
             case 'bigwig':
-              features = parseBigWigBlock(resultData, 0, request)
+              parseBigWigBlock(allFeatures, resultData, 0, request)
               break
             case 'bigbed':
-              features = parseBigBedBlock(
+              parseBigBedBlock(
+                allFeatures,
                 resultData,
                 0,
                 block.offset * (1 << 8),
@@ -559,17 +538,12 @@ export class BlockView {
               )
               break
             default:
-              features = []
               console.warn(`Don't know what to do with ${blockType}`)
           }
-          for (const f of features) {
-            groupFeatures.push(f)
-          }
         }
-        return groupFeatures
       }),
     )
-    return results.flat()
+    return allFeatures
   }
 
   private async _readBigWigFeaturesAsArrays(
@@ -715,7 +689,8 @@ export class BlockView {
               block.offset,
               block.offset + block.length,
             )
-            const features = parseSummaryBlock(blockData, 0, request)
+            const features: Feature[] = []
+            parseSummaryBlock(features, blockData, 0, request)
             if (features.length > 0) {
               const starts = new Int32Array(features.length)
               const ends = new Int32Array(features.length)

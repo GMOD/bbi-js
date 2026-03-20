@@ -259,6 +259,29 @@ export abstract class BBI {
     }
   }
 
+  private viewCache = new Map<string, BlockView>()
+
+  protected getOrCreateBlockView(
+    refsByName: Record<string, number>,
+    rTreeOffset: number,
+    uncompressBufSize: number,
+    blockType: string,
+  ) {
+    const key = `${rTreeOffset}_${blockType}`
+    let view = this.viewCache.get(key)
+    if (!view) {
+      view = new BlockView(
+        this.bbi,
+        refsByName,
+        rTreeOffset,
+        uncompressBufSize,
+        blockType,
+      )
+      this.viewCache.set(key, view)
+    }
+    return view
+  }
+
   /*
    * fetches the "unzoomed" view of the bigwig data. this is the default for bigbed
    * @param abortSignal - a signal to optionally abort this operation
@@ -266,8 +289,7 @@ export abstract class BBI {
   protected async getUnzoomedView(opts?: RequestOptions) {
     const { unzoomedIndexOffset, refsByName, uncompressBufSize, fileType } =
       await this.getHeader(opts)
-    return new BlockView(
-      this.bbi,
+    return this.getOrCreateBlockView(
       refsByName,
       unzoomedIndexOffset,
       uncompressBufSize,
