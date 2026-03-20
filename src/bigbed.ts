@@ -21,9 +21,6 @@ interface Index {
   field: number
 }
 
-export function filterUndef<T>(ts: (T | undefined)[]): T[] {
-  return ts.filter((t: T | undefined): t is T => !!t)
-}
 
 function getTabField(str: string, fieldIndex: number) {
   if (fieldIndex < 0) {
@@ -64,11 +61,9 @@ async function readBPlusTreeNode(
   const len = 4 + blockSize * (keySize + valSize)
   const buffer = await bbi.read(len, nodeOffset, opts)
   const dataView = new DataView(buffer.buffer, buffer.byteOffset, buffer.length)
-  let offset = 0
-  const nodeType = dataView.getInt8(offset)
-  offset += 2 // skip nodeType byte + 1 reserved byte
-  const cnt = dataView.getInt16(offset, true)
-  offset += 2
+  const nodeType = dataView.getInt8(0)
+  const cnt = dataView.getInt16(2, true)
+  let offset = 4
 
   // Non-leaf node (nodeType === 0): contains keys and child node pointers for navigation
   if (nodeType === 0) {
@@ -183,13 +178,8 @@ export class BigBed extends BBI {
     const b = await this.bbi.read(64, extHeaderOffset)
 
     const dataView = new DataView(b.buffer, b.byteOffset, b.length)
-    let offset = 0
-    // const _size = dataView.getUint16(offset, true)
-    offset += 2
-    const count = dataView.getUint16(offset, true)
-    offset += 2
-    const dataOffset = Number(dataView.getBigUint64(offset, true))
-    offset += 8
+    const count = dataView.getUint16(2, true)
+    const dataOffset = Number(dataView.getBigUint64(4, true))
 
     // no extra index is defined if count==0
     if (count === 0) {
@@ -205,14 +195,10 @@ export class BigBed extends BBI {
     for (let i = 0; i < count; i += 1) {
       const b = buffer.subarray(i * blocklen)
       const dataView = new DataView(b.buffer, b.byteOffset, b.length)
-      let offset = 0
-      const type = dataView.getInt16(offset, true)
-      offset += 2
-      const fieldcount = dataView.getInt16(offset, true)
-      offset += 2
-      const dataOffset = Number(dataView.getBigUint64(offset, true))
-      offset += 8 + 4 // skip 8-byte offset + 4 reserved bytes
-      const field = dataView.getInt16(offset, true)
+      const type = dataView.getInt16(0, true)
+      const fieldcount = dataView.getInt16(2, true)
+      const dataOffset = Number(dataView.getBigUint64(4, true))
+      const field = dataView.getInt16(16, true)
       indices.push({
         type,
         fieldcount,
@@ -246,17 +232,9 @@ export class BigBed extends BBI {
       const b = await this.bbi.read(32, offset2, opts)
 
       const dataView = new DataView(b.buffer, b.byteOffset, b.length)
-      let offset = 0
-      // const _magic = dataView.getInt32(offset, true)
-      offset += 4
-      const blockSize = dataView.getInt32(offset, true)
-      offset += 4
-      const keySize = dataView.getInt32(offset, true)
-      offset += 4
-      const valSize = dataView.getInt32(offset, true)
-      offset += 4
-      // const _itemCount = Number(dataView.getBigUint64(offset, true))
-      offset += 8
+      const blockSize = dataView.getInt32(4, true)
+      const keySize = dataView.getInt32(8, true)
+      const valSize = dataView.getInt32(12, true)
 
       return readBPlusTreeNode(
         this.bbi,
@@ -269,7 +247,8 @@ export class BigBed extends BBI {
         opts,
       )
     })
-    return filterUndef(await Promise.all(locs))
+    const results = await Promise.all(locs)
+    return results.filter((l): l is Loc => l !== undefined)
   }
 
   /*

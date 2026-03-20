@@ -70,17 +70,16 @@ export class BlockView {
     }
   }
 
-  public async readWigData(
+  private async _collectBlocks(
     chrName: string,
     start: number,
     end: number,
     opts?: Options,
-  ): Promise<Feature[]> {
+  ): Promise<{ blocks: ReadData[]; chrId: number } | undefined> {
     const chrId = this.refsByName[chrName]
     if (chrId === undefined) {
-      return []
+      return undefined
     }
-    const request = { chrId, start, end }
     if (!this.rTreePromise) {
       this.rTreePromise = this.bbi.read(48, this.rTreeOffset, opts)
     }
@@ -105,7 +104,7 @@ export class BlockView {
       (startChrom < chrId || (startChrom === chrId && startBase <= end)) &&
       (endChrom > chrId || (endChrom === chrId && endBase >= start))
 
-    const blocksToFetch: ReadData[] = []
+    const blocks: ReadData[] = []
 
     const traverseRTree = async (offsets: number[]) => {
       let spans = new Range([
@@ -118,16 +117,16 @@ export class BlockView {
       }
       const childOffsets: number[] = []
       await Promise.all(
-        spans.getRanges().map(async range => {
-          const length = range.max - range.min
-          const offset = range.min
+        spans.getRanges().map(async ({ min, max }) => {
+          const length = max - min
+          const offset = min
           const resultBuffer = await this.featureCache.get(
             `${length}_${offset}`,
             { length, offset },
             opts?.signal,
           )
           for (const element of offsets) {
-            if (range.contains(element)) {
+            if (min <= element && element <= max) {
               const data = resultBuffer.subarray(element - offset)
               const dv = new DataView(data.buffer, data.byteOffset, data.length)
               const isLeaf = dv.getUint8(0)
@@ -143,7 +142,7 @@ export class BlockView {
                   const blockSize = Number(dv.getBigUint64(nodeOffset + 24, true))
                   nodeOffset += 32
                   if (blockIntersectsQuery(startChrom, startBase, endChrom, endBase)) {
-                    blocksToFetch.push({ offset: blockOffset, length: blockSize })
+                    blocks.push({ offset: blockOffset, length: blockSize })
                   }
                 }
               } else if (isLeaf === 0) {
@@ -169,7 +168,37 @@ export class BlockView {
     }
 
     await traverseRTree([this.rTreeOffset + 48])
-    return this.readFeatures(blocksToFetch, { ...opts, request })
+    return { blocks, chrId }
+  }
+
+  public async readWigData(
+    chrName: string,
+    start: number,
+    end: number,
+    opts?: Options,
+  ): Promise<Feature[]> {
+    const collected = await this._collectBlocks(chrName, start, end, opts)
+    if (!collected) {
+      return []
+    }
+    const { blocks, chrId } = collected
+    return this.readFeatures(blocks, { ...opts, request: { chrId, start, end } })
+  }
+
+  public async readWigDataAsArrays(
+    chrName: string,
+    start: number,
+    end: number,
+    opts?: Options,
+  ): Promise<BigWigFeatureArrays | SummaryFeatureArrays> {
+    const collected = await this._collectBlocks(chrName, start, end, opts)
+    const blocks = collected?.blocks ?? []
+    const request = collected ? { chrId: collected.chrId, start, end } : undefined
+    const optsWithReq = { ...opts, request }
+    if (this.blockType === 'summary') {
+      return this._readSummaryFeaturesAsArrays(blocks, optsWithReq)
+    }
+    return this._readBigWigFeaturesAsArrays(blocks, optsWithReq)
   }
 
   private parseSummaryBlock(
@@ -265,20 +294,13 @@ export class BlockView {
     req?: CoordRequest,
   ) {
     const b = buffer.subarray(startOffset)
-
     const dataView = new DataView(b.buffer, b.byteOffset, b.length)
-    let offset = 0
-    offset += 4
-    const blockStart = dataView.getInt32(offset, true)
-    offset += 8
-    const itemStep = dataView.getUint32(offset, true)
-    offset += 4
-    const itemSpan = dataView.getUint32(offset, true)
-    offset += 4
-    const blockType = dataView.getUint8(offset)
-    offset += 2
-    const itemCount = dataView.getUint16(offset, true)
-    offset += 2
+    const blockStart = dataView.getInt32(4, true)
+    const itemStep = dataView.getUint32(12, true)
+    const itemSpan = dataView.getUint32(16, true)
+    const blockType = dataView.getUint8(20)
+    const itemCount = dataView.getUint16(22, true)
+    let offset = 24
     const items = []
     switch (blockType) {
       case 1: {
@@ -526,7 +548,7 @@ export class BlockView {
     return results.flat()
   }
 
-  public async readBigWigFeaturesAsArrays(
+  private async _readBigWigFeaturesAsArrays(
     blocks: { offset: number; length: number }[],
     opts: Options = {},
   ): Promise<BigWigFeatureArrays> {
@@ -617,7 +639,7 @@ export class BlockView {
     return { starts, ends, scores, isSummary: false as const }
   }
 
-  public async readSummaryFeaturesAsArrays(
+  private async _readSummaryFeaturesAsArrays(
     blocks: { offset: number; length: number }[],
     opts: Options = {},
   ): Promise<SummaryFeatureArrays> {

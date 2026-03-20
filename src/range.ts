@@ -14,33 +14,8 @@ export default class Range {
     this.ranges = arg1
   }
 
-  get min() {
-    return this.ranges[0]!.min
-  }
-
-  get max() {
-    return this.ranges.at(-1)!.max
-  }
-
-  public contains(pos: number) {
-    for (const r of this.ranges) {
-      if (r.min <= pos && r.max >= pos) {
-        return true
-      }
-    }
-    return false
-  }
-
-  public isContiguous(): boolean {
-    return this.ranges.length > 1
-  }
-
   public getRanges() {
-    return this.ranges.map(r => new Range([r]))
-  }
-
-  public toString(): string {
-    return this.ranges.map(r => `[${r.min}-${r.max}]`).join(',')
+    return this.ranges
   }
 
   public union(s1: Range) {
