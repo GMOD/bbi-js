@@ -163,13 +163,6 @@ test('abort with getFeatures', async () => {
   aborter.abort()
   await expect(ob).rejects.toThrow(/aborted/)
 })
-test('abort with getFeatureStream', async () => {
-  const ti = new BigWig({ path: 'test/data/volvox.bw' })
-  const aborter = new AbortController()
-  const ob = ti.getFeatureStream('ctgA', 0, 100, { signal: aborter.signal })
-  aborter.abort()
-  await expect(ob).rejects.toThrow(/aborted/)
-})
 test('test uncompressed bw (-unc from wigToBigWig)', async () => {
   const ti = new BigWig({ path: 'test/data/uncompressed.bw' })
   const ob = await ti.getFeatures('ctgA', 40000, 40100)

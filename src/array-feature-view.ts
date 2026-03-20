@@ -62,7 +62,10 @@ export class ArrayFeatureView {
   }
 
   get(i: number, key: 'refName' | 'source'): string
-  get(i: number, key: 'start' | 'end' | 'score' | 'minScore' | 'maxScore'): number | undefined
+  get(
+    i: number,
+    key: 'start' | 'end' | 'score' | 'minScore' | 'maxScore',
+  ): number | undefined
   get(i: number, key: 'summary'): boolean
 
   get(i: number, key: string): any

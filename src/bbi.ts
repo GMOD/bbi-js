@@ -1,5 +1,4 @@
 import { LocalFile, RemoteFile } from 'generic-filehandle2'
-import { of } from 'rxjs'
 
 import { BlockView } from './block-view.ts'
 
@@ -7,7 +6,6 @@ import type {
   BigWigFeatureArrays,
   BigWigHeader,
   BigWigHeaderWithRefNames,
-  Feature,
   RefInfo,
   RequestOptions2,
   RequestOptions,
@@ -157,7 +155,6 @@ export abstract class BBI {
       const scoreSum = dataView.getFloat64(offset, true)
       offset += 8
       const scoreSumSquares = dataView.getFloat64(offset, true)
-      offset += 8
 
       totalSummary = {
         scoreMin,
@@ -218,13 +215,18 @@ export abstract class BBI {
 
       // Leaf nodes contain the actual chromosome name-to-ID mappings
       if (isLeafNode) {
-        const b = await this.bbi.read(count * (keySize + valSize), currentOffset + 4)
+        const b = await this.bbi.read(
+          count * (keySize + valSize),
+          currentOffset + 4,
+        )
         const dataView = getDataView(b)
         let offset = 0
         for (let n = 0; n < count; n++) {
           const keyEnd = b.indexOf(0, offset)
           const effectiveKeyEnd =
-            keyEnd !== -1 && keyEnd < offset + keySize ? keyEnd : offset + keySize
+            keyEnd !== -1 && keyEnd < offset + keySize
+              ? keyEnd
+              : offset + keySize
           const key = decoder.decode(b.subarray(offset, effectiveKeyEnd))
           offset += keySize
           const refId = dataView.getUint32(offset, true)
@@ -281,18 +283,6 @@ export abstract class BBI {
     opts?: RequestOptions,
   ): Promise<BlockView>
 
-  /**
-   * Gets features from a BigWig file
-   *
-   * @param refName - The chromosome name
-   *
-   * @param start - The start of a region
-   *
-   * @param end - The end of a region
-   *
-   * @param opts - An object containing basesPerSpan (e.g. pixels per basepair)
-   * or scale used to infer the zoomLevel to use
-   */
   private async _getView(opts?: RequestOptions2) {
     const { basesPerSpan, scale } = opts || {}
     const viewScale = basesPerSpan ? 1 / basesPerSpan : (scale ?? 1)
@@ -309,16 +299,6 @@ export abstract class BBI {
     return view.readWigData(this.renameRefSeqs(refName), start, end, opts)
   }
 
-  public async getFeatureStream(
-    refName: string,
-    start: number,
-    end: number,
-    opts?: RequestOptions2,
-  ) {
-    const features = await this.getFeatures(refName, start, end, opts)
-    return of(features)
-  }
-
   public async getFeaturesAsArrays(
     refName: string,
     start: number,
@@ -326,6 +306,11 @@ export abstract class BBI {
     opts?: RequestOptions2,
   ): Promise<BigWigFeatureArrays | SummaryFeatureArrays> {
     const view = await this._getView(opts)
-    return view.readWigDataAsArrays(this.renameRefSeqs(refName), start, end, opts)
+    return view.readWigDataAsArrays(
+      this.renameRefSeqs(refName),
+      start,
+      end,
+      opts,
+    )
   }
 }

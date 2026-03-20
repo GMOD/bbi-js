@@ -1,7 +1,7 @@
 import AbortablePromiseCache from '@gmod/abortable-promise-cache'
 import QuickLRU from '@jbrowse/quick-lru'
 
-import Range from './range.ts'
+import { mergeRanges } from './range.ts'
 import {
   decompressAndParseBigWigBlocks,
   decompressAndParseSummaryBlocks,
@@ -34,6 +34,284 @@ interface Options {
 
 function coordFilter(s1: number, e1: number, s2: number, e2: number): boolean {
   return s1 < e2 && e1 >= s2
+}
+
+function parseSummaryBlock(
+  b: Uint8Array,
+  startOffset: number,
+  request?: CoordRequest,
+) {
+  const features: Feature[] = []
+  let offset = startOffset
+
+  const dataView = new DataView(b.buffer, b.byteOffset, b.length)
+  while (offset < b.byteLength) {
+    const chromId = dataView.getUint32(offset, true)
+    offset += 4
+    const start = dataView.getUint32(offset, true)
+    offset += 4
+    const end = dataView.getUint32(offset, true)
+    offset += 4
+    const validCnt = dataView.getUint32(offset, true)
+    offset += 4
+    const minScore = dataView.getFloat32(offset, true)
+    offset += 4
+    const maxScore = dataView.getFloat32(offset, true)
+    offset += 4
+    const sumData = dataView.getFloat32(offset, true)
+    offset += 8
+
+    if (
+      !request ||
+      (chromId === request.chrId &&
+        coordFilter(start, end, request.start, request.end))
+    ) {
+      features.push({
+        start,
+        end,
+        maxScore,
+        minScore,
+        summary: true,
+        score: sumData / (validCnt || 1),
+      })
+    }
+  }
+
+  return features
+}
+
+function parseBigBedBlock(
+  data: Uint8Array,
+  startOffset: number,
+  offset: number,
+  request?: CoordRequest,
+) {
+  const items: Feature[] = []
+  let currOffset = startOffset
+  const dataView = new DataView(data.buffer, data.byteOffset, data.length)
+  while (currOffset < data.byteLength) {
+    const c2 = currOffset
+    const chromId = dataView.getUint32(currOffset, true)
+    currOffset += 4
+    const start = dataView.getInt32(currOffset, true)
+    currOffset += 4
+    const end = dataView.getInt32(currOffset, true)
+    currOffset += 4
+    let i = currOffset
+    for (; i < data.length; i++) {
+      if (data[i] === 0) {
+        break
+      }
+    }
+    const b = data.subarray(currOffset, i)
+    const rest = decoder.decode(b)
+    currOffset = i + 1
+    if (
+      !request ||
+      (chromId === request.chrId &&
+        coordFilter(start, end, request.start, request.end))
+    ) {
+      items.push({
+        start,
+        end,
+        rest,
+        uniqueId: `bb-${offset + c2}`,
+      })
+    }
+  }
+
+  return items
+}
+
+function parseBigWigBlock(
+  buffer: Uint8Array,
+  startOffset: number,
+  req?: CoordRequest,
+) {
+  const b = buffer.subarray(startOffset)
+  const dataView = new DataView(b.buffer, b.byteOffset, b.length)
+  const blockStart = dataView.getInt32(4, true)
+  const itemStep = dataView.getUint32(12, true)
+  const itemSpan = dataView.getUint32(16, true)
+  const blockType = dataView.getUint8(20)
+  const itemCount = dataView.getUint16(22, true)
+  let offset = 24
+  const items = []
+  switch (blockType) {
+    case 1: {
+      for (let i = 0; i < itemCount; i++) {
+        const start = dataView.getInt32(offset, true)
+        offset += 4
+        const end = dataView.getInt32(offset, true)
+        offset += 4
+        const score = dataView.getFloat32(offset, true)
+        offset += 4
+        if (!req || coordFilter(start, end, req.start, req.end)) {
+          items.push({
+            start,
+            end,
+            score,
+          })
+        }
+      }
+      break
+    }
+    case 2: {
+      for (let i = 0; i < itemCount; i++) {
+        const start = dataView.getInt32(offset, true)
+        offset += 4
+        const score = dataView.getFloat32(offset, true)
+        offset += 4
+        const end = start + itemSpan
+        if (!req || coordFilter(start, end, req.start, req.end)) {
+          items.push({
+            score,
+            start,
+            end,
+          })
+        }
+      }
+      break
+    }
+    case 3: {
+      for (let i = 0; i < itemCount; i++) {
+        const score = dataView.getFloat32(offset, true)
+        offset += 4
+        const start = blockStart + i * itemStep
+        const end = start + itemSpan
+        if (!req || coordFilter(start, end, req.start, req.end)) {
+          items.push({
+            score,
+            start,
+            end,
+          })
+        }
+      }
+      break
+    }
+  }
+
+  return items
+}
+
+function parseBigWigBlockAsArrays(
+  buffer: Uint8Array,
+  startOffset: number,
+  req?: CoordRequest,
+): { starts: Int32Array; ends: Int32Array; scores: Float32Array } {
+  const dataView = new DataView(
+    buffer.buffer,
+    buffer.byteOffset + startOffset,
+    buffer.length - startOffset,
+  )
+  const blockStart = dataView.getInt32(4, true)
+  const itemStep = dataView.getUint32(12, true)
+  const itemSpan = dataView.getUint32(16, true)
+  const blockType = dataView.getUint8(20)
+  const itemCount = dataView.getUint16(22, true)
+
+  const starts = new Int32Array(itemCount)
+  const ends = new Int32Array(itemCount)
+  const scores = new Float32Array(itemCount)
+
+  if (!req) {
+    switch (blockType) {
+      case 1: {
+        let offset = 24
+        for (let i = 0; i < itemCount; i++) {
+          starts[i] = dataView.getInt32(offset, true)
+          ends[i] = dataView.getInt32(offset + 4, true)
+          scores[i] = dataView.getFloat32(offset + 8, true)
+          offset += 12
+        }
+        return { starts, ends, scores }
+      }
+      case 2: {
+        let offset = 24
+        for (let i = 0; i < itemCount; i++) {
+          const start = dataView.getInt32(offset, true)
+          starts[i] = start
+          ends[i] = start + itemSpan
+          scores[i] = dataView.getFloat32(offset + 4, true)
+          offset += 8
+        }
+        return { starts, ends, scores }
+      }
+      case 3: {
+        let offset = 24
+        for (let i = 0; i < itemCount; i++) {
+          const start = blockStart + i * itemStep
+          starts[i] = start
+          ends[i] = start + itemSpan
+          scores[i] = dataView.getFloat32(offset, true)
+          offset += 4
+        }
+        return { starts, ends, scores }
+      }
+    }
+    return { starts, ends, scores }
+  }
+
+  const reqStart = req.start
+  const reqEnd = req.end
+  let idx = 0
+
+  switch (blockType) {
+    case 1: {
+      let offset = 24
+      for (let i = 0; i < itemCount; i++) {
+        const start = dataView.getInt32(offset, true)
+        const end = dataView.getInt32(offset + 4, true)
+        if (start < reqEnd && end >= reqStart) {
+          starts[idx] = start
+          ends[idx] = end
+          scores[idx] = dataView.getFloat32(offset + 8, true)
+          idx++
+        }
+        offset += 12
+      }
+      break
+    }
+    case 2: {
+      let offset = 24
+      for (let i = 0; i < itemCount; i++) {
+        const start = dataView.getInt32(offset, true)
+        const end = start + itemSpan
+        if (start < reqEnd && end >= reqStart) {
+          starts[idx] = start
+          ends[idx] = end
+          scores[idx] = dataView.getFloat32(offset + 4, true)
+          idx++
+        }
+        offset += 8
+      }
+      break
+    }
+    case 3: {
+      let offset = 24
+      for (let i = 0; i < itemCount; i++) {
+        const start = blockStart + i * itemStep
+        const end = start + itemSpan
+        if (start < reqEnd && end >= reqStart) {
+          starts[idx] = start
+          ends[idx] = end
+          scores[idx] = dataView.getFloat32(offset, true)
+          idx++
+        }
+        offset += 4
+      }
+      break
+    }
+  }
+
+  if (idx < itemCount) {
+    return {
+      starts: starts.subarray(0, idx),
+      ends: ends.subarray(0, idx),
+      scores: scores.subarray(0, idx),
+    }
+  }
+  return { starts, ends, scores }
 }
 
 /**
@@ -84,7 +362,11 @@ export class BlockView {
       this.rTreePromise = this.bbi.read(48, this.rTreeOffset, opts)
     }
     const buffer = await this.rTreePromise
-    const dataView = new DataView(buffer.buffer, buffer.byteOffset, buffer.length)
+    const dataView = new DataView(
+      buffer.buffer,
+      buffer.byteOffset,
+      buffer.length,
+    )
     const magic = dataView.getUint32(0, true)
     if (magic !== CIR_TREE_MAGIC) {
       throw new Error(
@@ -107,17 +389,12 @@ export class BlockView {
     const blocks: ReadData[] = []
 
     const traverseRTree = async (offsets: number[]) => {
-      let spans = new Range([
-        { min: offsets[0]!, max: offsets[0]! + maxRTreeBlockSpan },
-      ])
-      for (let i = 1; i < offsets.length; i++) {
-        spans = spans.union(
-          new Range([{ min: offsets[i]!, max: offsets[i]! + maxRTreeBlockSpan }]),
-        )
-      }
+      const spans = mergeRanges(
+        offsets.map(o => ({ min: o, max: o + maxRTreeBlockSpan })),
+      )
       const childOffsets: number[] = []
       await Promise.all(
-        spans.getRanges().map(async ({ min, max }) => {
+        spans.map(async ({ min, max }) => {
           const length = max - min
           const offset = min
           const resultBuffer = await this.featureCache.get(
@@ -138,10 +415,21 @@ export class BlockView {
                   const startBase = dv.getUint32(nodeOffset + 4, true)
                   const endChrom = dv.getUint32(nodeOffset + 8, true)
                   const endBase = dv.getUint32(nodeOffset + 12, true)
-                  const blockOffset = Number(dv.getBigUint64(nodeOffset + 16, true))
-                  const blockSize = Number(dv.getBigUint64(nodeOffset + 24, true))
+                  const blockOffset = Number(
+                    dv.getBigUint64(nodeOffset + 16, true),
+                  )
+                  const blockSize = Number(
+                    dv.getBigUint64(nodeOffset + 24, true),
+                  )
                   nodeOffset += 32
-                  if (blockIntersectsQuery(startChrom, startBase, endChrom, endBase)) {
+                  if (
+                    blockIntersectsQuery(
+                      startChrom,
+                      startBase,
+                      endChrom,
+                      endBase,
+                    )
+                  ) {
                     blocks.push({ offset: blockOffset, length: blockSize })
                   }
                 }
@@ -151,9 +439,18 @@ export class BlockView {
                   const startBase = dv.getUint32(nodeOffset + 4, true)
                   const endChrom = dv.getUint32(nodeOffset + 8, true)
                   const endBase = dv.getUint32(nodeOffset + 12, true)
-                  const childOffset = Number(dv.getBigUint64(nodeOffset + 16, true))
+                  const childOffset = Number(
+                    dv.getBigUint64(nodeOffset + 16, true),
+                  )
                   nodeOffset += 24
-                  if (blockIntersectsQuery(startChrom, startBase, endChrom, endBase)) {
+                  if (
+                    blockIntersectsQuery(
+                      startChrom,
+                      startBase,
+                      endChrom,
+                      endBase,
+                    )
+                  ) {
                     childOffsets.push(childOffset)
                   }
                 }
@@ -182,7 +479,10 @@ export class BlockView {
       return []
     }
     const { blocks, chrId } = collected
-    return this.readFeatures(blocks, { ...opts, request: { chrId, start, end } })
+    return this.readFeatures(blocks, {
+      ...opts,
+      request: { chrId, start, end },
+    })
   }
 
   public async readWigDataAsArrays(
@@ -193,290 +493,14 @@ export class BlockView {
   ): Promise<BigWigFeatureArrays | SummaryFeatureArrays> {
     const collected = await this._collectBlocks(chrName, start, end, opts)
     const blocks = collected?.blocks ?? []
-    const request = collected ? { chrId: collected.chrId, start, end } : undefined
+    const request = collected
+      ? { chrId: collected.chrId, start, end }
+      : undefined
     const optsWithReq = { ...opts, request }
     if (this.blockType === 'summary') {
       return this._readSummaryFeaturesAsArrays(blocks, optsWithReq)
     }
     return this._readBigWigFeaturesAsArrays(blocks, optsWithReq)
-  }
-
-  private parseSummaryBlock(
-    b: Uint8Array,
-    startOffset: number,
-    request?: CoordRequest,
-  ) {
-    const features: Feature[] = []
-    let offset = startOffset
-
-    const dataView = new DataView(b.buffer, b.byteOffset, b.length)
-    while (offset < b.byteLength) {
-      const chromId = dataView.getUint32(offset, true)
-      offset += 4
-      const start = dataView.getUint32(offset, true)
-      offset += 4
-      const end = dataView.getUint32(offset, true)
-      offset += 4
-      const validCnt = dataView.getUint32(offset, true)
-      offset += 4
-      const minScore = dataView.getFloat32(offset, true)
-      offset += 4
-      const maxScore = dataView.getFloat32(offset, true)
-      offset += 4
-      const sumData = dataView.getFloat32(offset, true)
-      offset += 8
-
-      if (
-        !request ||
-        (chromId === request.chrId &&
-          coordFilter(start, end, request.start, request.end))
-      ) {
-        features.push({
-          start,
-          end,
-          maxScore,
-          minScore,
-          summary: true,
-          score: sumData / (validCnt || 1),
-        })
-      }
-    }
-
-    return features
-  }
-
-  private parseBigBedBlock(
-    data: Uint8Array,
-    startOffset: number,
-    offset: number,
-    request?: CoordRequest,
-  ) {
-    const items: Feature[] = []
-    let currOffset = startOffset
-    const dataView = new DataView(data.buffer, data.byteOffset, data.length)
-    while (currOffset < data.byteLength) {
-      const c2 = currOffset
-      const chromId = dataView.getUint32(currOffset, true)
-      currOffset += 4
-      const start = dataView.getInt32(currOffset, true)
-      currOffset += 4
-      const end = dataView.getInt32(currOffset, true)
-      currOffset += 4
-      let i = currOffset
-      for (; i < data.length; i++) {
-        if (data[i] === 0) {
-          break
-        }
-      }
-      const b = data.subarray(currOffset, i)
-      const rest = decoder.decode(b)
-      currOffset = i + 1
-      if (
-        !request ||
-        (chromId === request.chrId &&
-          coordFilter(start, end, request.start, request.end))
-      ) {
-        items.push({
-          start,
-          end,
-          rest,
-          uniqueId: `bb-${offset + c2}`,
-        })
-      }
-    }
-
-    return items
-  }
-
-  private parseBigWigBlock(
-    buffer: Uint8Array,
-    startOffset: number,
-    req?: CoordRequest,
-  ) {
-    const b = buffer.subarray(startOffset)
-    const dataView = new DataView(b.buffer, b.byteOffset, b.length)
-    const blockStart = dataView.getInt32(4, true)
-    const itemStep = dataView.getUint32(12, true)
-    const itemSpan = dataView.getUint32(16, true)
-    const blockType = dataView.getUint8(20)
-    const itemCount = dataView.getUint16(22, true)
-    let offset = 24
-    const items = []
-    switch (blockType) {
-      case 1: {
-        for (let i = 0; i < itemCount; i++) {
-          const start = dataView.getInt32(offset, true)
-          offset += 4
-          const end = dataView.getInt32(offset, true)
-          offset += 4
-          const score = dataView.getFloat32(offset, true)
-          offset += 4
-          if (!req || coordFilter(start, end, req.start, req.end)) {
-            items.push({
-              start,
-              end,
-              score,
-            })
-          }
-        }
-        break
-      }
-      case 2: {
-        for (let i = 0; i < itemCount; i++) {
-          const start = dataView.getInt32(offset, true)
-          offset += 4
-          const score = dataView.getFloat32(offset, true)
-          offset += 4
-          const end = start + itemSpan
-          if (!req || coordFilter(start, end, req.start, req.end)) {
-            items.push({
-              score,
-              start,
-              end,
-            })
-          }
-        }
-        break
-      }
-      case 3: {
-        for (let i = 0; i < itemCount; i++) {
-          const score = dataView.getFloat32(offset, true)
-          offset += 4
-          const start = blockStart + i * itemStep
-          const end = start + itemSpan
-          if (!req || coordFilter(start, end, req.start, req.end)) {
-            items.push({
-              score,
-              start,
-              end,
-            })
-          }
-        }
-        break
-      }
-    }
-
-    return items
-  }
-
-  private parseBigWigBlockAsArrays(
-    buffer: Uint8Array,
-    startOffset: number,
-    req?: CoordRequest,
-  ): { starts: Int32Array; ends: Int32Array; scores: Float32Array } {
-    const dataView = new DataView(
-      buffer.buffer,
-      buffer.byteOffset + startOffset,
-      buffer.length - startOffset,
-    )
-    const blockStart = dataView.getInt32(4, true)
-    const itemStep = dataView.getUint32(12, true)
-    const itemSpan = dataView.getUint32(16, true)
-    const blockType = dataView.getUint8(20)
-    const itemCount = dataView.getUint16(22, true)
-
-    const starts = new Int32Array(itemCount)
-    const ends = new Int32Array(itemCount)
-    const scores = new Float32Array(itemCount)
-
-    if (!req) {
-      switch (blockType) {
-        case 1: {
-          let offset = 24
-          for (let i = 0; i < itemCount; i++) {
-            starts[i] = dataView.getInt32(offset, true)
-            ends[i] = dataView.getInt32(offset + 4, true)
-            scores[i] = dataView.getFloat32(offset + 8, true)
-            offset += 12
-          }
-          return { starts, ends, scores }
-        }
-        case 2: {
-          let offset = 24
-          for (let i = 0; i < itemCount; i++) {
-            const start = dataView.getInt32(offset, true)
-            starts[i] = start
-            ends[i] = start + itemSpan
-            scores[i] = dataView.getFloat32(offset + 4, true)
-            offset += 8
-          }
-          return { starts, ends, scores }
-        }
-        case 3: {
-          let offset = 24
-          for (let i = 0; i < itemCount; i++) {
-            const start = blockStart + i * itemStep
-            starts[i] = start
-            ends[i] = start + itemSpan
-            scores[i] = dataView.getFloat32(offset, true)
-            offset += 4
-          }
-          return { starts, ends, scores }
-        }
-      }
-      return { starts, ends, scores }
-    }
-
-    const reqStart = req.start
-    const reqEnd = req.end
-    let idx = 0
-
-    switch (blockType) {
-      case 1: {
-        let offset = 24
-        for (let i = 0; i < itemCount; i++) {
-          const start = dataView.getInt32(offset, true)
-          const end = dataView.getInt32(offset + 4, true)
-          if (start < reqEnd && end >= reqStart) {
-            starts[idx] = start
-            ends[idx] = end
-            scores[idx] = dataView.getFloat32(offset + 8, true)
-            idx++
-          }
-          offset += 12
-        }
-        break
-      }
-      case 2: {
-        let offset = 24
-        for (let i = 0; i < itemCount; i++) {
-          const start = dataView.getInt32(offset, true)
-          const end = start + itemSpan
-          if (start < reqEnd && end >= reqStart) {
-            starts[idx] = start
-            ends[idx] = end
-            scores[idx] = dataView.getFloat32(offset + 4, true)
-            idx++
-          }
-          offset += 8
-        }
-        break
-      }
-      case 3: {
-        let offset = 24
-        for (let i = 0; i < itemCount; i++) {
-          const start = blockStart + i * itemStep
-          const end = start + itemSpan
-          if (start < reqEnd && end >= reqStart) {
-            starts[idx] = start
-            ends[idx] = end
-            scores[idx] = dataView.getFloat32(offset, true)
-            idx++
-          }
-          offset += 4
-        }
-        break
-      }
-    }
-
-    if (idx < itemCount) {
-      return {
-        starts: starts.subarray(0, idx),
-        ends: ends.subarray(0, idx),
-        scores: scores.subarray(0, idx),
-      }
-    }
-    return { starts, ends, scores }
   }
 
   public async readFeatures(
@@ -521,13 +545,13 @@ export class BlockView {
           let features: Feature[]
           switch (blockType) {
             case 'summary':
-              features = this.parseSummaryBlock(resultData, 0, request)
+              features = parseSummaryBlock(resultData, 0, request)
               break
             case 'bigwig':
-              features = this.parseBigWigBlock(resultData, 0, request)
+              features = parseBigWigBlock(resultData, 0, request)
               break
             case 'bigbed':
-              features = this.parseBigBedBlock(
+              features = parseBigBedBlock(
                 resultData,
                 0,
                 block.offset * (1 << 8),
@@ -595,7 +619,7 @@ export class BlockView {
               block.offset,
               block.offset + block.length,
             )
-            const result = this.parseBigWigBlockAsArrays(blockData, 0, request)
+            const result = parseBigWigBlockAsArrays(blockData, 0, request)
             if (result.starts.length > 0) {
               allStarts.push(result.starts)
               allEnds.push(result.ends)
@@ -691,7 +715,7 @@ export class BlockView {
               block.offset,
               block.offset + block.length,
             )
-            const features = this.parseSummaryBlock(blockData, 0, request)
+            const features = parseSummaryBlock(blockData, 0, request)
             if (features.length > 0) {
               const starts = new Int32Array(features.length)
               const ends = new Int32Array(features.length)

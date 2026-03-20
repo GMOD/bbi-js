@@ -1,42 +1,28 @@
-/**
- * Adapted from a combination of Range and _Compound in the
- * Dalliance Genome Explorer, (c) Thomas Down 2006-2010.
- */
-
 export interface IRange {
   min: number
   max: number
 }
-export default class Range {
-  public ranges: IRange[]
 
-  public constructor(arg1: IRange[]) {
-    this.ranges = arg1
-  }
+// Merges overlapping or adjacent byte ranges so that nearby R-tree nodes can
+// be fetched in a single read rather than many small reads
+export function mergeRanges(ranges: IRange[]) {
+  const sorted = [...ranges].sort((a, b) =>
+    a.min !== b.min ? a.min - b.min : a.max - b.max,
+  )
 
-  public getRanges() {
-    return this.ranges
-  }
+  const merged: IRange[] = []
+  let current = sorted[0]!
 
-  public union(s1: Range) {
-    const allRanges = [...this.ranges, ...s1.ranges].sort((a, b) => {
-      return a.min !== b.min ? a.min - b.min : a.max - b.max
-    })
-
-    const merged: IRange[] = []
-    let current = allRanges[0]!
-
-    for (let i = 1; i < allRanges.length; i++) {
-      const nxt = allRanges[i]!
-      if (nxt.min > current.max + 1) {
-        merged.push(current)
-        current = nxt
-      } else if (nxt.max > current.max) {
-        current = { min: current.min, max: nxt.max }
-      }
+  for (let i = 1; i < sorted.length; i++) {
+    const nxt = sorted[i]!
+    if (nxt.min > current.max + 1) {
+      merged.push(current)
+      current = nxt
+    } else if (nxt.max > current.max) {
+      current = { min: current.min, max: nxt.max }
     }
-    merged.push(current)
-
-    return new Range(merged)
   }
+  merged.push(current)
+
+  return merged
 }

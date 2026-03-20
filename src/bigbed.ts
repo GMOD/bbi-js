@@ -1,8 +1,9 @@
 import AbortablePromiseCache from '@gmod/abortable-promise-cache'
 import QuickLRU from '@jbrowse/quick-lru'
+
 import { BBI } from './bbi.ts'
 
-import type { Feature, RequestOptions } from './types.ts'
+import type { RequestOptions } from './types.ts'
 import type { GenericFilehandle } from 'generic-filehandle2'
 
 const decoder = new TextDecoder('utf8')
@@ -20,7 +21,6 @@ interface Index {
   offset: number
   field: number
 }
-
 
 function getTabField(str: string, fieldIndex: number) {
   if (fieldIndex < 0) {
