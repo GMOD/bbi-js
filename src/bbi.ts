@@ -1,6 +1,4 @@
 import { LocalFile, RemoteFile } from 'generic-filehandle2'
-import { Observable, firstValueFrom } from 'rxjs'
-import { toArray } from 'rxjs/operators'
 
 import { BlockView } from './block-view.ts'
 
@@ -8,7 +6,6 @@ import type {
   BigWigFeatureArrays,
   BigWigHeader,
   BigWigHeaderWithRefNames,
-  Feature,
   RefInfo,
   RequestOptions2,
   RequestOptions,
@@ -89,13 +86,12 @@ export abstract class BBI {
     const b = await this.bbi.read(requestSize, 0, opts)
     const dataView = getDataView(b)
 
-    const r1 = dataView.getInt32(0, true)
-    if (r1 !== BIG_WIG_MAGIC && r1 !== BIG_BED_MAGIC) {
-      throw new Error('not a BigWig/BigBed file')
-    }
     let offset = 0
     const magic = dataView.getInt32(offset, true)
     offset += 4
+    if (magic !== BIG_WIG_MAGIC && magic !== BIG_BED_MAGIC) {
+      throw new Error('not a BigWig/BigBed file')
+    }
     const version = dataView.getUint16(offset, true)
     offset += 2
     const numZoomLevels = dataView.getUint16(offset, true)
@@ -159,7 +155,6 @@ export abstract class BBI {
       const scoreSum = dataView.getFloat64(offset, true)
       offset += 8
       const scoreSumSquares = dataView.getFloat64(offset, true)
-      offset += 8
 
       totalSummary = {
         scoreMin,
@@ -209,39 +204,23 @@ export abstract class BBI {
     const dataView = getDataView(
       await this.bbi.read(32, chromosomeTreeOffset, opts),
     )
-    let offset = 0
-    // const magic = dataView.getUint32(offset, true) // unused
-    offset += 4
-    // const blockSize = dataView.getUint32(offset, true) // unused
-    offset += 4
-    const keySize = dataView.getUint32(offset, true)
-    offset += 4
-    const valSize = dataView.getUint32(offset, true)
-    offset += 4
-    // const itemCount = dataView.getBigUint64(offset, true) // unused
-    offset += 8
+    const keySize = dataView.getUint32(8, true)
+    const valSize = dataView.getUint32(12, true)
 
     // Recursively traverses the B+ tree to populate chromosome name-to-ID mappings
     const readBPlusTreeNode = async (currentOffset: number) => {
-      const b = await this.bbi.read(4, currentOffset)
-      const dataView = getDataView(b)
-      let offset = 0
-      const isLeafNode = dataView.getUint8(offset)
-      offset += 1
-      // const reserved = dataView.getUint8(offset) // unused
-      offset += 1
-      const count = dataView.getUint16(offset, true)
-      offset += 2
+      const header = getDataView(await this.bbi.read(4, currentOffset))
+      const isLeafNode = header.getUint8(0)
+      const count = header.getUint16(2, true)
 
       // Leaf nodes contain the actual chromosome name-to-ID mappings
       if (isLeafNode) {
         const b = await this.bbi.read(
           count * (keySize + valSize),
-          currentOffset + offset,
+          currentOffset + 4,
         )
         const dataView = getDataView(b)
-        offset = 0
-
+        let offset = 0
         for (let n = 0; n < count; n++) {
           const keyEnd = b.indexOf(0, offset)
           const effectiveKeyEnd =
@@ -254,22 +233,16 @@ export abstract class BBI {
           offset += 4
           const refSize = dataView.getUint32(offset, true)
           offset += 4
-
           refsByName[this.renameRefSeqs(key)] = refId
-          refsByNumber[refId] = {
-            name: key,
-            id: refId,
-            length: refSize,
-          }
+          refsByNumber[refId] = { name: key, id: refId, length: refSize }
         }
       } else {
         // Non-leaf nodes contain pointers to child nodes
-        const nextNodes = []
         const dataView = getDataView(
-          await this.bbi.read(count * (keySize + 8), currentOffset + offset),
+          await this.bbi.read(count * (keySize + 8), currentOffset + 4),
         )
-        offset = 0
-
+        const nextNodes = []
+        let offset = 0
         for (let n = 0; n < count; n++) {
           offset += keySize
           const childOffset = Number(dataView.getBigUint64(offset, true))
@@ -286,6 +259,29 @@ export abstract class BBI {
     }
   }
 
+  private viewCache = new Map<string, BlockView>()
+
+  protected getOrCreateBlockView(
+    refsByName: Record<string, number>,
+    rTreeOffset: number,
+    uncompressBufSize: number,
+    blockType: string,
+  ) {
+    const key = `${rTreeOffset}_${blockType}`
+    let view = this.viewCache.get(key)
+    if (!view) {
+      view = new BlockView(
+        this.bbi,
+        refsByName,
+        rTreeOffset,
+        uncompressBufSize,
+        blockType,
+      )
+      this.viewCache.set(key, view)
+    }
+    return view
+  }
+
   /*
    * fetches the "unzoomed" view of the bigwig data. this is the default for bigbed
    * @param abortSignal - a signal to optionally abort this operation
@@ -293,8 +289,7 @@ export abstract class BBI {
   protected async getUnzoomedView(opts?: RequestOptions) {
     const { unzoomedIndexOffset, refsByName, uncompressBufSize, fileType } =
       await this.getHeader(opts)
-    return new BlockView(
-      this.bbi,
+    return this.getOrCreateBlockView(
       refsByName,
       unzoomedIndexOffset,
       uncompressBufSize,
@@ -310,44 +305,10 @@ export abstract class BBI {
     opts?: RequestOptions,
   ): Promise<BlockView>
 
-  /**
-   * Gets features from a BigWig file
-   *
-   * @param refName - The chromosome name
-   *
-   * @param start - The start of a region
-   *
-   * @param end - The end of a region
-   *
-   * @param opts - An object containing basesPerSpan (e.g. pixels per basepair)
-   * or scale used to infer the zoomLevel to use
-   */
-  public async getFeatureStream(
-    refName: string,
-    start: number,
-    end: number,
-    opts?: RequestOptions2,
-  ) {
-    await this.getHeader(opts)
-    const chrName = this.renameRefSeqs(refName)
-    let view: BlockView
+  private async _getView(opts?: RequestOptions2) {
     const { basesPerSpan, scale } = opts || {}
-
-    if (basesPerSpan) {
-      view = await this.getView(1 / basesPerSpan, opts)
-    } else if (scale) {
-      view = await this.getView(scale, opts)
-    } else {
-      view = await this.getView(1, opts)
-    }
-
-    return new Observable<Feature[]>(observer => {
-      view
-        .readWigData(chrName, start, end, observer, opts)
-        .catch((e: unknown) => {
-          observer.error(e)
-        })
-    })
+    const viewScale = basesPerSpan ? 1 / basesPerSpan : (scale ?? 1)
+    return this.getView(viewScale, opts)
   }
 
   public async getFeatures(
@@ -356,86 +317,22 @@ export abstract class BBI {
     end: number,
     opts?: RequestOptions2,
   ) {
-    const ob = await this.getFeatureStream(refName, start, end, opts)
-
-    const arrays = await firstValueFrom(ob.pipe(toArray()))
-    const totalLength = arrays.reduce((sum, arr) => sum + arr.length, 0)
-    const result = new Array(totalLength)
-    let index = 0
-    for (const arr of arrays) {
-      for (const item of arr) {
-        result[index++] = item
-      }
-    }
-    return result
+    const view = await this._getView(opts)
+    return view.readWigData(this.renameRefSeqs(refName), start, end, opts)
   }
 
-  /**
-   * Gets features from a BigWig file as typed arrays (more efficient than getFeatures)
-   *
-   * @param refName - The chromosome name
-   * @param start - The start of a region
-   * @param end - The end of a region
-   * @param opts - Options including basesPerSpan or scale
-   * @returns Promise with typed arrays: starts, ends, scores (and minScores/maxScores for summary data)
-   */
   public async getFeaturesAsArrays(
     refName: string,
     start: number,
     end: number,
     opts?: RequestOptions2,
   ): Promise<BigWigFeatureArrays | SummaryFeatureArrays> {
-    const features = await this.getFeatures(refName, start, end, opts)
-    const count = features.length
-
-    if (count === 0) {
-      return {
-        starts: new Int32Array(0),
-        ends: new Int32Array(0),
-        scores: new Float32Array(0),
-        isSummary: false as const,
-      }
-    }
-
-    const hasSummary = features[0]?.summary === true
-
-    if (hasSummary) {
-      const starts = new Int32Array(count)
-      const ends = new Int32Array(count)
-      const scores = new Float32Array(count)
-      const minScores = new Float32Array(count)
-      const maxScores = new Float32Array(count)
-
-      for (let i = 0; i < count; i++) {
-        const f = features[i]!
-        starts[i] = f.start
-        ends[i] = f.end
-        scores[i] = f.score ?? 0
-        minScores[i] = f.minScore ?? 0
-        maxScores[i] = f.maxScore ?? 0
-      }
-
-      return {
-        starts,
-        ends,
-        scores,
-        minScores,
-        maxScores,
-        isSummary: true as const,
-      }
-    }
-
-    const starts = new Int32Array(count)
-    const ends = new Int32Array(count)
-    const scores = new Float32Array(count)
-
-    for (let i = 0; i < count; i++) {
-      const f = features[i]!
-      starts[i] = f.start
-      ends[i] = f.end
-      scores[i] = f.score ?? 0
-    }
-
-    return { starts, ends, scores, isSummary: false as const }
+    const view = await this._getView(opts)
+    return view.readWigDataAsArrays(
+      this.renameRefSeqs(refName),
+      start,
+      end,
+      opts,
+    )
   }
 }

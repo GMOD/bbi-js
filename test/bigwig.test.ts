@@ -1,4 +1,3 @@
-import { firstValueFrom, toArray } from 'rxjs'
 import { expect, test } from 'vitest'
 
 import { BigWig, Header } from '../src/'
@@ -163,15 +162,6 @@ test('abort with getFeatures', async () => {
   const ob = ti.getFeatures('ctgA', 0, 100, { signal: aborter.signal })
   aborter.abort()
   await expect(ob).rejects.toThrow(/aborted/)
-})
-test('abort with getFeatureStream', async () => {
-  const ti = new BigWig({ path: 'test/data/volvox.bw' })
-  const aborter = new AbortController()
-  const ob = await ti.getFeatureStream('ctgA', 0, 100, {
-    signal: aborter.signal,
-  })
-  aborter.abort()
-  await expect(firstValueFrom(ob.pipe(toArray()))).rejects.toThrow(/aborted/)
 })
 test('test uncompressed bw (-unc from wigToBigWig)', async () => {
   const ti = new BigWig({ path: 'test/data/uncompressed.bw' })

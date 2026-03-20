@@ -1,5 +1,4 @@
 import { BBI } from './bbi.ts'
-import { BlockView } from './block-view.ts'
 
 import type { RequestOptions } from './types.ts'
 
@@ -21,8 +20,7 @@ export class BigWig extends BBI {
     for (let i = maxLevel; i >= 0; i -= 1) {
       const zh = zoomLevels[i]
       if (zh && zh.reductionLevel <= 2 * basesPerPx) {
-        return new BlockView(
-          this.bbi,
+        return this.getOrCreateBlockView(
           refsByName,
           zh.indexOffset,
           uncompressBufSize,
