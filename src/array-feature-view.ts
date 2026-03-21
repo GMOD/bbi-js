@@ -68,7 +68,7 @@ export class ArrayFeatureView {
   ): number | undefined
   get(i: number, key: 'summary'): boolean
 
-  get(i: number, key: string): any
+  get(i: number, key: string): string | number | boolean | undefined
   get(i: number, key: string) {
     switch (key) {
       case 'start':
