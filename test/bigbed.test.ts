@@ -2,7 +2,7 @@ import BED from '@gmod/bed'
 import { LocalFile } from 'generic-filehandle2'
 import { expect, test, vi } from 'vitest'
 
-import { BigBed } from '../src/'
+import { BigBed } from '../src/index.ts'
 
 test('loads small bigbed file', async () => {
   const ti = new BigBed({ path: 'test/data/hg18.bb' })

@@ -1,8 +1,8 @@
 import { expect, test } from 'vitest'
 
-import { BigWig } from '../src/'
+import { BigWig } from '../src/index.ts'
 
-import type { Header } from '../src/'
+import type { Header } from '../src/index.ts'
 
 interface ExtendedHeader extends Header {
   iWasMemoized: boolean
