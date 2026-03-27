@@ -49,25 +49,25 @@
     "genomics"
   ],
   "dependencies": {
-    "@gmod/abortable-promise-cache": "^3.0.1",
-    "@jbrowse/quick-lru": "^7.0.0",
-    "generic-filehandle2": "^2.0.16"
+    "@gmod/abortable-promise-cache": "^3.0.4",
+    "@jbrowse/quick-lru": "^7.3.5",
+    "generic-filehandle2": "^2.0.18"
   },
   "devDependencies": {
-    "@gmod/bed": "^2.1.2",
+    "@gmod/bed": "^2.1.10",
     "@types/node": "^25.5.0",
     "@typescript-eslint/eslint-plugin": "^8.57.2",
     "@typescript-eslint/parser": "^8.57.2",
-    "@vitest/coverage-v8": "^4.1.1",
-    "eslint": "^9.0.0",
-    "eslint-plugin-import": "^2.31.0",
+    "@vitest/coverage-v8": "^4.1.2",
+    "eslint": "^9.39.4",
+    "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-unicorn": "^64.0.0",
-    "prettier": "^3.7.4",
+    "prettier": "^3.8.1",
     "rimraf": "^6.1.3",
     "standard-changelog": "^7.0.1",
     "typescript": "^6.0.2",
     "typescript-eslint": "^8.57.2",
-    "vitest": "^4.1.1",
+    "vitest": "^4.1.2",
     "webpack": "^5.105.4",
     "webpack-cli": "^7.0.2"
   },
