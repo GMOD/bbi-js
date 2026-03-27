@@ -4,29 +4,22 @@ on: push
 
 jobs:
   test:
-    name: Lint, build, and test on node 20.x and ubuntu-latest
+    name: Lint, build, and test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Use Node.js 20.x
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20.x
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
-      - name: Install wasm-bindgen-cli
-        run: cargo install wasm-bindgen-cli
-      - name: Install deps (with cache)
-        uses: bahmutov/npm-install@v1
-      - name: Lint codebase
-        run: yarn lint
-      - name: Format codebase
-        run: yarn prettier -c .
-      - name: Build codebase
-        run: yarn build
-      - name: Test codebase
-        run: yarn test --coverage
-      - name: Upload coverage
-        run: bash <(curl -s https://codecov.io/bash)
+      - run: cargo install wasm-bindgen-cli
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm build
+      - run: pnpm test
