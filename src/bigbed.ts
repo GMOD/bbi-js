@@ -145,6 +145,7 @@ async function readBPlusTreeNode(
 
     return undefined
   }
+  return undefined
 }
 
 export class BigBed extends BBI {
