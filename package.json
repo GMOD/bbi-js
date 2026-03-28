@@ -3,7 +3,10 @@
   "version": "9.0.0",
   "description": "Parser for BigWig/BigBed files",
   "license": "MIT",
-  "repository": "GMOD/bbi-js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/GMOD/bbi-js.git"
+  },
   "type": "module",
   "types": "./dist/index.d.ts",
   "exports": {

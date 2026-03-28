@@ -4,7 +4,7 @@
     "module": "nodenext",
     "target": "es2022",
     "declaration": true,
-    "skipLibCheck": true,
+    "skipLibCheck": false,
     "outDir": "dist",
     "strict": true,
     "sourceMap": true,
