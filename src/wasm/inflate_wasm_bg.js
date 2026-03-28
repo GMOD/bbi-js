@@ -205,7 +205,7 @@ export function parse_summary_block(data, req_chr_id, req_start, req_end) {
         wasm.__wbindgen_add_to_stack_pointer(16);
     }
 }
-export function __wbg_Error_83742b46f01ce22d(arg0, arg1) {
+export function __wbg_Error_55538483de6e3abe(arg0, arg1) {
     const ret = Error(getStringFromWasm0(arg0, arg1));
     return addHeapObject(ret);
 }
