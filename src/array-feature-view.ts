@@ -1,5 +1,40 @@
 import type { BigWigFeatureArrays, SummaryFeatureArrays } from './types.ts'
 
+export class BigWigFeature {
+  constructor(
+    private view: ArrayFeatureView,
+    private i: number,
+  ) {}
+
+  get(key: 'refName' | 'source'): string
+  get(key: 'start' | 'end' | 'score'): number
+  get(key: 'minScore' | 'maxScore'): number | undefined
+  get(key: 'summary'): boolean
+  get(key: string): unknown
+  get(key: string) {
+    return this.view.get(this.i, key)
+  }
+
+  id() {
+    return this.view.id(this.i)
+  }
+
+  toJSON() {
+    const { view, i } = this
+    return {
+      start: view.start(i),
+      end: view.end(i),
+      score: view.score(i),
+      refName: view.refName,
+      source: view.source,
+      uniqueId: view.id(i),
+      summary: view.isSummary,
+      minScore: view.minScore(i),
+      maxScore: view.maxScore(i),
+    }
+  }
+}
+
 export class ArrayFeatureView {
   public readonly starts: Int32Array
   public readonly ends: Int32Array
