@@ -1,6 +1,6 @@
 {
   "name": "@gmod/bbi",
-  "version": "9.0.8",
+  "version": "9.0.9",
   "description": "Parser for BigWig/BigBed files",
   "license": "MIT",
   "repository": {
