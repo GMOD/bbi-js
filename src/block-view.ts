@@ -298,6 +298,25 @@ function parseBigWigBlockAsArrays(
   return { starts, ends, scores }
 }
 
+function parseBlock(
+  blockType: string,
+  data: Uint8Array,
+  blockOffset: number,
+  request?: CoordRequest,
+): Feature[] {
+  switch (blockType) {
+    case 'summary':
+      return parseSummaryBlock(data, 0, request)
+    case 'bigwig':
+      return parseBigWigBlock(data, 0, request)
+    case 'bigbed':
+      return parseBigBedBlock(data, 0, blockOffset * (1 << 8), request)
+    default:
+      console.warn(`Don't know what to do with ${blockType}`)
+      return []
+  }
+}
+
 /**
  * View into a subset of the data in a BigWig file.
  *
@@ -310,7 +329,7 @@ export class BlockView {
   // efficiently query genomic intervals by chromosome and position
   private rTreePromise?: Promise<Uint8Array>
 
-  private featureCache = new AbortablePromiseCache<ReadData, Uint8Array>({
+  private rTreeNodeCache = new AbortablePromiseCache<ReadData, Uint8Array>({
     cache: new QuickLRU({ maxSize: 1000 }),
 
     fill: async ({ length, offset }, signal) =>
@@ -343,7 +362,12 @@ export class BlockView {
       return undefined
     }
     if (!this.rTreePromise) {
-      this.rTreePromise = this.bbi.read(48, this.rTreeOffset, opts)
+      this.rTreePromise = this.bbi
+        .read(48, this.rTreeOffset, opts)
+        .catch((e: unknown) => {
+          this.rTreePromise = undefined
+          throw e
+        })
     }
     const buffer = await this.rTreePromise
     const dataView = new DataView(
@@ -381,7 +405,7 @@ export class BlockView {
       for (const { min, max } of spans) {
         const length = max - min
         const offset = min
-        const resultBuffer = await this.featureCache.get(
+        const resultBuffer = await this.rTreeNodeCache.get(
           `${length}_${offset}`,
           { length, offset },
           opts?.signal,
@@ -486,55 +510,44 @@ export class BlockView {
       const groupOffset = blockGroup.offset
       const subBlocks = blockGroup.blocks
 
-      let decompressedData: Uint8Array
-      let decompressedOffsets: number[]
-
       if (uncompressBufSize > 0) {
-        const localBlocks: { offset: number; length: number }[] = []
-        for (const block of subBlocks) {
-          localBlocks.push({
-            offset: block.offset - groupOffset,
-            length: block.length,
-          })
+        const localBlocks = subBlocks.map(block => ({
+          offset: block.offset - groupOffset,
+          length: block.length,
+        }))
+        const { data: decompressedData, offsets } = await unzipBatch(
+          data,
+          localBlocks,
+          uncompressBufSize,
+        )
+        for (let i = 0; i < subBlocks.length; i++) {
+          const resultData = decompressedData.subarray(
+            offsets[i],
+            offsets[i + 1],
+          )
+          const features = parseBlock(
+            blockType,
+            resultData,
+            subBlocks[i]!.offset,
+            request,
+          )
+          for (const f of features) {
+            allFeatures.push(f)
+          }
         }
-        const result = await unzipBatch(data, localBlocks, uncompressBufSize)
-        decompressedData = result.data
-        decompressedOffsets = result.offsets
       } else {
-        decompressedData = data
-        decompressedOffsets = []
         for (const block of subBlocks) {
-          decompressedOffsets.push(block.offset - groupOffset)
-        }
-        decompressedOffsets.push(data.length)
-      }
-
-      for (let i = 0; i < subBlocks.length; i++) {
-        const start = decompressedOffsets[i]!
-        const end = decompressedOffsets[i + 1]!
-        const resultData = decompressedData.subarray(start, end)
-        let features: Feature[]
-        switch (blockType) {
-          case 'summary':
-            features = parseSummaryBlock(resultData, 0, request)
-            break
-          case 'bigwig':
-            features = parseBigWigBlock(resultData, 0, request)
-            break
-          case 'bigbed':
-            features = parseBigBedBlock(
-              resultData,
-              0,
-              subBlocks[i]!.offset * (1 << 8),
-              request,
-            )
-            break
-          default:
-            features = []
-            console.warn(`Don't know what to do with ${blockType}`)
-        }
-        for (const f of features) {
-          allFeatures.push(f)
+          const start = block.offset - groupOffset
+          const resultData = data.subarray(start, start + block.length)
+          const features = parseBlock(
+            blockType,
+            resultData,
+            block.offset,
+            request,
+          )
+          for (const f of features) {
+            allFeatures.push(f)
+          }
         }
       }
     }
