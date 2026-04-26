@@ -176,7 +176,7 @@ export class BigBed extends BBI {
    */
   private async _readIndices(opts: RequestOptions) {
     const { extHeaderOffset } = await this.getHeader(opts)
-    const b = await this.bbi.read(64, extHeaderOffset)
+    const b = await this.bbi.read(64, extHeaderOffset, opts)
 
     const dataView = new DataView(b.buffer, b.byteOffset, b.length)
     const count = dataView.getUint16(2, true)
@@ -189,7 +189,7 @@ export class BigBed extends BBI {
 
     const blocklen = 20
     const len = blocklen * count
-    const buffer = await this.bbi.read(len, dataOffset)
+    const buffer = await this.bbi.read(len, dataOffset, opts)
 
     const indices: Index[] = []
 
@@ -280,7 +280,7 @@ export class BigBed extends BBI {
       if (!f.rest) {
         return false
       }
-      const fieldIndex = (f.field || 0) - 3
+      const fieldIndex = (f.field ?? 0) - 3
       return getTabField(f.rest, fieldIndex) === name
     })
   }

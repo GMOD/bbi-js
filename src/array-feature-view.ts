@@ -43,8 +43,8 @@ export class ArrayFeatureView {
   public readonly minScores: Float32Array | undefined
   public readonly maxScores: Float32Array | undefined
   public readonly isSummary: boolean
-  private _source: string
-  private _refName: string
+  public readonly source: string
+  public readonly refName: string
 
   constructor(
     arrays: BigWigFeatureArrays | SummaryFeatureArrays,
@@ -57,20 +57,12 @@ export class ArrayFeatureView {
     this.isSummary = arrays.isSummary
     this.minScores = arrays.isSummary ? arrays.minScores : undefined
     this.maxScores = arrays.isSummary ? arrays.maxScores : undefined
-    this._source = source
-    this._refName = refName
+    this.source = source
+    this.refName = refName
   }
 
   get length() {
     return this.starts.length
-  }
-
-  get source() {
-    return this._source
-  }
-
-  get refName() {
-    return this._refName
   }
 
   start(i: number) {
@@ -94,7 +86,7 @@ export class ArrayFeatureView {
   }
 
   id(i: number) {
-    return `${this._source}:${this._refName}:${this.starts[i]}-${this.ends[i]}`
+    return `${this.source}:${this.refName}:${this.starts[i]}-${this.ends[i]}`
   }
 
   get(i: number, key: 'refName' | 'source'): string
@@ -114,9 +106,9 @@ export class ArrayFeatureView {
       case 'score':
         return this.scores[i]
       case 'refName':
-        return this._refName
+        return this.refName
       case 'source':
-        return this._source
+        return this.source
       case 'minScore':
         return this.minScores?.[i]
       case 'maxScore':

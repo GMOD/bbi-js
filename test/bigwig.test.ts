@@ -1,4 +1,5 @@
-import { expect, test } from 'vitest'
+import { LocalFile } from 'generic-filehandle2'
+import { expect, test, vi } from 'vitest'
 
 import { BigWig } from '../src/index.ts'
 
@@ -169,6 +170,32 @@ test('test uncompressed bw (-unc from wigToBigWig)', async () => {
   const ti = new BigWig({ path: 'test/data/uncompressed.bw' })
   const ob = await ti.getFeatures('ctgA', 40000, 40100)
   expect(ob.slice(0, 10)).toMatchSnapshot()
+})
+
+test('getFeaturesAsArrays matches getFeatures on uncompressed bigwig', async () => {
+  const ti = new BigWig({ path: 'test/data/uncompressed.bw' })
+  const feats = await ti.getFeatures('ctgA', 40000, 40100)
+  const arrays = await ti.getFeaturesAsArrays('ctgA', 40000, 40100)
+  expect(arrays.isSummary).toBe(false)
+  expect(Array.from(arrays.starts)).toEqual(feats.map(f => f.start))
+  expect(Array.from(arrays.ends)).toEqual(feats.map(f => f.end))
+  expect(Array.from(arrays.scores)).toEqual(feats.map(f => f.score))
+})
+
+test('rTreePromise resets after read failure, allowing retry', async () => {
+  const filehandle = new LocalFile('test/data/volvox.bw')
+  const ti = new BigWig({ filehandle })
+  await ti.getHeader()
+
+  const spy = vi
+    .spyOn(filehandle, 'read')
+    .mockImplementationOnce(() => Promise.reject(new Error('network error')))
+
+  await expect(ti.getFeatures('ctgA', 0, 100)).rejects.toThrow('network error')
+
+  spy.mockRestore()
+  const feats = await ti.getFeatures('ctgA', 0, 100)
+  expect(feats.length).toBeGreaterThan(0)
 })
 
 test('crash from bigtools', async () => {

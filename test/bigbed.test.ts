@@ -90,3 +90,18 @@ test('crash', async () => {
   const h = await ti.getHeader()
   expect(h).toMatchSnapshot()
 })
+
+test('_readIndices forwards abort signal to underlying reads', async () => {
+  const filehandle = new LocalFile('test/data/chr22_with_name_index.bb')
+  const ti = new BigBed({ filehandle })
+  await ti.getHeader()
+
+  const aborter = new AbortController()
+  const spy = vi.spyOn(filehandle, 'read')
+
+  await ti.readIndices({ signal: aborter.signal })
+
+  for (const call of spy.mock.calls) {
+    expect(call[2]).toMatchObject({ signal: aborter.signal })
+  }
+})

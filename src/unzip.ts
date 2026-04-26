@@ -9,20 +9,23 @@ export interface UnzipBatchResult {
   offsets: number[]
 }
 
-export async function unzipBatch(
-  data: Uint8Array,
-  blocks: { offset: number; length: number }[],
-  maxOutputSize: number,
-): Promise<UnzipBatchResult> {
+function blocksToTypedArrays(blocks: { offset: number; length: number }[]) {
   const inputOffsets = new Uint32Array(blocks.length)
   const inputLengths = new Uint32Array(blocks.length)
-
   for (let i = 0; i < blocks.length; i++) {
     const block = blocks[i]!
     inputOffsets[i] = block.offset
     inputLengths[i] = block.length
   }
+  return { inputOffsets, inputLengths }
+}
 
+export async function unzipBatch(
+  data: Uint8Array,
+  blocks: { offset: number; length: number }[],
+  maxOutputSize: number,
+): Promise<UnzipBatchResult> {
+  const { inputOffsets, inputLengths } = blocksToTypedArrays(blocks)
   return inflateRawBatch(data, inputOffsets, inputLengths, maxOutputSize)
 }
 
@@ -33,15 +36,7 @@ export async function decompressAndParseBigWigBlocks(
   reqStart: number,
   reqEnd: number,
 ) {
-  const inputOffsets = new Uint32Array(blocks.length)
-  const inputLengths = new Uint32Array(blocks.length)
-
-  for (let i = 0; i < blocks.length; i++) {
-    const block = blocks[i]!
-    inputOffsets[i] = block.offset
-    inputLengths[i] = block.length
-  }
-
+  const { inputOffsets, inputLengths } = blocksToTypedArrays(blocks)
   return decompressAndParseBigWig(
     data,
     inputOffsets,
@@ -60,15 +55,7 @@ export async function decompressAndParseSummaryBlocks(
   reqStart: number,
   reqEnd: number,
 ) {
-  const inputOffsets = new Uint32Array(blocks.length)
-  const inputLengths = new Uint32Array(blocks.length)
-
-  for (let i = 0; i < blocks.length; i++) {
-    const block = blocks[i]!
-    inputOffsets[i] = block.offset
-    inputLengths[i] = block.length
-  }
-
+  const { inputOffsets, inputLengths } = blocksToTypedArrays(blocks)
   return decompressAndParseSummary(
     data,
     inputOffsets,
