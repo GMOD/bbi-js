@@ -277,6 +277,51 @@ Features after parsing with @gmod/bed:
 }
 ```
 
+### parseBigWig(bigwig, opts)
+
+A convenience function that reads all features from every chromosome in a BigWig
+file, returning non-empty base-resolution results only (no zoom levels).
+
+- bigwig - a `BigWig` instance
+- opts - optional `RequestOptions` (e.g. `opts.signal` for abort)
+
+Returns a `Promise<BigWigFeatureArrays[]>`, one entry per chromosome that has
+data.
+
+```typescript
+import { BigWig, parseBigWig } from '@gmod/bbi'
+
+const file = new BigWig({ path: 'volvox.bw' })
+const results = await parseBigWig(file)
+for (const { starts, ends, scores } of results) {
+  for (let i = 0; i < starts.length; i++) {
+    console.log(starts[i], ends[i], scores[i])
+  }
+}
+```
+
+### ArrayFeatureView / BigWigFeature
+
+`ArrayFeatureView` wraps a `BigWigFeatureArrays` or `SummaryFeatureArrays`
+result and exposes a JBrowse-compatible `Feature`-style interface.
+`BigWigFeature` is a single-feature view into an `ArrayFeatureView`.
+
+```typescript
+import { BigWig, ArrayFeatureView } from '@gmod/bbi'
+
+const file = new BigWig({ path: 'volvox.bw' })
+const arrays = await file.getFeaturesAsArrays('chr1', 0, 100000)
+const view = new ArrayFeatureView(arrays, 'mySource', 'chr1')
+
+for (let i = 0; i < view.length; i++) {
+  console.log(view.start(i), view.end(i), view.score(i))
+}
+```
+
+`BigWigFeature` instances are also iterable via `view.get(i, key)` and expose a
+`toJSON()` method. Keys: `start`, `end`, `score`, `refName`, `source`,
+`summary`, `minScore`, `maxScore`.
+
 ## Publishing
 
 Releases are published to npm using
