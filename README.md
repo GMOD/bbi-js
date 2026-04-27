@@ -75,7 +75,7 @@ See the [example](./example/) folder for a complete working demo.
 Accepts an object containing either
 
 - path - path to a local file
-- url - path to a url
+- url - URL of a remote file
 - filehandle - a filehandle instance that you can implement as a custom class
   yourself. path and url are based on
   https://www.npmjs.com/package/generic-filehandle2 but by implementing a class
@@ -94,7 +94,7 @@ Accepts an object containing either
   zoom level that is returned is the one which has reductionLevel<=2/opts.scale
   (reductionLevel is a property of the zoom level structure in the bigwig file
   data)
-- opts.basesPerScale - optional, inverse of opts.scale e.g. bpPerPx
+- opts.basesPerScale - optional, inverse of opts.scale (bp per pixel)
 - opts.signal - optional, an AbortSignal to halt processing
 
 Returns a promise to an array of features. If an incorrect refName or no
@@ -105,8 +105,8 @@ Example:
 ```typescript
 const feats = await bigwig.getFeatures('chr1', 0, 100)
 // returns array of features with start, end, score
-// coordinates on returned data are are 0-based half open
-// no conversion to 1-based as in wig is done)
+// coordinates on returned data are 0-based half open
+// no conversion to 1-based as in wig is done
 // note refseq is not returned on the object, it is clearly chr1 from the query though
 ```
 
@@ -116,13 +116,17 @@ Here is what the reductionLevel structure looks like in a file. The zoomLevel
 that is chosen is the first reductionLevel<2\*opts.basesPerScale (or
 reductionLevel<2/opts.scale) when scanning backwards through this list
 
-      [ { reductionLevel: 40, ... },
-        { reductionLevel: 160, ... },
-        { reductionLevel: 640, ... },
-        { reductionLevel: 2560, ... },
-        { reductionLevel: 10240, ... },
-        { reductionLevel: 40960, ... },
-        { reductionLevel: 163840, ... } ]
+```json
+[
+  { "reductionLevel": 40 },
+  { "reductionLevel": 160 },
+  { "reductionLevel": 640 },
+  { "reductionLevel": 2560 },
+  { "reductionLevel": 10240 },
+  { "reductionLevel": 40960 },
+  { "reductionLevel": 163840 }
+]
+```
 
 #### getFeaturesAsArrays(refName, start, end, opts)
 
@@ -199,7 +203,7 @@ they exist.
 - opts.signal - optional, an AbortSignal to halt processing
 
 returns a promise to an array of features. no concept of zoom levels is used
-with bigwig data
+with bigbed data
 
 #### searchExtraIndex(name, opts)
 
@@ -272,6 +276,57 @@ Features after parsing with @gmod/bed:
   "spID": "AL137655"
 }
 ```
+
+### parseBigWig(bigwig, opts)
+
+A convenience function that reads all features from every chromosome in a BigWig
+file, returning non-empty base-resolution results only (no zoom levels).
+
+- bigwig - a `BigWig` instance
+- opts - optional `RequestOptions` (e.g. `opts.signal` for abort)
+
+Returns a `Promise<BigWigFeatureArrays[]>`, one entry per chromosome that has
+data.
+
+```typescript
+import { BigWig, parseBigWig } from '@gmod/bbi'
+
+const file = new BigWig({ path: 'volvox.bw' })
+const results = await parseBigWig(file)
+for (const { starts, ends, scores } of results) {
+  for (let i = 0; i < starts.length; i++) {
+    console.log(starts[i], ends[i], scores[i])
+  }
+}
+```
+
+### ArrayFeatureView / BigWigFeature
+
+`ArrayFeatureView` wraps a `BigWigFeatureArrays` or `SummaryFeatureArrays`
+result and exposes a JBrowse-compatible `Feature`-style interface.
+`BigWigFeature` is a single-feature view into an `ArrayFeatureView`.
+
+```typescript
+import { BigWig, ArrayFeatureView } from '@gmod/bbi'
+
+const file = new BigWig({ path: 'volvox.bw' })
+const arrays = await file.getFeaturesAsArrays('chr1', 0, 100000)
+const view = new ArrayFeatureView(arrays, 'mySource', 'chr1')
+
+for (let i = 0; i < view.length; i++) {
+  console.log(view.start(i), view.end(i), view.score(i))
+}
+```
+
+`BigWigFeature` instances are also iterable via `view.get(i, key)` and expose a
+`toJSON()` method. Keys: `start`, `end`, `score`, `refName`, `source`,
+`summary`, `minScore`, `maxScore`.
+
+## Publishing
+
+Releases are published to npm using
+[npm provenance / trusted publishing](https://docs.npmjs.com/generating-provenance-statements)
+via GitHub Actions. To publish, push a git tag (e.g. `git tag v1.0.0 && git push --tags`).
 
 ## Academic Use
 
