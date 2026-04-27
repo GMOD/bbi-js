@@ -21,9 +21,6 @@ importers:
       '@eslint/js':
         specifier: ^10.0.1
         version: 10.0.1(eslint@10.2.1)
-      '@gmod/bed':
-        specifier: ^2.1.10
-        version: 2.1.10
       '@types/node':
         specifier: ^25.6.0
         version: 25.6.0
@@ -162,10 +159,6 @@ packages:
 
   '@gmod/abortable-promise-cache@3.0.4':
     resolution: {integrity: sha512-kxRJj5fyRKFuZDp/YvnHeadYCV2EEUKyH2T4a2Iz9O7T/thOWWHUDiiD/Mg6WZP/RNNDIcfSHl/xVHHy/+j8qg==}
-
-  '@gmod/bed@2.1.10':
-    resolution: {integrity: sha512-begb47SbolFRLXUaQA8w1yBdzPFEw+FncHvfLMxfDC0nacDeU3N72BUPhK4Dq51mi8QpN4NfT3dR8O2j2g1Lww==}
-    engines: {node: '>=6'}
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -2169,8 +2162,6 @@ snapshots:
       levn: 0.4.1
 
   '@gmod/abortable-promise-cache@3.0.4': {}
-
-  '@gmod/bed@2.1.10': {}
 
   '@humanfs/core@0.19.2':
     dependencies:
