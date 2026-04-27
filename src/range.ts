@@ -11,10 +11,10 @@ export function mergeRanges(ranges: IRange[]) {
   )
 
   const merged: IRange[] = []
-  let current = sorted[0]!
+  let current = sorted[0]
 
   for (let i = 1; i < sorted.length; i++) {
-    const nxt = sorted[i]!
+    const nxt = sorted[i]
     if (nxt.min > current.max + 1) {
       merged.push(current)
       current = nxt

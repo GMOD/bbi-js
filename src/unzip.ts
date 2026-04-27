@@ -13,7 +13,7 @@ function blocksToTypedArrays(blocks: { offset: number; length: number }[]) {
   const inputOffsets = new Uint32Array(blocks.length)
   const inputLengths = new Uint32Array(blocks.length)
   for (let i = 0; i < blocks.length; i++) {
-    const block = blocks[i]!
+    const block = blocks[i]
     inputOffsets[i] = block.offset
     inputLengths[i] = block.length
   }

@@ -66,15 +66,15 @@ export class ArrayFeatureView {
   }
 
   start(i: number) {
-    return this.starts[i]!
+    return this.starts[i]
   }
 
   end(i: number) {
-    return this.ends[i]!
+    return this.ends[i]
   }
 
   score(i: number) {
-    return this.scores[i]!
+    return this.scores[i]
   }
 
   minScore(i: number) {

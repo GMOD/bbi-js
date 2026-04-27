@@ -528,7 +528,7 @@ export class BlockView {
           const features = parseBlock(
             blockType,
             resultData,
-            subBlocks[i]!.offset,
+            subBlocks[i].offset,
             request,
           )
           for (const f of features) {
@@ -618,9 +618,9 @@ export class BlockView {
 
     if (allStarts.length === 1) {
       return {
-        starts: allStarts[0]!,
-        ends: allEnds[0]!,
-        scores: allScores[0]!,
+        starts: allStarts[0],
+        ends: allEnds[0],
+        scores: allScores[0],
         isSummary: false as const,
       }
     }
@@ -630,10 +630,10 @@ export class BlockView {
     const scores = new Float32Array(totalCount)
     let offset = 0
     for (let i = 0; i < allStarts.length; i++) {
-      starts.set(allStarts[i]!, offset)
-      ends.set(allEnds[i]!, offset)
-      scores.set(allScores[i]!, offset)
-      offset += allStarts[i]!.length
+      starts.set(allStarts[i], offset)
+      ends.set(allEnds[i], offset)
+      scores.set(allScores[i], offset)
+      offset += allStarts[i].length
     }
 
     return { starts, ends, scores, isSummary: false as const }
@@ -694,7 +694,7 @@ export class BlockView {
             const minScores = new Float32Array(features.length)
             const maxScores = new Float32Array(features.length)
             for (let i = 0; i < features.length; i++) {
-              const f = features[i]!
+              const f = features[i]
               starts[i] = f.start
               ends[i] = f.end
               scores[i] = f.score ?? 0
@@ -725,11 +725,11 @@ export class BlockView {
 
     if (allStarts.length === 1) {
       return {
-        starts: allStarts[0]!,
-        ends: allEnds[0]!,
-        scores: allScores[0]!,
-        minScores: allMinScores[0]!,
-        maxScores: allMaxScores[0]!,
+        starts: allStarts[0],
+        ends: allEnds[0],
+        scores: allScores[0],
+        minScores: allMinScores[0],
+        maxScores: allMaxScores[0],
         isSummary: true as const,
       }
     }
@@ -741,12 +741,12 @@ export class BlockView {
     const maxScores = new Float32Array(totalCount)
     let offset = 0
     for (let i = 0; i < allStarts.length; i++) {
-      starts.set(allStarts[i]!, offset)
-      ends.set(allEnds[i]!, offset)
-      scores.set(allScores[i]!, offset)
-      minScores.set(allMinScores[i]!, offset)
-      maxScores.set(allMaxScores[i]!, offset)
-      offset += allStarts[i]!.length
+      starts.set(allStarts[i], offset)
+      ends.set(allEnds[i], offset)
+      scores.set(allScores[i], offset)
+      minScores.set(allMinScores[i], offset)
+      maxScores.set(allMaxScores[i], offset)
+      offset += allStarts[i].length
     }
 
     return {
