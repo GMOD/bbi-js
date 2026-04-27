@@ -1,3 +1,10 @@
+## [9.0.10](https://github.com/GMOD/bbi-js/compare/v9.0.9...v9.0.10) (2026-04-27)
+
+
+### Bug Fixes
+
+* add non-null assertions for noUncheckedIndexedAccess compliance ([3d67c8c](https://github.com/GMOD/bbi-js/commit/3d67c8cf989a15872b667b094e1d65b5f98ee95a))
+
 ## [9.0.9](https://github.com/GMOD/bbi-js/compare/v9.0.8...v9.0.9) (2026-04-04)
 
 ## [9.0.8](https://github.com/GMOD/bbi-js/compare/v9.0.7...v9.0.8) (2026-04-04)
