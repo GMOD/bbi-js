@@ -75,7 +75,7 @@ See the [example](./example/) folder for a complete working demo.
 Accepts an object containing either
 
 - path - path to a local file
-- url - path to a url
+- url - URL of a remote file
 - filehandle - a filehandle instance that you can implement as a custom class
   yourself. path and url are based on
   https://www.npmjs.com/package/generic-filehandle2 but by implementing a class
@@ -94,7 +94,7 @@ Accepts an object containing either
   zoom level that is returned is the one which has reductionLevel<=2/opts.scale
   (reductionLevel is a property of the zoom level structure in the bigwig file
   data)
-- opts.basesPerScale - optional, inverse of opts.scale e.g. bpPerPx
+- opts.basesPerScale - optional, inverse of opts.scale (bp per pixel)
 - opts.signal - optional, an AbortSignal to halt processing
 
 Returns a promise to an array of features. If an incorrect refName or no
@@ -105,8 +105,8 @@ Example:
 ```typescript
 const feats = await bigwig.getFeatures('chr1', 0, 100)
 // returns array of features with start, end, score
-// coordinates on returned data are are 0-based half open
-// no conversion to 1-based as in wig is done)
+// coordinates on returned data are 0-based half open
+// no conversion to 1-based as in wig is done
 // note refseq is not returned on the object, it is clearly chr1 from the query though
 ```
 
@@ -116,13 +116,17 @@ Here is what the reductionLevel structure looks like in a file. The zoomLevel
 that is chosen is the first reductionLevel<2\*opts.basesPerScale (or
 reductionLevel<2/opts.scale) when scanning backwards through this list
 
-      [ { reductionLevel: 40, ... },
-        { reductionLevel: 160, ... },
-        { reductionLevel: 640, ... },
-        { reductionLevel: 2560, ... },
-        { reductionLevel: 10240, ... },
-        { reductionLevel: 40960, ... },
-        { reductionLevel: 163840, ... } ]
+```json
+[
+  { "reductionLevel": 40 },
+  { "reductionLevel": 160 },
+  { "reductionLevel": 640 },
+  { "reductionLevel": 2560 },
+  { "reductionLevel": 10240 },
+  { "reductionLevel": 40960 },
+  { "reductionLevel": 163840 }
+]
+```
 
 #### getFeaturesAsArrays(refName, start, end, opts)
 
@@ -199,7 +203,7 @@ they exist.
 - opts.signal - optional, an AbortSignal to halt processing
 
 returns a promise to an array of features. no concept of zoom levels is used
-with bigwig data
+with bigbed data
 
 #### searchExtraIndex(name, opts)
 
