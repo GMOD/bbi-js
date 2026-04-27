@@ -326,7 +326,7 @@ for (let i = 0; i < view.length; i++) {
 
 Releases are published to npm using
 [npm provenance / trusted publishing](https://docs.npmjs.com/generating-provenance-statements)
-via GitHub Actions.
+via GitHub Actions. To publish, push a git tag (e.g. `git tag v1.0.0 && git push --tags`).
 
 ## Academic Use
 
