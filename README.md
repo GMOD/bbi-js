@@ -324,9 +324,11 @@ for (let i = 0; i < view.length; i++) {
 
 ## Publishing
 
-Releases are published to npm using
-[npm provenance / trusted publishing](https://docs.npmjs.com/generating-provenance-statements)
-via GitHub Actions. To publish, push a git tag (e.g. `git tag v1.0.0 && git push --tags`).
+[Trusted publishing](https://docs.npmjs.com/about-trusted-publishing) via GitHub Actions.
+
+```bash
+npm version patch  # or minor/major
+```
 
 ## Academic Use
 
