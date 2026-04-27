@@ -277,6 +277,12 @@ Features after parsing with @gmod/bed:
 }
 ```
 
+## Publishing
+
+Releases are published to npm using
+[npm provenance / trusted publishing](https://docs.npmjs.com/generating-provenance-statements)
+via GitHub Actions.
+
 ## Academic Use
 
 This package was written with funding from the [NHGRI](http://genome.gov) as
