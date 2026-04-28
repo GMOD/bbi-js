@@ -11,7 +11,7 @@ export function groupBlocks(blocks: Block[]) {
   let lastBlock: (Block & { blocks: Block[] }) | undefined
   let lastBlockEnd: number | undefined
   for (const block of blocks) {
-    if (lastBlock && lastBlockEnd && block.offset - lastBlockEnd <= 2000) {
+    if (lastBlock && block.offset - lastBlockEnd! <= 2000) {
       lastBlock.length = block.offset + block.length - lastBlock.offset
       lastBlock.blocks.push(block)
       lastBlockEnd = block.offset + block.length

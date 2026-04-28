@@ -119,15 +119,13 @@ export abstract class BBI {
     for (let i = 0; i < numZoomLevels; i++) {
       const reductionLevel = dataView.getUint32(offset, true)
       offset += 4
-      const reserved = dataView.getUint32(offset, true)
-      offset += 4
+      offset += 4 // reserved
       const dataOffset = Number(dataView.getBigUint64(offset, true))
       offset += 8
       const indexOffset = Number(dataView.getBigUint64(offset, true))
       offset += 8
       zoomLevels.push({
         reductionLevel,
-        reserved,
         dataOffset,
         indexOffset,
       })
@@ -209,7 +207,7 @@ export abstract class BBI {
 
     // Recursively traverses the B+ tree to populate chromosome name-to-ID mappings
     const readBPlusTreeNode = async (currentOffset: number) => {
-      const header = getDataView(await this.bbi.read(4, currentOffset))
+      const header = getDataView(await this.bbi.read(4, currentOffset, opts))
       const isLeafNode = header.getUint8(0)
       const count = header.getUint16(2, true)
 
@@ -218,6 +216,7 @@ export abstract class BBI {
         const b = await this.bbi.read(
           count * (keySize + valSize),
           currentOffset + 4,
+          opts,
         )
         const dataView = getDataView(b)
         let offset = 0
@@ -239,7 +238,7 @@ export abstract class BBI {
       } else {
         // Non-leaf nodes contain pointers to child nodes
         const dataView = getDataView(
-          await this.bbi.read(count * (keySize + 8), currentOffset + 4),
+          await this.bbi.read(count * (keySize + 8), currentOffset + 4, opts),
         )
         const nextNodes = []
         let offset = 0

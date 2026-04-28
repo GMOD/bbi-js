@@ -9,9 +9,7 @@ export function mergeRanges(ranges: IRange[]) {
   if (ranges.length === 0) {
     return []
   }
-  const sorted = [...ranges].sort((a, b) =>
-    a.min !== b.min ? a.min - b.min : a.max - b.max,
-  )
+  const sorted = ranges.toSorted((a, b) => a.min - b.min)
 
   const merged: IRange[] = []
   let current = sorted[0]!

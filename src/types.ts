@@ -1,6 +1,5 @@
 export interface ZoomLevel {
   reductionLevel: number
-  reserved: number
   dataOffset: number
   indexOffset: number
 }

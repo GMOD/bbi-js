@@ -71,7 +71,7 @@ function parseSummaryBlock(
         maxScore,
         minScore,
         summary: true,
-        score: sumData / (validCnt || 1),
+        score: validCnt ? sumData / validCnt : 0,
       })
     }
   }
