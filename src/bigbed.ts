@@ -1,12 +1,8 @@
-import AbortablePromiseCache from '@gmod/abortable-promise-cache'
-import QuickLRU from '@jbrowse/quick-lru'
-
 import { BBI } from './bbi.ts'
+import { getDataView, parseKey } from './util.ts'
 
 import type { RequestOptions } from './types.ts'
 import type { GenericFilehandle } from 'generic-filehandle2'
-
-const decoder = new TextDecoder('utf8')
 
 interface Loc {
   key: string
@@ -38,14 +34,6 @@ function getTabField(str: string, fieldIndex: number) {
   return end === -1 ? str.slice(start) : str.slice(start, end)
 }
 
-// Parses a null-terminated string key from a B+ tree node
-function parseKey(buffer: Uint8Array, offset: number, keySize: number) {
-  const keyEnd = buffer.indexOf(0, offset)
-  const effectiveKeyEnd =
-    keyEnd !== -1 && keyEnd < offset + keySize ? keyEnd : offset + keySize
-  return decoder.decode(buffer.subarray(offset, effectiveKeyEnd))
-}
-
 // Recursively traverses a B+ tree to search for a specific name in the BigBed extraIndex
 // B+ trees are balanced tree structures optimized for disk-based searches
 async function readBPlusTreeNode(
@@ -60,7 +48,7 @@ async function readBPlusTreeNode(
 ): Promise<Loc | undefined> {
   const len = 4 + blockSize * (keySize + valSize)
   const buffer = await bbi.read(len, nodeOffset, opts)
-  const dataView = new DataView(buffer.buffer, buffer.byteOffset, buffer.length)
+  const dataView = getDataView(buffer)
   const nodeType = dataView.getInt8(0)
   const cnt = dataView.getInt16(2, true)
   let offset = 4
@@ -149,15 +137,16 @@ async function readBPlusTreeNode(
 }
 
 export class BigBed extends BBI {
-  public readIndicesCache = new AbortablePromiseCache<RequestOptions, Index[]>({
-    cache: new QuickLRU({ maxSize: 1 }),
-    fill: (args: RequestOptions, signal?: AbortSignal) =>
-      this._readIndices({ ...args, signal }),
-  })
+  private indicesP?: Promise<Index[]>
 
   public readIndices(opts: RequestOptions = {}) {
-    const { signal, ...rest } = opts
-    return this.readIndicesCache.get(JSON.stringify(rest), opts, signal)
+    if (!this.indicesP) {
+      this.indicesP = this._readIndices(opts).catch((e: unknown) => {
+        this.indicesP = undefined
+        throw e
+      })
+    }
+    return this.indicesP
   }
 
   /*
@@ -178,7 +167,7 @@ export class BigBed extends BBI {
     const { extHeaderOffset } = await this.getHeader(opts)
     const b = await this.bbi.read(64, extHeaderOffset, opts)
 
-    const dataView = new DataView(b.buffer, b.byteOffset, b.length)
+    const dataView = getDataView(b)
     const count = dataView.getUint16(2, true)
     const dataOffset = Number(dataView.getBigUint64(4, true))
 
@@ -194,8 +183,7 @@ export class BigBed extends BBI {
     const indices: Index[] = []
 
     for (let i = 0; i < count; i += 1) {
-      const b = buffer.subarray(i * blocklen)
-      const dataView = new DataView(b.buffer, b.byteOffset, b.length)
+      const dataView = getDataView(buffer, i * blocklen)
       const type = dataView.getInt16(0, true)
       const fieldcount = dataView.getInt16(2, true)
       const dataOffset = Number(dataView.getBigUint64(4, true))
@@ -232,7 +220,7 @@ export class BigBed extends BBI {
       const { offset: offset2, field } = index
       const b = await this.bbi.read(32, offset2, opts)
 
-      const dataView = new DataView(b.buffer, b.byteOffset, b.length)
+      const dataView = getDataView(b)
       const blockSize = dataView.getInt32(4, true)
       const keySize = dataView.getInt32(8, true)
       const valSize = dataView.getInt32(12, true)

@@ -1,6 +1,7 @@
 import { LocalFile, RemoteFile } from 'generic-filehandle2'
 
 import { BlockView } from './block-view.ts'
+import { getDataView, parseKey } from './util.ts'
 
 import type {
   BigWigFeatureArrays,
@@ -19,10 +20,6 @@ const BIG_WIG_MAGIC = -2003829722
 const BIG_BED_MAGIC = -2021002517
 
 const decoder = new TextDecoder('utf8')
-
-function getDataView(buffer: Uint8Array) {
-  return new DataView(buffer.buffer, buffer.byteOffset, buffer.length)
-}
 
 export abstract class BBI {
   protected bbi: GenericFilehandle
@@ -141,28 +138,23 @@ export abstract class BBI {
 
     let totalSummary: Statistics
     if (totalSummaryOffset) {
-      const b2 = b.subarray(totalSummaryOffset)
-      let offset = 0
-      const dataView = getDataView(b2)
-      const basesCovered = Number(dataView.getBigUint64(offset, true))
-      offset += 8
-      const scoreMin = dataView.getFloat64(offset, true)
-      offset += 8
-      const scoreMax = dataView.getFloat64(offset, true)
-      offset += 8
-      const scoreSum = dataView.getFloat64(offset, true)
-      offset += 8
-      const scoreSumSquares = dataView.getFloat64(offset, true)
-
+      const summaryView = getDataView(b, totalSummaryOffset)
       totalSummary = {
-        scoreMin,
-        scoreMax,
-        scoreSum,
-        scoreSumSquares,
-        basesCovered,
+        basesCovered: Number(summaryView.getBigUint64(0, true)),
+        scoreMin: summaryView.getFloat64(8, true),
+        scoreMax: summaryView.getFloat64(16, true),
+        scoreSum: summaryView.getFloat64(24, true),
+        scoreSumSquares: summaryView.getFloat64(32, true),
       }
     } else {
       throw new Error('no stats')
+    }
+
+    let autoSql = ''
+    if (asOffset) {
+      const nullPos = b.indexOf(0, asOffset)
+      const end = nullPos === -1 ? b.length : nullPos
+      autoSql = decoder.decode(b.subarray(asOffset, end))
     }
 
     return {
@@ -181,9 +173,7 @@ export abstract class BBI {
       unzoomedIndexOffset,
       fileType,
       version,
-      autoSql: asOffset
-        ? decoder.decode(b.subarray(asOffset, b.indexOf(0, asOffset)))
-        : '',
+      autoSql,
     }
   }
 
@@ -221,12 +211,7 @@ export abstract class BBI {
         const dataView = getDataView(b)
         let offset = 0
         for (let n = 0; n < count; n++) {
-          const keyEnd = b.indexOf(0, offset)
-          const effectiveKeyEnd =
-            keyEnd !== -1 && keyEnd < offset + keySize
-              ? keyEnd
-              : offset + keySize
-          const key = decoder.decode(b.subarray(offset, effectiveKeyEnd))
+          const key = parseKey(b, offset, keySize)
           offset += keySize
           const refId = dataView.getUint32(offset, true)
           offset += 4

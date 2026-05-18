@@ -47,6 +47,8 @@ export default defineConfig(
       'no-useless-assignment': 'off',
       'no-underscore-dangle': 'off',
       curly: 'error',
+      'object-shorthand': 'error',
+      '@typescript-eslint/no-unnecessary-condition': 'error',
       eqeqeq: 'error',
       '@typescript-eslint/consistent-type-imports': 'error',
       '@typescript-eslint/no-explicit-any': 'error',

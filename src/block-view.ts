@@ -7,10 +7,11 @@ import {
   decompressAndParseSummaryBlocks,
   unzipBatch,
 } from './unzip.ts'
-import { groupBlocks } from './util.ts'
+import { getDataView, groupBlocks } from './util.ts'
 
 import type { Feature } from './types.ts'
 import type { BigWigFeatureArrays, SummaryFeatureArrays } from './unzip.ts'
+import type { Block } from './util.ts'
 import type { GenericFilehandle } from 'generic-filehandle2'
 
 const decoder = new TextDecoder('utf8')
@@ -20,11 +21,6 @@ interface CoordRequest {
   chrId: number
   start: number
   end: number
-}
-
-interface ReadData {
-  offset: number
-  length: number
 }
 
 interface Options {
@@ -329,7 +325,7 @@ export class BlockView {
   // efficiently query genomic intervals by chromosome and position
   private rTreePromise?: Promise<Uint8Array>
 
-  private rTreeNodeCache = new AbortablePromiseCache<ReadData, Uint8Array>({
+  private rTreeNodeCache = new AbortablePromiseCache<Block, Uint8Array>({
     cache: new QuickLRU({ maxSize: 1000 }),
 
     fill: async ({ length, offset }, signal) =>
@@ -356,7 +352,7 @@ export class BlockView {
     start: number,
     end: number,
     opts?: Options,
-  ): Promise<{ blocks: ReadData[]; chrId: number } | undefined> {
+  ): Promise<{ blocks: Block[]; chrId: number } | undefined> {
     const chrId = this.refsByName[chrName]
     if (chrId === undefined) {
       return undefined
@@ -370,11 +366,7 @@ export class BlockView {
         })
     }
     const buffer = await this.rTreePromise
-    const dataView = new DataView(
-      buffer.buffer,
-      buffer.byteOffset,
-      buffer.length,
-    )
+    const dataView = getDataView(buffer)
     const magic = dataView.getUint32(0, true)
     if (magic !== CIR_TREE_MAGIC) {
       throw new Error(
@@ -394,7 +386,7 @@ export class BlockView {
       (startChrom < chrId || (startChrom === chrId && startBase <= end)) &&
       (endChrom > chrId || (endChrom === chrId && endBase >= start))
 
-    const blocks: ReadData[] = []
+    const blocks: Block[] = []
     let currentOffsets = [this.rTreeOffset + 48]
 
     while (currentOffsets.length > 0) {
@@ -413,42 +405,36 @@ export class BlockView {
         for (const element of currentOffsets) {
           if (min <= element && element <= max) {
             const data = resultBuffer.subarray(element - offset)
-            const dv = new DataView(data.buffer, data.byteOffset, data.length)
+            const dv = getDataView(data)
             const isLeaf = dv.getUint8(0)
             const count = dv.getUint16(2, true)
-            let nodeOffset = 4
-            if (isLeaf === 1) {
+            if (isLeaf === 1 || isLeaf === 0) {
+              const entrySize = isLeaf === 1 ? 32 : 24
+              let nodeOffset = 4
               for (let i = 0; i < count; i++) {
                 const startChrom = dv.getUint32(nodeOffset, true)
                 const startBase = dv.getUint32(nodeOffset + 4, true)
                 const endChrom = dv.getUint32(nodeOffset + 8, true)
                 const endBase = dv.getUint32(nodeOffset + 12, true)
-                const blockOffset = Number(
-                  dv.getBigUint64(nodeOffset + 16, true),
-                )
-                const blockSize = Number(dv.getBigUint64(nodeOffset + 24, true))
-                nodeOffset += 32
                 if (
                   blockIntersectsQuery(startChrom, startBase, endChrom, endBase)
                 ) {
-                  blocks.push({ offset: blockOffset, length: blockSize })
+                  const childOrBlockOffset = Number(
+                    dv.getBigUint64(nodeOffset + 16, true),
+                  )
+                  if (isLeaf === 1) {
+                    const blockSize = Number(
+                      dv.getBigUint64(nodeOffset + 24, true),
+                    )
+                    blocks.push({
+                      offset: childOrBlockOffset,
+                      length: blockSize,
+                    })
+                  } else {
+                    nextOffsets.push(childOrBlockOffset)
+                  }
                 }
-              }
-            } else if (isLeaf === 0) {
-              for (let i = 0; i < count; i++) {
-                const startChrom = dv.getUint32(nodeOffset, true)
-                const startBase = dv.getUint32(nodeOffset + 4, true)
-                const endChrom = dv.getUint32(nodeOffset + 8, true)
-                const endBase = dv.getUint32(nodeOffset + 12, true)
-                const childOffset = Number(
-                  dv.getBigUint64(nodeOffset + 16, true),
-                )
-                nodeOffset += 24
-                if (
-                  blockIntersectsQuery(startChrom, startBase, endChrom, endBase)
-                ) {
-                  nextOffsets.push(childOffset)
-                }
+                nodeOffset += entrySize
               }
             }
           }
