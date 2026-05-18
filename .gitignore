@@ -7,8 +7,8 @@ dist
 .eslintcache
 esm
 crate/target
-src/wasm/*
-!src/wasm/inflate-wasm-inlined.d.ts
+src/wasm/
+crate/build/
 esm_*/
 *.cpuprofile
 bench-results.json

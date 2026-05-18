@@ -2,7 +2,7 @@ const path = require('path')
 
 module.exports = {
   mode: 'production',
-  entry: path.resolve(__dirname, 'src/wrapper.js'),
+  entry: path.resolve(__dirname, 'build/wrapper.js'),
   output: {
     path: path.resolve(__dirname, '../src/wasm'),
     filename: 'inflate-wasm-inlined.js',

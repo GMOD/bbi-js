@@ -1,12 +1,20 @@
 import wasmData from '../../src/wasm/inflate_wasm_bg.wasm'
 import * as bg from '../../src/wasm/inflate_wasm_bg.js'
+import {
+  decompress_and_parse_bigwig,
+  decompress_and_parse_summary,
+  inflate_raw,
+  inflate_raw_batch,
+  inflate_raw_unknown_size,
+} from '../../src/wasm/inflate_wasm.js'
 
-let wasm = null
-let initPromise = null
+let wasm: WebAssembly.Exports | null = null
+let initPromise: Promise<WebAssembly.Exports> | null = null
 
-async function init() {
-  if (wasm) return wasm
-
+async function init(): Promise<WebAssembly.Exports> {
+  if (wasm) {
+    return wasm
+  }
   if (!initPromise) {
     initPromise = (async () => {
       const response = await fetch(wasmData)
@@ -14,33 +22,56 @@ async function init() {
       const { instance } = await WebAssembly.instantiate(bytes, {
         './inflate_wasm_bg.js': bg,
       })
+      bg.__wbg_set_wasm(instance.exports)
       wasm = instance.exports
-      bg.__wbg_set_wasm(wasm)
       return wasm
     })()
   }
-
   return initPromise
 }
 
-export async function inflateRaw(input, outputSize) {
-  await init()
-  return bg.inflate_raw(input, outputSize)
+export interface BatchResult {
+  data: Uint8Array
+  offsets: number[]
 }
 
-export async function inflateRawUnknownSize(input) {
+export interface BigWigFeatureArrays {
+  starts: Int32Array
+  ends: Int32Array
+  scores: Float32Array
+}
+
+export interface SummaryFeatureArrays {
+  starts: Int32Array
+  ends: Int32Array
+  scores: Float32Array
+  minScores: Float32Array
+  maxScores: Float32Array
+}
+
+export async function inflateRaw(
+  input: Uint8Array,
+  outputSize: number,
+): Promise<Uint8Array> {
   await init()
-  return bg.inflate_raw_unknown_size(input)
+  return inflate_raw(input, outputSize)
+}
+
+export async function inflateRawUnknownSize(
+  input: Uint8Array,
+): Promise<Uint8Array> {
+  await init()
+  return inflate_raw_unknown_size(input)
 }
 
 export async function inflateRawBatch(
-  inputs,
-  inputOffsets,
-  inputLengths,
-  maxOutputSize,
-) {
+  inputs: Uint8Array,
+  inputOffsets: Uint32Array,
+  inputLengths: Uint32Array,
+  maxOutputSize: number,
+): Promise<BatchResult> {
   await init()
-  const packed = bg.inflate_raw_batch(
+  const packed = inflate_raw_batch(
     inputs,
     inputOffsets,
     inputLengths,
@@ -52,7 +83,7 @@ export async function inflateRawBatch(
   const offsetsStart = 4
   const dataStart = offsetsStart + (numBlocks + 1) * 4
 
-  const offsets = new Array(numBlocks + 1)
+  const offsets = new Array<number>(numBlocks + 1)
   for (let i = 0; i <= numBlocks; i++) {
     offsets[i] = view.getUint32(offsetsStart + i * 4, true)
   }
@@ -62,7 +93,7 @@ export async function inflateRawBatch(
   return { data, offsets }
 }
 
-function unpackBigWigFeatures(packed) {
+function unpackBigWigFeatures(packed: Uint8Array): BigWigFeatureArrays {
   const view = new DataView(packed.buffer, packed.byteOffset, packed.byteLength)
   const count = view.getUint32(0, true)
 
@@ -93,7 +124,7 @@ function unpackBigWigFeatures(packed) {
   }
 }
 
-function unpackSummaryFeatures(packed) {
+function unpackSummaryFeatures(packed: Uint8Array): SummaryFeatureArrays {
   const view = new DataView(packed.buffer, packed.byteOffset, packed.byteLength)
   const count = view.getUint32(0, true)
 
@@ -139,15 +170,15 @@ function unpackSummaryFeatures(packed) {
 }
 
 export async function decompressAndParseBigWig(
-  inputs,
-  inputOffsets,
-  inputLengths,
-  maxBlockSize,
-  reqStart,
-  reqEnd,
-) {
+  inputs: Uint8Array,
+  inputOffsets: Uint32Array,
+  inputLengths: Uint32Array,
+  maxBlockSize: number,
+  reqStart: number,
+  reqEnd: number,
+): Promise<BigWigFeatureArrays> {
   await init()
-  const packed = bg.decompress_and_parse_bigwig(
+  const packed = decompress_and_parse_bigwig(
     inputs,
     inputOffsets,
     inputLengths,
@@ -159,16 +190,16 @@ export async function decompressAndParseBigWig(
 }
 
 export async function decompressAndParseSummary(
-  inputs,
-  inputOffsets,
-  inputLengths,
-  maxBlockSize,
-  reqChrId,
-  reqStart,
-  reqEnd,
-) {
+  inputs: Uint8Array,
+  inputOffsets: Uint32Array,
+  inputLengths: Uint32Array,
+  maxBlockSize: number,
+  reqChrId: number,
+  reqStart: number,
+  reqEnd: number,
+): Promise<SummaryFeatureArrays> {
   await init()
-  const packed = bg.decompress_and_parse_summary(
+  const packed = decompress_and_parse_summary(
     inputs,
     inputOffsets,
     inputLengths,
