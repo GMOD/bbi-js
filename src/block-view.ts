@@ -530,15 +530,14 @@ export class BlockView {
     opts?: Options,
   ): Promise<BigWigFeatureArrays | SummaryFeatureArrays> {
     const collected = await this._collectBlocks(chrName, start, end, opts)
-    const blocks = collected?.blocks ?? []
-    const request = collected
-      ? { chrId: collected.chrId, start, end }
-      : undefined
-    const optsWithReq = { ...opts, request }
     if (this.blockType === 'summary') {
-      return this._readSummaryFeaturesAsArrays(blocks, optsWithReq)
+      return collected
+        ? this._readSummaryFeaturesAsArrays(collected.blocks, { chrId: collected.chrId, start, end }, opts)
+        : { starts: new Int32Array(0), ends: new Int32Array(0), scores: new Float32Array(0), minScores: new Float32Array(0), maxScores: new Float32Array(0), isSummary: true as const }
     }
-    return this._readBigWigFeaturesAsArrays(blocks, optsWithReq)
+    return collected
+      ? this._readBigWigFeaturesAsArrays(collected.blocks, { chrId: collected.chrId, start, end }, opts)
+      : { starts: new Int32Array(0), ends: new Int32Array(0), scores: new Float32Array(0), isSummary: false as const }
   }
 
   public async readFeatures(
@@ -602,10 +601,11 @@ export class BlockView {
 
   private async _readBigWigFeaturesAsArrays(
     blocks: { offset: number; length: number }[],
+    request: CoordRequest,
     opts: Options = {},
   ): Promise<BigWigFeatureArrays> {
     const { uncompressBufSize } = this
-    const { signal, request } = opts
+    const { signal } = opts
     const blockGroupsToFetch = groupBlocks(blocks)
 
     const allStarts: Int32Array[] = []
@@ -627,8 +627,8 @@ export class BlockView {
           data,
           localBlocks,
           uncompressBufSize,
-          request?.start ?? 0,
-          request?.end ?? 0,
+          request.start,
+          request.end,
         )
         if (result.starts.length > 0) {
           allStarts.push(result.starts)
@@ -687,10 +687,11 @@ export class BlockView {
 
   private async _readSummaryFeaturesAsArrays(
     blocks: { offset: number; length: number }[],
+    request: CoordRequest,
     opts: Options = {},
   ): Promise<SummaryFeatureArrays> {
     const { uncompressBufSize } = this
-    const { signal, request } = opts
+    const { signal } = opts
     const blockGroupsToFetch = groupBlocks(blocks)
 
     const allStarts: Int32Array[] = []
@@ -714,9 +715,9 @@ export class BlockView {
           data,
           localBlocks,
           uncompressBufSize,
-          request?.chrId ?? 0,
-          request?.start ?? 0,
-          request?.end ?? 0,
+          request.chrId,
+          request.start,
+          request.end,
         )
         if (result.starts.length > 0) {
           allStarts.push(result.starts)
