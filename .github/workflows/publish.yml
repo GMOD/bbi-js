@@ -18,7 +18,11 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
       - uses: cargo-bins/cargo-binstall@main
-      - run: cargo binstall wasm-bindgen-cli@0.2.118 --no-confirm
+      - name: Install wasm-bindgen-cli matching Cargo.lock
+        run: |
+          VERSION=$(grep -A1 '^name = "wasm-bindgen"$' crate/Cargo.lock | grep -oP 'version = "\K[^"]+' | head -1)
+          echo "Installing wasm-bindgen-cli@$VERSION"
+          cargo binstall wasm-bindgen-cli@$VERSION --no-confirm
       - uses: pnpm/action-setup@v4
         with:
           version: 10
