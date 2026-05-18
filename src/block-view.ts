@@ -294,6 +294,66 @@ function parseBigWigBlockAsArrays(
   return { starts, ends, scores }
 }
 
+function parseSummaryBlockAsArrays(
+  b: Uint8Array,
+  startOffset: number,
+  request?: CoordRequest,
+): {
+  starts: Int32Array
+  ends: Int32Array
+  scores: Float32Array
+  minScores: Float32Array
+  maxScores: Float32Array
+} {
+  const dataView = new DataView(b.buffer, b.byteOffset, b.length)
+  const maxItems = Math.floor((b.byteLength - startOffset) / 32)
+  const starts = new Int32Array(maxItems)
+  const ends = new Int32Array(maxItems)
+  const scores = new Float32Array(maxItems)
+  const minScores = new Float32Array(maxItems)
+  const maxScores = new Float32Array(maxItems)
+  let idx = 0
+  let offset = startOffset
+  while (offset < b.byteLength) {
+    const chromId = dataView.getUint32(offset, true)
+    offset += 4
+    const start = dataView.getUint32(offset, true)
+    offset += 4
+    const end = dataView.getUint32(offset, true)
+    offset += 4
+    const validCnt = dataView.getUint32(offset, true)
+    offset += 4
+    const minScore = dataView.getFloat32(offset, true)
+    offset += 4
+    const maxScore = dataView.getFloat32(offset, true)
+    offset += 4
+    const sumData = dataView.getFloat32(offset, true)
+    offset += 8
+    if (
+      !request ||
+      (chromId === request.chrId &&
+        coordFilter(start, end, request.start, request.end))
+    ) {
+      starts[idx] = start
+      ends[idx] = end
+      scores[idx] = validCnt ? sumData / validCnt : 0
+      minScores[idx] = minScore
+      maxScores[idx] = maxScore
+      idx++
+    }
+  }
+  if (idx < maxItems) {
+    return {
+      starts: starts.subarray(0, idx),
+      ends: ends.subarray(0, idx),
+      scores: scores.subarray(0, idx),
+      minScores: minScores.subarray(0, idx),
+      maxScores: maxScores.subarray(0, idx),
+    }
+  }
+  return { starts, ends, scores, minScores, maxScores }
+}
+
 function parseBlock(
   blockType: string,
   data: Uint8Array,
@@ -672,27 +732,14 @@ export class BlockView {
             block.offset,
             block.offset + block.length,
           )
-          const features = parseSummaryBlock(blockData, 0, request)
-          if (features.length > 0) {
-            const starts = new Int32Array(features.length)
-            const ends = new Int32Array(features.length)
-            const scores = new Float32Array(features.length)
-            const minScores = new Float32Array(features.length)
-            const maxScores = new Float32Array(features.length)
-            for (let i = 0; i < features.length; i++) {
-              const f = features[i]!
-              starts[i] = f.start
-              ends[i] = f.end
-              scores[i] = f.score ?? 0
-              minScores[i] = f.minScore ?? 0
-              maxScores[i] = f.maxScore ?? 0
-            }
-            allStarts.push(starts)
-            allEnds.push(ends)
-            allScores.push(scores)
-            allMinScores.push(minScores)
-            allMaxScores.push(maxScores)
-            totalCount += features.length
+          const result = parseSummaryBlockAsArrays(blockData, 0, request)
+          if (result.starts.length > 0) {
+            allStarts.push(result.starts)
+            allEnds.push(result.ends)
+            allScores.push(result.scores)
+            allMinScores.push(result.minScores)
+            allMaxScores.push(result.maxScores)
+            totalCount += result.starts.length
           }
         }
       }

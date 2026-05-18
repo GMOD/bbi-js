@@ -94,7 +94,7 @@ Accepts an object containing either
   zoom level that is returned is the one which has reductionLevel<=2/opts.scale
   (reductionLevel is a property of the zoom level structure in the bigwig file
   data)
-- opts.basesPerScale - optional, inverse of opts.scale (bp per pixel)
+- opts.basesPerSpan - optional, inverse of opts.scale (bp per pixel)
 - opts.signal - optional, an AbortSignal to halt processing
 
 Returns a promise to an array of features. If an incorrect refName or no

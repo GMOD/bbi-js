@@ -67,25 +67,21 @@ async function readBPlusTreeNode(
       })
     }
 
-    // Binary search to find the appropriate child node
     let left = 0
     let right = leafkeys.length - 1
-    let targetIndex = leafkeys.length - 1
+    let targetIndex = -1
 
     while (left <= right) {
       const mid = Math.floor((left + right) / 2)
-      const cmp = name.localeCompare(leafkeys[mid]!.key)
-
-      if (cmp < 0) {
-        targetIndex = mid - 1
-        right = mid - 1
-      } else {
+      if (name.localeCompare(leafkeys[mid]!.key) >= 0) {
+        targetIndex = mid
         left = mid + 1
+      } else {
+        right = mid - 1
       }
     }
 
-    const childOffset =
-      targetIndex >= 0 ? leafkeys[targetIndex]!.offset : leafkeys[0]!.offset
+    const childOffset = leafkeys[targetIndex >= 0 ? targetIndex : 0]!.offset
     return readBPlusTreeNode(
       bbi,
       childOffset,
