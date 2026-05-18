@@ -81,7 +81,7 @@ async function readBPlusTreeNode(
       }
     }
 
-    const childOffset = leafkeys[targetIndex >= 0 ? targetIndex : 0]!.offset
+    const childOffset = leafkeys[Math.max(targetIndex, 0)]!.offset
     return readBPlusTreeNode(
       bbi,
       childOffset,

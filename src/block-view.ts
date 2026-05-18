@@ -532,12 +532,32 @@ export class BlockView {
     const collected = await this._collectBlocks(chrName, start, end, opts)
     if (this.blockType === 'summary') {
       return collected
-        ? this._readSummaryFeaturesAsArrays(collected.blocks, { chrId: collected.chrId, start, end }, opts)
-        : { starts: new Int32Array(0), ends: new Int32Array(0), scores: new Float32Array(0), minScores: new Float32Array(0), maxScores: new Float32Array(0), isSummary: true as const }
+        ? this._readSummaryFeaturesAsArrays(
+            collected.blocks,
+            { chrId: collected.chrId, start, end },
+            opts,
+          )
+        : {
+            starts: new Int32Array(0),
+            ends: new Int32Array(0),
+            scores: new Float32Array(0),
+            minScores: new Float32Array(0),
+            maxScores: new Float32Array(0),
+            isSummary: true as const,
+          }
     }
     return collected
-      ? this._readBigWigFeaturesAsArrays(collected.blocks, { chrId: collected.chrId, start, end }, opts)
-      : { starts: new Int32Array(0), ends: new Int32Array(0), scores: new Float32Array(0), isSummary: false as const }
+      ? this._readBigWigFeaturesAsArrays(
+          collected.blocks,
+          { chrId: collected.chrId, start, end },
+          opts,
+        )
+      : {
+          starts: new Int32Array(0),
+          ends: new Int32Array(0),
+          scores: new Float32Array(0),
+          isSummary: false as const,
+        }
   }
 
   public async readFeatures(
