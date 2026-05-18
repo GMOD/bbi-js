@@ -328,7 +328,7 @@ for (let i = 0; i < view.length; i++) {
 Actions.
 
 ```bash
-npm version patch  # or minor/major
+pnpm version patch  # or minor/major
 ```
 
 ## Academic Use
