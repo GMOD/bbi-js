@@ -84,7 +84,6 @@
 /******/ })();
 /******/ 
 /************************************************************************/
-var __webpack_exports__ = {};
 
 // NAMESPACE OBJECT: ../src/wasm/inflate_wasm_bg.js
 var src_wasm_inflate_wasm_bg_namespaceObject = {};
