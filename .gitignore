@@ -7,7 +7,6 @@ dist
 .eslintcache
 esm
 crate/target
-src/wasm/
 crate/build/
 esm_*/
 *.cpuprofile

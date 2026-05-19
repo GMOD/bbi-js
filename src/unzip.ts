@@ -2,7 +2,7 @@ import {
   decompressAndParseBigWig,
   decompressAndParseSummary,
   inflateRawBatch,
-} from './wasm/inflate-wasm-inlined.js'
+} from './wasm/inflate-wasm-inlined.mjs'
 
 export interface UnzipBatchResult {
   data: Uint8Array
