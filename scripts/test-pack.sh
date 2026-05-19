@@ -19,6 +19,7 @@ trap 'rm -rf "$SCRATCH"' EXIT
 
 cd "$PKG_DIR"
 TARBALL="$(npm pack --silent --pack-destination "$SCRATCH")"
+FIXTURE="$PKG_DIR/test/data/volvox.bw"
 
 cd "$SCRATCH"
 cat >package.json <<'JSON'
@@ -29,30 +30,35 @@ cat >package.json <<'JSON'
   "type": "module"
 }
 JSON
-npm install --silent --no-audit --no-fund "./$TARBALL" >/dev/null
+npm install --silent --no-audit --no-fund generic-filehandle2 "./$TARBALL" >/dev/null
 
-cat >smoke.mjs <<'JS'
+# Read a real bigwig fixture end-to-end. This is the part that actually
+# exercises the wasm bundle: getHeader() doesn't, but getFeatures() runs
+# through the inflate path and instantiates the wasm module.
+cat >smoke.mjs <<JS
 import { BigWig, BigBed, ArrayFeatureView, BigWigFeature, parseBigWig } from '@gmod/bbi'
-if (typeof BigWig !== 'function') throw new Error('BigWig missing from ESM entry')
-if (typeof BigBed !== 'function') throw new Error('BigBed missing from ESM entry')
-if (typeof ArrayFeatureView !== 'function') throw new Error('ArrayFeatureView missing')
-if (typeof BigWigFeature !== 'function') throw new Error('BigWigFeature missing')
-if (typeof parseBigWig !== 'function') throw new Error('parseBigWig missing')
-// Force the unzip module (which imports ./wasm/inflate-wasm-inlined.js) to load.
-// Instantiating BigWig pulls bigwig.js -> bbi.js -> unzip.js.
-new BigWig({ filehandle: { read: () => { throw new Error('not called') } } })
-console.log('esm import + wasm-bundle load ok')
+import { LocalFile } from 'generic-filehandle2'
+for (const [name, fn] of Object.entries({ BigWig, BigBed, ArrayFeatureView, BigWigFeature, parseBigWig })) {
+  if (typeof fn !== 'function') throw new Error(\`\${name} missing from ESM entry\`)
+}
+const bw = new BigWig({ filehandle: new LocalFile('$FIXTURE') })
+const feats = await bw.getFeatures('ctgA', 0, 100)
+if (!Array.isArray(feats) || feats.length === 0) throw new Error('no features returned (ESM)')
+console.log(\`esm: \${feats.length} features ok\`)
 JS
 
-cat >smoke.cjs <<'JS'
+cat >smoke.cjs <<JS
 const { BigWig, BigBed, ArrayFeatureView, BigWigFeature, parseBigWig } = require('@gmod/bbi')
-if (typeof BigWig !== 'function') throw new Error('BigWig missing from CJS entry')
-if (typeof BigBed !== 'function') throw new Error('BigBed missing from CJS entry')
-if (typeof ArrayFeatureView !== 'function') throw new Error('ArrayFeatureView missing')
-if (typeof BigWigFeature !== 'function') throw new Error('BigWigFeature missing')
-if (typeof parseBigWig !== 'function') throw new Error('parseBigWig missing')
-new BigWig({ filehandle: { read: () => { throw new Error('not called') } } })
-console.log('cjs import + wasm-bundle load ok')
+;(async () => {
+  const { LocalFile } = await import('generic-filehandle2')
+  for (const [name, fn] of Object.entries({ BigWig, BigBed, ArrayFeatureView, BigWigFeature, parseBigWig })) {
+    if (typeof fn !== 'function') throw new Error(\`\${name} missing from CJS entry\`)
+  }
+  const bw = new BigWig({ filehandle: new LocalFile('$FIXTURE') })
+  const feats = await bw.getFeatures('ctgA', 0, 100)
+  if (!Array.isArray(feats) || feats.length === 0) throw new Error('no features returned (CJS)')
+  console.log(\`cjs: \${feats.length} features ok\`)
+})().catch(e => { console.error(e); process.exit(1) })
 JS
 
 node smoke.mjs

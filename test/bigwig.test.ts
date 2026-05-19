@@ -3,9 +3,9 @@ import { expect, test, vi } from 'vitest'
 
 import { BigWig } from '../src/index.ts'
 
-import type { Header } from '../src/index.ts'
+import type { BigWigHeaderWithRefNames } from '../src/index.ts'
 
-interface ExtendedHeader extends Header {
+interface ExtendedHeader extends BigWigHeaderWithRefNames {
   iWasMemoized: boolean
 }
 
@@ -37,8 +37,8 @@ test('loads variable step bigwig', async () => {
   const feats1 = await ti.getFeatures('chr1', 0, 51, { scale: 1 })
   const feats2 = await ti.getFeatures('chr1', 0, 52, { scale: 1 })
   expect(feats1).toMatchSnapshot()
-  expect(feats1[feats1.length - 1].start).toEqual(47)
-  expect(feats2[feats2.length - 1].start).toEqual(51)
+  expect(feats1.at(-1)?.start).toEqual(47)
+  expect(feats2.at(-1)?.start).toEqual(51)
 })
 test('loads simple fixedstep bigwig', async () => {
   const ti = new BigWig({ path: 'test/data/volvox_microarray.bw' })
@@ -119,10 +119,10 @@ test('matches bigWigToBedGraph', async () => {
     GK000001.2\t1000977\t1001000\t0`
       .split('\n')
       .map(s => s.split('\t'))
-      .map(([_refName, start, end, score]) => ({
-        start: +start,
-        end: +end,
-        score: +score,
+      .map(cols => ({
+        start: +cols[1]!,
+        end: +cols[2]!,
+        score: +cols[3]!,
       })),
   )
 })

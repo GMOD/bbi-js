@@ -35,13 +35,13 @@ export interface BatchResult {
   offsets: number[]
 }
 
-export interface BigWigFeatureArrays {
+export interface WasmBigWigArrays {
   starts: Int32Array
   ends: Int32Array
   scores: Float32Array
 }
 
-export interface SummaryFeatureArrays {
+export interface WasmSummaryArrays {
   starts: Int32Array
   ends: Int32Array
   scores: Float32Array
@@ -93,7 +93,7 @@ export async function inflateRawBatch(
   return { data, offsets }
 }
 
-function unpackBigWigFeatures(packed: Uint8Array): BigWigFeatureArrays {
+function unpackBigWigFeatures(packed: Uint8Array): WasmBigWigArrays {
   const view = new DataView(packed.buffer, packed.byteOffset, packed.byteLength)
   const count = view.getUint32(0, true)
 
@@ -124,7 +124,7 @@ function unpackBigWigFeatures(packed: Uint8Array): BigWigFeatureArrays {
   }
 }
 
-function unpackSummaryFeatures(packed: Uint8Array): SummaryFeatureArrays {
+function unpackSummaryFeatures(packed: Uint8Array): WasmSummaryArrays {
   const view = new DataView(packed.buffer, packed.byteOffset, packed.byteLength)
   const count = view.getUint32(0, true)
 
@@ -176,7 +176,7 @@ export async function decompressAndParseBigWig(
   maxBlockSize: number,
   reqStart: number,
   reqEnd: number,
-): Promise<BigWigFeatureArrays> {
+): Promise<WasmBigWigArrays> {
   await init()
   const packed = decompress_and_parse_bigwig(
     inputs,
@@ -197,7 +197,7 @@ export async function decompressAndParseSummary(
   reqChrId: number,
   reqStart: number,
   reqEnd: number,
-): Promise<SummaryFeatureArrays> {
+): Promise<WasmSummaryArrays> {
   await init()
   const packed = decompress_and_parse_summary(
     inputs,
