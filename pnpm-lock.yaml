@@ -22,8 +22,8 @@ importers:
         specifier: ^10.0.1
         version: 10.0.1(eslint@10.4.0)
       '@gmod/bed':
-        specifier: ^2.2.3
-        version: 2.2.3
+        specifier: ^2.2.5
+        version: 2.2.5
       '@types/node':
         specifier: ^25.8.0
         version: 25.8.0
@@ -148,8 +148,8 @@ packages:
   '@gmod/abortable-promise-cache@3.0.4':
     resolution: {integrity: sha512-kxRJj5fyRKFuZDp/YvnHeadYCV2EEUKyH2T4a2Iz9O7T/thOWWHUDiiD/Mg6WZP/RNNDIcfSHl/xVHHy/+j8qg==}
 
-  '@gmod/bed@2.2.3':
-    resolution: {integrity: sha512-JPrijnobKsFhBcWamy+Vu647QsYCP6Az0gvq56AYpZ7IdvyJYdi7iLrhe3eQEOXjSsARj6ShbX3vxmN3N36X2A==}
+  '@gmod/bed@2.2.5':
+    resolution: {integrity: sha512-bk+D5yrV1cxNCuiJ771iK68jmU8yEGV2vufdJW1SjeByl7ievJoYKgRdSwEol4hleqV1cNcmlMvfmj3t+n+OMw==}
 
   '@humanfs/core@0.19.2':
     resolution: {integrity: sha512-UhXNm+CFMWcbChXywFwkmhqjs3PRCmcSa/hfBgLIb7oQ5HNb1wS0icWsGtSAUNgefHeI+eBrA8I1fxmbHsGdvA==}
@@ -1668,7 +1668,7 @@ snapshots:
 
   '@gmod/abortable-promise-cache@3.0.4': {}
 
-  '@gmod/bed@2.2.3': {}
+  '@gmod/bed@2.2.5': {}
 
   '@humanfs/core@0.19.2':
     dependencies:
