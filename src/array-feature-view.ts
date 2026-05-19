@@ -64,23 +64,23 @@ export class ArrayFeatureView {
     return this.starts.length
   }
 
-  start(i: number) {
-    return this.starts[i]
+  start(i: number): number {
+    return this.starts[i]!
   }
 
-  end(i: number) {
-    return this.ends[i]
+  end(i: number): number {
+    return this.ends[i]!
   }
 
-  score(i: number) {
-    return this.scores[i]
+  score(i: number): number {
+    return this.scores[i]!
   }
 
-  minScore(i: number) {
+  minScore(i: number): number | undefined {
     return this.minScores?.[i]
   }
 
-  maxScore(i: number) {
+  maxScore(i: number): number | undefined {
     return this.maxScores?.[i]
   }
 
@@ -89,10 +89,8 @@ export class ArrayFeatureView {
   }
 
   get(i: number, key: 'refName' | 'source'): string
-  get(
-    i: number,
-    key: 'start' | 'end' | 'score' | 'minScore' | 'maxScore',
-  ): number | undefined
+  get(i: number, key: 'start' | 'end' | 'score'): number
+  get(i: number, key: 'minScore' | 'maxScore'): number | undefined
   get(i: number, key: 'summary'): boolean
 
   get(i: number, key: string): string | number | boolean | undefined
