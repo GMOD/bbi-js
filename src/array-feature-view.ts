@@ -10,7 +10,10 @@ export class BigWigFeature {
   get(key: 'start' | 'end' | 'score'): number
   get(key: 'minScore' | 'maxScore'): number | undefined
   get(key: 'summary'): boolean
-  get(key: string): string | number | boolean | undefined
+  // any (not unknown) so this stays structurally assignable to jbrowse's
+  // Feature interface, which has `get(name: string): any` as its fallback.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  get(key: string): any
   get(key: string) {
     return this.view.get(this.i, key)
   }
