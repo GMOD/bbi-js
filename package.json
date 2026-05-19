@@ -25,6 +25,7 @@
   ],
   "scripts": {
     "test": "vitest",
+    "test:pack": "./scripts/test-pack.sh",
     "clean": "rimraf dist esm",
     "format": "prettier --write .",
     "lint": "eslint --report-unused-disable-directives --max-warnings 0",
@@ -32,8 +33,8 @@
     "build:esm": "tsc --outDir esm",
     "postbuild:esm": "mkdir -p esm/wasm && cp src/wasm/inflate-wasm-inlined.js src/wasm/inflate-wasm-inlined.d.ts esm/wasm/",
     "build:es5": "tsc --module commonjs --moduleResolution bundler --outDir dist",
-    "postbuild:es5": "echo '{\"type\": \"commonjs\"}' > dist/package.json && mkdir -p dist/wasm && cp src/wasm/inflate-wasm-inlined.js src/wasm/inflate-wasm-inlined.d.ts dist/wasm/",
-    "preversion": "pnpm lint && pnpm test --run && pnpm build",
+    "postbuild:es5": "echo '{\"type\": \"commonjs\"}' > dist/package.json && mkdir -p dist/wasm && cp src/wasm/inflate-wasm-inlined.js src/wasm/inflate-wasm-inlined.d.ts dist/wasm/ && echo '{\"type\": \"module\"}' > dist/wasm/package.json",
+    "preversion": "pnpm lint && pnpm test --run && pnpm build && pnpm test:pack",
     "postversion": "git push --follow-tags",
     "build": "pnpm build:wasm && pnpm build:esm && pnpm build:es5",
     "benchonly": "vitest bench",
