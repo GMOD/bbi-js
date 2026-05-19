@@ -5,7 +5,7 @@ module.exports = {
   entry: path.resolve(__dirname, 'build/wrapper.js'),
   output: {
     path: path.resolve(__dirname, '../src/wasm'),
-    filename: 'inflate-wasm-inlined.mjs',
+    filename: 'inflate-wasm-inlined.js',
     library: {
       type: 'module',
     },
