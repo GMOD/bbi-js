@@ -104,7 +104,9 @@ test('_readIndices forwards abort signal to underlying reads', async () => {
   for (const call of spy.mock.calls) {
     // bbi-js calls filehandle.read(length, position, opts); LocalFile's typed
     // arity is 2 but the third arg is forwarded at runtime
-    const opts = (call as unknown as [number, number, { signal?: AbortSignal }])[2]
+    const opts = (
+      call as unknown as [number, number, { signal?: AbortSignal }]
+    )[2]
     expect(opts).toMatchObject({ signal: aborter.signal })
   }
 })

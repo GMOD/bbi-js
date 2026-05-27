@@ -9,7 +9,7 @@
     "build": "pnpm build:wasm && pnpm build:wrapper && pnpm build:bundle"
   },
   "devDependencies": {
-    "webpack": "^5.106.2",
+    "webpack": "^5.107.2",
     "webpack-cli": "^7.0.2"
   }
 }
