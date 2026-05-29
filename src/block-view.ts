@@ -27,8 +27,10 @@ interface Options {
   request?: CoordRequest
 }
 
+// half-open [start,end) intersection: feature [s1,e1) overlaps query [s2,e2)
+// iff s1 < e2 && e1 > s2. Must match the wasm parse path (crate/src/lib.rs).
 function coordFilter(s1: number, e1: number, s2: number, e2: number): boolean {
-  return s1 < e2 && e1 >= s2
+  return s1 < e2 && e1 > s2
 }
 
 function parseSummaryBlock(b: Uint8Array, request?: CoordRequest) {
@@ -224,7 +226,7 @@ function parseBigWigBlockAsArrays(
       for (let i = 0; i < itemCount; i++) {
         const start = dataView.getInt32(offset, true)
         const end = dataView.getInt32(offset + 4, true)
-        if (start < reqEnd && end >= reqStart) {
+        if (start < reqEnd && end > reqStart) {
           starts[idx] = start
           ends[idx] = end
           scores[idx] = dataView.getFloat32(offset + 8, true)
@@ -239,7 +241,7 @@ function parseBigWigBlockAsArrays(
       for (let i = 0; i < itemCount; i++) {
         const start = dataView.getInt32(offset, true)
         const end = start + itemSpan
-        if (start < reqEnd && end >= reqStart) {
+        if (start < reqEnd && end > reqStart) {
           starts[idx] = start
           ends[idx] = end
           scores[idx] = dataView.getFloat32(offset + 4, true)
@@ -254,7 +256,7 @@ function parseBigWigBlockAsArrays(
       for (let i = 0; i < itemCount; i++) {
         const start = blockStart + i * itemStep
         const end = start + itemSpan
-        if (start < reqEnd && end >= reqStart) {
+        if (start < reqEnd && end > reqStart) {
           starts[idx] = start
           ends[idx] = end
           scores[idx] = dataView.getFloat32(offset, true)

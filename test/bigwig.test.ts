@@ -67,7 +67,7 @@ test('inside file deeply', async () => {
 test('missing data', async () => {
   const ti = new BigWig({ path: 'test/data/volvox.bw' })
   const feats = await ti.getFeatures('ctgA', 4200, 5600)
-  expect(feats.length).toEqual(1401)
+  expect(feats.length).toEqual(1400)
   expect(feats.slice(10, 20)).toMatchSnapshot()
   expect(feats.slice(1000, 1010)).toMatchSnapshot()
 })
@@ -97,7 +97,7 @@ test('performs regularization', async () => {
     renameRefSeqs: ref => ref.replace('contig', 'ctg'),
   })
   const feats = await ti.getFeatures('contigA', 4200, 5600)
-  expect(feats.length).toEqual(1401)
+  expect(feats.length).toEqual(1400)
 })
 
 test('matches bigWigToBedGraph', async () => {
@@ -148,7 +148,7 @@ test('test memoize', async () => {
 test('test a slow loading getfeatures', async () => {
   const ti = new BigWig({ path: 'test/data/volvox.bw' })
   const feats = await ti.getFeatures('ctgA', 10000, 40000)
-  expect(feats.length).toEqual(30001)
+  expect(feats.length).toEqual(30000)
 })
 
 test('should load a lot of summary data', async () => {

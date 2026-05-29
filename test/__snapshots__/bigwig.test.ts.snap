@@ -58,11 +58,6 @@ exports[`crash from bigtools 1`] = `
 exports[`inside file deeply 1`] = `
 [
   {
-    "end": 20010,
-    "score": 18,
-    "start": 20009,
-  },
-  {
     "end": 20011,
     "score": 19,
     "start": 20010,
@@ -106,6 +101,11 @@ exports[`inside file deeply 1`] = `
     "end": 20019,
     "score": 17,
     "start": 20018,
+  },
+  {
+    "end": 20020,
+    "score": 17,
+    "start": 20019,
   },
 ]
 `;
@@ -1875,11 +1875,6 @@ exports[`loads simple fixedstep bigwig 3`] = `
 exports[`loads simple fixedstep bigwig 4`] = `
 [
   {
-    "end": 2000,
-    "score": 192,
-    "start": 1900,
-  },
-  {
     "end": 2100,
     "score": 114,
     "start": 2000,
@@ -1945,11 +1940,6 @@ exports[`loads variable step bigwig 1`] = `
 exports[`missing data 1`] = `
 [
   {
-    "end": 4210,
-    "score": 20,
-    "start": 4209,
-  },
-  {
     "end": 4211,
     "score": 20,
     "start": 4210,
@@ -1994,16 +1984,16 @@ exports[`missing data 1`] = `
     "score": 21,
     "start": 4218,
   },
+  {
+    "end": 4220,
+    "score": 21,
+    "start": 4219,
+  },
 ]
 `;
 
 exports[`missing data 2`] = `
 [
-  {
-    "end": 5200,
-    "score": 19,
-    "start": 5199,
-  },
   {
     "end": 5201,
     "score": 19,
@@ -2048,6 +2038,11 @@ exports[`missing data 2`] = `
     "end": 5209,
     "score": 18,
     "start": 5208,
+  },
+  {
+    "end": 5210,
+    "score": 18,
+    "start": 5209,
   },
 ]
 `;
@@ -7235,11 +7230,6 @@ exports[`sorted names 1`] = `
 exports[`test uncompressed bw (-unc from wigToBigWig) 1`] = `
 [
   {
-    "end": 40000,
-    "score": 23,
-    "start": 39999,
-  },
-  {
     "end": 40001,
     "score": 23,
     "start": 40000,
@@ -7283,6 +7273,11 @@ exports[`test uncompressed bw (-unc from wigToBigWig) 1`] = `
     "end": 40009,
     "score": 22,
     "start": 40008,
+  },
+  {
+    "end": 40010,
+    "score": 22,
+    "start": 40009,
   },
 ]
 `;
