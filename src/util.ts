@@ -1,4 +1,4 @@
-const decoder = new TextDecoder('utf8')
+export const decoder = new TextDecoder('utf8')
 
 export interface Block {
   offset: number

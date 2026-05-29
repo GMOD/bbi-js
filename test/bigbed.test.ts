@@ -78,6 +78,16 @@ test('bigbed file consistent file ID', async () => {
   expect(f11).toEqual(f22)
 })
 
+test('bigbed feature uniqueIds are unique across blocks', async () => {
+  const ti = new BigBed({ path: 'test/data/chr22_with_name_index.bb' })
+  const { refsByNumber } = await ti.getHeader()
+  const ref = Object.values(refsByNumber)[0]!
+  const feats = await ti.getFeatures(ref.name, 0, ref.length)
+  const ids = feats.map(f => f.uniqueId)
+  expect(feats.length).toBeGreaterThan(1000)
+  expect(new Set(ids).size).toEqual(feats.length)
+})
+
 test('transcripts.bb', async () => {
   const filehandle = new LocalFile('test/data/transcripts.bb')
   const ti = new BigBed({ filehandle })

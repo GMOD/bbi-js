@@ -1,7 +1,7 @@
 import { LocalFile, RemoteFile } from 'generic-filehandle2'
 
 import { BlockView } from './block-view.ts'
-import { getDataView, parseKey } from './util.ts'
+import { decoder, getDataView, parseKey } from './util.ts'
 
 import type {
   BigWigFeatureArrays,
@@ -18,8 +18,6 @@ import type { GenericFilehandle } from 'generic-filehandle2'
 
 const BIG_WIG_MAGIC = -2003829722
 const BIG_BED_MAGIC = -2021002517
-
-const decoder = new TextDecoder('utf8')
 
 export abstract class BBI {
   protected bbi: GenericFilehandle
@@ -130,9 +128,22 @@ export abstract class BBI {
 
     const fileType = magic === BIG_BED_MAGIC ? 'bigbed' : 'bigwig'
 
+    // A short read means we hit EOF, so a larger request can't return more
+    // bytes - stop growing to avoid looping on a truncated/corrupt file.
+    const reachedEof = b.length < requestSize
+
+    // autoSql is a null-terminated string at asOffset; if the terminator isn't
+    // in the buffer yet the string is truncated and we need a larger fetch
+    const autoSqlTruncated = asOffset !== 0 && !b.includes(0, asOffset)
+
     // refetch header if it is too large on first pass,
     // 8*5 is the sizeof the totalSummary struct
-    if (asOffset > requestSize || totalSummaryOffset > requestSize - 8 * 5) {
+    if (
+      !reachedEof &&
+      (asOffset > requestSize ||
+        totalSummaryOffset > requestSize - 8 * 5 ||
+        autoSqlTruncated)
+    ) {
       return this._getMainHeader(opts, requestSize * 2)
     }
 

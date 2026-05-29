@@ -11,7 +11,7 @@ export class BigWig extends BBI {
    * @param opts - An object containing basesPerSpan (e.g. pixels per basepair)
    * or scale used to infer the zoomLevel to use
    */
-  protected async getView(scale: number, opts: RequestOptions) {
+  protected async getView(scale: number, opts?: RequestOptions) {
     const { zoomLevels, refsByName, uncompressBufSize } =
       await this.getHeader(opts)
     const basesPerPx = 1 / scale

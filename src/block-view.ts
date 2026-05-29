@@ -7,14 +7,13 @@ import {
   decompressAndParseSummaryBlocks,
   unzipBatch,
 } from './unzip.ts'
-import { getDataView, groupBlocks } from './util.ts'
+import { decoder, getDataView, groupBlocks } from './util.ts'
 
 import type { Feature } from './types.ts'
 import type { BigWigFeatureArrays, SummaryFeatureArrays } from './unzip.ts'
 import type { Block } from './util.ts'
 import type { GenericFilehandle } from 'generic-filehandle2'
 
-const decoder = new TextDecoder('utf8')
 const CIR_TREE_MAGIC = 0x2468ace0
 
 interface CoordRequest {
@@ -32,14 +31,10 @@ function coordFilter(s1: number, e1: number, s2: number, e2: number): boolean {
   return s1 < e2 && e1 >= s2
 }
 
-function parseSummaryBlock(
-  b: Uint8Array,
-  startOffset: number,
-  request?: CoordRequest,
-) {
+function parseSummaryBlock(b: Uint8Array, request?: CoordRequest) {
   const features: Feature[] = []
-  let offset = startOffset
-  const dataView = new DataView(b.buffer, b.byteOffset, b.length)
+  let offset = 0
+  const dataView = getDataView(b)
   while (offset < b.byteLength) {
     const chromId = dataView.getUint32(offset, true)
     offset += 4
@@ -76,30 +71,24 @@ function parseSummaryBlock(
 
 function parseBigBedBlock(
   data: Uint8Array,
-  startOffset: number,
-  offset: number,
+  blockOffset: number,
   request?: CoordRequest,
 ) {
   const items: Feature[] = []
-  let currOffset = startOffset
-  const dataView = new DataView(data.buffer, data.byteOffset, data.length)
+  let currOffset = 0
+  const dataView = getDataView(data)
   while (currOffset < data.byteLength) {
-    const c2 = currOffset
+    const recordStart = currOffset
     const chromId = dataView.getUint32(currOffset, true)
     currOffset += 4
     const start = dataView.getInt32(currOffset, true)
     currOffset += 4
     const end = dataView.getInt32(currOffset, true)
     currOffset += 4
-    let i = currOffset
-    for (; i < data.length; i++) {
-      if (data[i] === 0) {
-        break
-      }
-    }
-    const b = data.subarray(currOffset, i)
-    const rest = decoder.decode(b)
-    currOffset = i + 1
+    const nullPos = data.indexOf(0, currOffset)
+    const restEnd = nullPos === -1 ? data.length : nullPos
+    const rest = decoder.decode(data.subarray(currOffset, restEnd))
+    currOffset = restEnd + 1
     if (
       !request ||
       (chromId === request.chrId &&
@@ -109,20 +98,18 @@ function parseBigBedBlock(
         start,
         end,
         rest,
-        uniqueId: `bb-${offset + c2}`,
+        // blockOffset is the block's byte offset in the file (unique per block)
+        // and recordStart is the record's offset within the block, so the pair
+        // is globally unique across the file
+        uniqueId: `bb-${blockOffset}-${recordStart}`,
       })
     }
   }
   return items
 }
 
-function parseBigWigBlock(
-  buffer: Uint8Array,
-  startOffset: number,
-  req?: CoordRequest,
-) {
-  const b = buffer.subarray(startOffset)
-  const dataView = new DataView(b.buffer, b.byteOffset, b.length)
+function parseBigWigBlock(buffer: Uint8Array, req?: CoordRequest) {
+  const dataView = getDataView(buffer)
   const blockStart = dataView.getInt32(4, true)
   const itemStep = dataView.getUint32(12, true)
   const itemSpan = dataView.getUint32(16, true)
@@ -176,14 +163,9 @@ function parseBigWigBlock(
 
 function parseBigWigBlockAsArrays(
   buffer: Uint8Array,
-  startOffset: number,
   req?: CoordRequest,
 ): { starts: Int32Array; ends: Int32Array; scores: Float32Array } {
-  const dataView = new DataView(
-    buffer.buffer,
-    buffer.byteOffset + startOffset,
-    buffer.length - startOffset,
-  )
+  const dataView = getDataView(buffer)
   const blockStart = dataView.getInt32(4, true)
   const itemStep = dataView.getUint32(12, true)
   const itemSpan = dataView.getUint32(16, true)
@@ -296,7 +278,6 @@ function parseBigWigBlockAsArrays(
 
 function parseSummaryBlockAsArrays(
   b: Uint8Array,
-  startOffset: number,
   request?: CoordRequest,
 ): {
   starts: Int32Array
@@ -305,15 +286,15 @@ function parseSummaryBlockAsArrays(
   minScores: Float32Array
   maxScores: Float32Array
 } {
-  const dataView = new DataView(b.buffer, b.byteOffset, b.length)
-  const maxItems = Math.floor((b.byteLength - startOffset) / 32)
+  const dataView = getDataView(b)
+  const maxItems = Math.floor(b.byteLength / 32)
   const starts = new Int32Array(maxItems)
   const ends = new Int32Array(maxItems)
   const scores = new Float32Array(maxItems)
   const minScores = new Float32Array(maxItems)
   const maxScores = new Float32Array(maxItems)
   let idx = 0
-  let offset = startOffset
+  let offset = 0
   while (offset < b.byteLength) {
     const chromId = dataView.getUint32(offset, true)
     offset += 4
@@ -354,6 +335,25 @@ function parseSummaryBlockAsArrays(
   return { starts, ends, scores, minScores, maxScores }
 }
 
+// Concatenate parsed per-block-group chunks into a single typed array. Returns
+// the lone chunk directly when possible to avoid an extra copy.
+function concatTypedArray<T extends Int32Array | Float32Array>(
+  chunks: T[],
+  totalCount: number,
+  Ctor: new (length: number) => T,
+): T {
+  if (chunks.length === 1) {
+    return chunks[0]!
+  }
+  const out = new Ctor(totalCount)
+  let offset = 0
+  for (const chunk of chunks) {
+    out.set(chunk, offset)
+    offset += chunk.length
+  }
+  return out
+}
+
 function parseBlock(
   blockType: string,
   data: Uint8Array,
@@ -362,11 +362,11 @@ function parseBlock(
 ): Feature[] {
   switch (blockType) {
     case 'summary':
-      return parseSummaryBlock(data, 0, request)
+      return parseSummaryBlock(data, request)
     case 'bigwig':
-      return parseBigWigBlock(data, 0, request)
+      return parseBigWigBlock(data, request)
     case 'bigbed':
-      return parseBigBedBlock(data, 0, blockOffset * (1 << 8), request)
+      return parseBigBedBlock(data, blockOffset, request)
     default:
       console.warn(`Don't know what to do with ${blockType}`)
       return []
@@ -619,196 +619,136 @@ export class BlockView {
     return allFeatures
   }
 
+  // Fetch each block group, then either batch-decompress+parse the whole group
+  // (compressed) or parse each block individually (uncompressed). Returns the
+  // non-empty per-group chunks; empty chunks are dropped so callers can sum
+  // lengths and concatenate directly. The chunk shape T is inferred from the
+  // parse functions, which the bigwig/summary callers supply.
+  private async _readBlocksAsArrays<T>(
+    blocks: Block[],
+    signal: AbortSignal | undefined,
+    parseGroup: (data: Uint8Array, localBlocks: Block[]) => Promise<T>,
+    parseSingleBlock: (blockData: Uint8Array) => T,
+    count: (chunk: T) => number,
+  ): Promise<T[]> {
+    const chunks: T[] = []
+    for (const blockGroup of groupBlocks(blocks)) {
+      const data = await this.bbi.read(blockGroup.length, blockGroup.offset, {
+        signal,
+      })
+      const localBlocks = blockGroup.blocks.map(block => ({
+        offset: block.offset - blockGroup.offset,
+        length: block.length,
+      }))
+
+      if (this.uncompressBufSize > 0) {
+        const chunk = await parseGroup(data, localBlocks)
+        if (count(chunk) > 0) {
+          chunks.push(chunk)
+        }
+      } else {
+        for (const block of localBlocks) {
+          const blockData = data.subarray(
+            block.offset,
+            block.offset + block.length,
+          )
+          const chunk = parseSingleBlock(blockData)
+          if (count(chunk) > 0) {
+            chunks.push(chunk)
+          }
+        }
+      }
+    }
+    return chunks
+  }
+
   private async _readBigWigFeaturesAsArrays(
-    blocks: { offset: number; length: number }[],
+    blocks: Block[],
     request: CoordRequest,
     opts: Options = {},
   ): Promise<BigWigFeatureArrays> {
-    const { uncompressBufSize } = this
-    const { signal } = opts
-    const blockGroupsToFetch = groupBlocks(blocks)
-
-    const allStarts: Int32Array[] = []
-    const allEnds: Int32Array[] = []
-    const allScores: Float32Array[] = []
-    let totalCount = 0
-
-    for (const blockGroup of blockGroupsToFetch) {
-      const { length, offset } = blockGroup
-      const data = await this.bbi.read(length, offset, { signal })
-
-      const localBlocks = blockGroup.blocks.map(block => ({
-        offset: block.offset - blockGroup.offset,
-        length: block.length,
-      }))
-
-      if (uncompressBufSize > 0) {
-        const result = await decompressAndParseBigWigBlocks(
+    const chunks = await this._readBlocksAsArrays(
+      blocks,
+      opts.signal,
+      (data, localBlocks) =>
+        decompressAndParseBigWigBlocks(
           data,
           localBlocks,
-          uncompressBufSize,
+          this.uncompressBufSize,
           request.start,
           request.end,
-        )
-        if (result.starts.length > 0) {
-          allStarts.push(result.starts)
-          allEnds.push(result.ends)
-          allScores.push(result.scores)
-          totalCount += result.starts.length
-        }
-      } else {
-        for (const block of localBlocks) {
-          const blockData = data.subarray(
-            block.offset,
-            block.offset + block.length,
-          )
-          const result = parseBigWigBlockAsArrays(blockData, 0, request)
-          if (result.starts.length > 0) {
-            allStarts.push(result.starts)
-            allEnds.push(result.ends)
-            allScores.push(result.scores)
-            totalCount += result.starts.length
-          }
-        }
-      }
+        ),
+      blockData => parseBigWigBlockAsArrays(blockData, request),
+      chunk => chunk.starts.length,
+    )
+    const totalCount = chunks.reduce((n, chunk) => n + chunk.starts.length, 0)
+    return {
+      starts: concatTypedArray(
+        chunks.map(c => c.starts),
+        totalCount,
+        Int32Array,
+      ),
+      ends: concatTypedArray(
+        chunks.map(c => c.ends),
+        totalCount,
+        Int32Array,
+      ),
+      scores: concatTypedArray(
+        chunks.map(c => c.scores),
+        totalCount,
+        Float32Array,
+      ),
+      isSummary: false as const,
     }
-
-    if (allStarts.length === 0) {
-      return {
-        starts: new Int32Array(0),
-        ends: new Int32Array(0),
-        scores: new Float32Array(0),
-        isSummary: false as const,
-      }
-    }
-
-    if (allStarts.length === 1) {
-      return {
-        starts: allStarts[0]!,
-        ends: allEnds[0]!,
-        scores: allScores[0]!,
-        isSummary: false as const,
-      }
-    }
-
-    const starts = new Int32Array(totalCount)
-    const ends = new Int32Array(totalCount)
-    const scores = new Float32Array(totalCount)
-    let offset = 0
-    for (let i = 0; i < allStarts.length; i++) {
-      starts.set(allStarts[i]!, offset)
-      ends.set(allEnds[i]!, offset)
-      scores.set(allScores[i]!, offset)
-      offset += allStarts[i]!.length
-    }
-
-    return { starts, ends, scores, isSummary: false as const }
   }
 
   private async _readSummaryFeaturesAsArrays(
-    blocks: { offset: number; length: number }[],
+    blocks: Block[],
     request: CoordRequest,
     opts: Options = {},
   ): Promise<SummaryFeatureArrays> {
-    const { uncompressBufSize } = this
-    const { signal } = opts
-    const blockGroupsToFetch = groupBlocks(blocks)
-
-    const allStarts: Int32Array[] = []
-    const allEnds: Int32Array[] = []
-    const allScores: Float32Array[] = []
-    const allMinScores: Float32Array[] = []
-    const allMaxScores: Float32Array[] = []
-    let totalCount = 0
-
-    for (const blockGroup of blockGroupsToFetch) {
-      const { length, offset } = blockGroup
-      const data = await this.bbi.read(length, offset, { signal })
-
-      const localBlocks = blockGroup.blocks.map(block => ({
-        offset: block.offset - blockGroup.offset,
-        length: block.length,
-      }))
-
-      if (uncompressBufSize > 0) {
-        const result = await decompressAndParseSummaryBlocks(
+    const chunks = await this._readBlocksAsArrays(
+      blocks,
+      opts.signal,
+      (data, localBlocks) =>
+        decompressAndParseSummaryBlocks(
           data,
           localBlocks,
-          uncompressBufSize,
+          this.uncompressBufSize,
           request.chrId,
           request.start,
           request.end,
-        )
-        if (result.starts.length > 0) {
-          allStarts.push(result.starts)
-          allEnds.push(result.ends)
-          allScores.push(result.scores)
-          allMinScores.push(result.minScores)
-          allMaxScores.push(result.maxScores)
-          totalCount += result.starts.length
-        }
-      } else {
-        for (const block of localBlocks) {
-          const blockData = data.subarray(
-            block.offset,
-            block.offset + block.length,
-          )
-          const result = parseSummaryBlockAsArrays(blockData, 0, request)
-          if (result.starts.length > 0) {
-            allStarts.push(result.starts)
-            allEnds.push(result.ends)
-            allScores.push(result.scores)
-            allMinScores.push(result.minScores)
-            allMaxScores.push(result.maxScores)
-            totalCount += result.starts.length
-          }
-        }
-      }
-    }
-
-    if (allStarts.length === 0) {
-      return {
-        starts: new Int32Array(0),
-        ends: new Int32Array(0),
-        scores: new Float32Array(0),
-        minScores: new Float32Array(0),
-        maxScores: new Float32Array(0),
-        isSummary: true as const,
-      }
-    }
-
-    if (allStarts.length === 1) {
-      return {
-        starts: allStarts[0]!,
-        ends: allEnds[0]!,
-        scores: allScores[0]!,
-        minScores: allMinScores[0]!,
-        maxScores: allMaxScores[0]!,
-        isSummary: true as const,
-      }
-    }
-
-    const starts = new Int32Array(totalCount)
-    const ends = new Int32Array(totalCount)
-    const scores = new Float32Array(totalCount)
-    const minScores = new Float32Array(totalCount)
-    const maxScores = new Float32Array(totalCount)
-    let offset = 0
-    for (let i = 0; i < allStarts.length; i++) {
-      starts.set(allStarts[i]!, offset)
-      ends.set(allEnds[i]!, offset)
-      scores.set(allScores[i]!, offset)
-      minScores.set(allMinScores[i]!, offset)
-      maxScores.set(allMaxScores[i]!, offset)
-      offset += allStarts[i]!.length
-    }
-
+        ),
+      blockData => parseSummaryBlockAsArrays(blockData, request),
+      chunk => chunk.starts.length,
+    )
+    const totalCount = chunks.reduce((n, chunk) => n + chunk.starts.length, 0)
     return {
-      starts,
-      ends,
-      scores,
-      minScores,
-      maxScores,
+      starts: concatTypedArray(
+        chunks.map(c => c.starts),
+        totalCount,
+        Int32Array,
+      ),
+      ends: concatTypedArray(
+        chunks.map(c => c.ends),
+        totalCount,
+        Int32Array,
+      ),
+      scores: concatTypedArray(
+        chunks.map(c => c.scores),
+        totalCount,
+        Float32Array,
+      ),
+      minScores: concatTypedArray(
+        chunks.map(c => c.minScores),
+        totalCount,
+        Float32Array,
+      ),
+      maxScores: concatTypedArray(
+        chunks.map(c => c.maxScores),
+        totalCount,
+        Float32Array,
+      ),
       isSummary: true as const,
     }
   }
