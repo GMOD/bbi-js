@@ -1,6 +1,6 @@
 /**
- * Combined decompress + parse for BigWig blocks
- * Returns same format as parse_bigwig_block but handles multiple compressed blocks
+ * Decompress one or more zlib-compressed BigWig blocks and parse them into
+ * packed typed arrays: [count: u32][starts: i32*count][ends: i32*count][scores: f32*count]
  * @param {Uint8Array} inputs
  * @param {Uint32Array} input_offsets
  * @param {Uint32Array} input_lengths
@@ -152,60 +152,7 @@ export function inflate_raw_unknown_size(input) {
         wasm.__wbindgen_add_to_stack_pointer(16);
     }
 }
-
-/**
- * Parse a BigWig data block and return packed typed arrays
- * Block types: 1 = bedGraph, 2 = varstep, 3 = fixedstep
- *
- * Returns packed binary: [count: u32][starts: i32*count][ends: i32*count][scores: f32*count]
- * @param {Uint8Array} data
- * @param {number} req_start
- * @param {number} req_end
- * @returns {Uint8Array}
- */
-export function parse_bigwig_block(data, req_start, req_end) {
-    try {
-        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        const ptr0 = passArray8ToWasm0(data, wasm.__wbindgen_export);
-        const len0 = WASM_VECTOR_LEN;
-        wasm.parse_bigwig_block(retptr, ptr0, len0, req_start, req_end);
-        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
-        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-        var v2 = getArrayU8FromWasm0(r0, r1).slice();
-        wasm.__wbindgen_export2(r0, r1 * 1, 1);
-        return v2;
-    } finally {
-        wasm.__wbindgen_add_to_stack_pointer(16);
-    }
-}
-
-/**
- * Parse a BigWig summary block and return packed typed arrays
- * Summary blocks contain: chromId, start, end, validCnt, minScore, maxScore, sumData, sumSqData
- *
- * Returns: [count: u32][starts: i32*n][ends: i32*n][scores: f32*n][minScores: f32*n][maxScores: f32*n]
- * @param {Uint8Array} data
- * @param {number} req_chr_id
- * @param {number} req_start
- * @param {number} req_end
- * @returns {Uint8Array}
- */
-export function parse_summary_block(data, req_chr_id, req_start, req_end) {
-    try {
-        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        const ptr0 = passArray8ToWasm0(data, wasm.__wbindgen_export);
-        const len0 = WASM_VECTOR_LEN;
-        wasm.parse_summary_block(retptr, ptr0, len0, req_chr_id, req_start, req_end);
-        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
-        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-        var v2 = getArrayU8FromWasm0(r0, r1).slice();
-        wasm.__wbindgen_export2(r0, r1 * 1, 1);
-        return v2;
-    } finally {
-        wasm.__wbindgen_add_to_stack_pointer(16);
-    }
-}
-export function __wbg_Error_bce6d499ff0a4aff(arg0, arg1) {
+export function __wbg_Error_ef53bc310eb298a0(arg0, arg1) {
     const ret = Error(getStringFromWasm0(arg0, arg1));
     return addHeapObject(ret);
 }
