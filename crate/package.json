@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build:wasm": "cargo build --release --target wasm32-unknown-unknown && wasm-bindgen --target bundler --out-dir ../src/wasm target/wasm32-unknown-unknown/release/inflate_wasm.wasm && rm -f ../src/wasm/inflate_wasm_bg.wasm.d.ts",
+    "build:wasm": "bash build-wasm.sh",
     "build:wrapper": "tsc",
     "build:bundle": "webpack --config webpack.config.js",
     "build": "pnpm build:wasm && pnpm build:wrapper && pnpm build:bundle"
