@@ -1,3 +1,4 @@
+*.bw
 CHANGELOG.md
 src/wasm
 pnpm-lock.yaml
