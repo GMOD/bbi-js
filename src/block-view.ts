@@ -525,6 +525,88 @@ export class BlockView {
     })
   }
 
+  // Multi-region read: collect the R-tree blocks for every region, dedupe by
+  // file offset (a block surfaced by overlapping regions is fetched once but
+  // parsed per region), then group the union so physically adjacent blocks
+  // from different regions coalesce into a single read. Each block is tagged
+  // with the region(s) whose coord filter applies when parsing it. Returns
+  // features per region, aligned to the input order.
+  public async readWigDataMulti(
+    regions: { refName: string; start: number; end: number }[],
+    opts: Options = {},
+  ): Promise<Feature[][]> {
+    const results: Feature[][] = regions.map(() => [])
+    const blockByOffset = new Map<number, Block>()
+    const tagsByOffset = new Map<
+      number,
+      { regionIndex: number; request: CoordRequest }[]
+    >()
+    for (let regionIndex = 0; regionIndex < regions.length; regionIndex++) {
+      const { refName, start, end } = regions[regionIndex]!
+      const collected = await this._collectBlocks(refName, start, end, opts)
+      if (collected) {
+        const request = { chrId: collected.chrId, start, end }
+        for (const block of collected.blocks) {
+          const tags = tagsByOffset.get(block.offset)
+          if (tags) {
+            tags.push({ regionIndex, request })
+          } else {
+            blockByOffset.set(block.offset, block)
+            tagsByOffset.set(block.offset, [{ regionIndex, request }])
+          }
+        }
+      }
+    }
+
+    const { blockType, uncompressBufSize } = this
+    const { signal } = opts
+    const parseInto = (resultData: Uint8Array, blockOffset: number) => {
+      const tags = tagsByOffset.get(blockOffset)
+      if (tags) {
+        for (const { regionIndex, request } of tags) {
+          const features = parseBlock(blockType, resultData, blockOffset, request)
+          for (const f of features) {
+            results[regionIndex]!.push(f)
+          }
+        }
+      }
+    }
+
+    for (const blockGroup of groupBlocks([...blockByOffset.values()])) {
+      const data = await this.bbi.read(blockGroup.length, blockGroup.offset, {
+        signal,
+      })
+      const groupOffset = blockGroup.offset
+      const subBlocks = blockGroup.blocks
+
+      if (uncompressBufSize > 0) {
+        const localBlocks = subBlocks.map(block => ({
+          offset: block.offset - groupOffset,
+          length: block.length,
+        }))
+        const { data: decompressedData, offsets } = await unzipBatch(
+          data,
+          localBlocks,
+          uncompressBufSize,
+        )
+        for (let i = 0; i < subBlocks.length; i++) {
+          const resultData = decompressedData.subarray(
+            offsets[i],
+            offsets[i + 1],
+          )
+          parseInto(resultData, subBlocks[i]!.offset)
+        }
+      } else {
+        for (const block of subBlocks) {
+          const start = block.offset - groupOffset
+          const resultData = data.subarray(start, start + block.length)
+          parseInto(resultData, block.offset)
+        }
+      }
+    }
+    return results
+  }
+
   public async readWigDataAsArrays(
     chrName: string,
     start: number,
