@@ -110,6 +110,37 @@ const feats = await bigwig.getFeatures('chr1', 0, 100)
 // note refseq is not returned on the object, it is clearly chr1 from the query though
 ```
 
+#### getFeaturesMulti(regions, opts)
+
+Fetches features for many regions in a single pass at one zoom level.
+
+- regions - an array of `{ refName, start, end }` objects (same coordinate
+  conventions as getFeatures)
+- opts - same options as getFeatures (scale/basesPerSpan/signal); all regions
+  share one zoom level
+
+Returns a promise to an array of feature arrays, aligned to the input order:
+result `[i]` holds the features for `regions[i]`. An unknown refName yields an
+empty array for that region.
+
+```typescript
+const perRegion = await bigwig.getFeaturesMulti([
+  { refName: 'chr1', start: 0, end: 1_000_000 },
+  { refName: 'chr2', start: 0, end: 1_000_000 },
+])
+// perRegion[0] = chr1 features, perRegion[1] = chr2 features
+```
+
+Why this exists: when a file is laid out in genomic order (standard
+`bedGraphToBigWig`/`bigWigToBigWig` output), blocks for many regions sit
+contiguously on disk. getFeaturesMulti collects the blocks for all regions and
+coalesces physically-adjacent reads across region boundaries into a single
+range request, where calling getFeatures per region issues one request each.
+For a whole-genome overview over a remote file this can collapse one request
+per chromosome into a handful — useful against servers with range-request rate
+limits. Regions may be passed in any order and may overlap; a block shared by
+overlapping regions is fetched once and reported in each region's result.
+
 ### Understanding scale and reductionLevel
 
 Here is what the reductionLevel structure looks like in a file. The zoomLevel
