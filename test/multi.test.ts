@@ -102,6 +102,48 @@ test('getFeaturesMulti handles overlapping regions without double-fetch', async 
   expect(new Set(multiOffsets).size).toBe(multiOffsets.length)
 })
 
+test('getFeaturesMulti is order-independent', async () => {
+  const bw = new BigWig({ path: 'test/data/cDC.bw' })
+  const scale = 1 / 20000
+  // scrambled chromosome order plus a non-monotonic same-chrom pair
+  const regions = [
+    { refName: 'chr5', start: 10_000_000, end: 20_000_000 },
+    { refName: 'chr1', start: 50_000_000, end: 60_000_000 },
+    { refName: 'chr1', start: 0, end: 10_000_000 },
+    { refName: 'chr22', start: 1_000_000, end: 5_000_000 },
+    { refName: 'chr2', start: 30_000_000, end: 40_000_000 },
+  ]
+
+  const fhScrambled = new CountingFile(new LocalFile('test/data/cDC.bw'))
+  const bwScrambled = new BigWig({ filehandle: fhScrambled })
+  await bwScrambled.getHeader()
+  const before = fhScrambled.reads
+  const multi = await bwScrambled.getFeaturesMulti(regions, { scale })
+  const scrambledReads = fhScrambled.reads - before
+
+  // buckets stay aligned to input order and match independent getFeatures
+  for (let i = 0; i < regions.length; i++) {
+    const r = regions[i]!
+    expect(multi[i]).toStrictEqual(
+      await bw.getFeatures(r.refName, r.start, r.end, { scale }),
+    )
+  }
+
+  // coalescing depends only on file offset, so pre-sorting the input must not
+  // change the number of reads
+  const sorted = [...regions].sort((a, b) =>
+    a.refName === b.refName
+      ? a.start - b.start
+      : a.refName.localeCompare(b.refName),
+  )
+  const fhSorted = new CountingFile(new LocalFile('test/data/cDC.bw'))
+  const bwSorted = new BigWig({ filehandle: fhSorted })
+  await bwSorted.getHeader()
+  const beforeSorted = fhSorted.reads
+  await bwSorted.getFeaturesMulti(sorted, { scale })
+  expect(fhSorted.reads - beforeSorted).toBe(scrambledReads)
+})
+
 test('getFeaturesMulti handles unknown refName and empty input', async () => {
   const bw = new BigWig({ path: 'test/data/cDC.bw' })
   const scale = 1 / 1000
