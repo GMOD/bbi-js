@@ -1,0 +1,22 @@
+{
+  "entryPoints": ["src/index.ts"],
+  "plugin": ["typedoc-plugin-markdown"],
+  "out": "docs/api",
+  "readme": "none",
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "excludeInternal": true,
+  "excludeNotDocumented": true,
+  "hideGenerator": true,
+  "disableSources": true,
+  "outputFileStrategy": "modules",
+  "flattenOutputFiles": true,
+  "entryFileName": "api",
+  "mergeReadme": false,
+  "parametersFormat": "table",
+  "propertiesFormat": "table",
+  "typeDeclarationFormat": "table",
+  "indexFormat": "table",
+  "sanitizeComments": false,
+  "useCodeBlocks": true
+}

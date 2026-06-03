@@ -8,6 +8,10 @@ export type {
   BigWigHeader,
   BigWigHeaderWithRefNames,
   Feature,
+  RefInfo,
   RequestOptions,
+  RequestOptions2,
+  Statistics,
   SummaryFeatureArrays,
+  ZoomLevel,
 } from './types.ts'

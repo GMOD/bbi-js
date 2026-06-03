@@ -132,6 +132,14 @@ async function readBPlusTreeNode(
   return undefined
 }
 
+/**
+ * Parser for BigBed files. Inherits `getHeader`, `getFeatures`, and
+ * `getFeaturesMulti` from `BBI`.
+ *
+ * Features have an additional `rest` field containing raw tab-delimited BED
+ * columns 4+, and a `uniqueId` derived from the file offset. No zoom levels
+ * are used for BigBed data.
+ */
 export class BigBed extends BBI {
   private indicesP?: Promise<Index[]>
 
@@ -236,16 +244,15 @@ export class BigBed extends BBI {
     return results.filter((l): l is Loc => l !== undefined)
   }
 
-  /*
-   * retrieve the features from the bigbed data that were found through the
-   * lookup of the extraIndex note that there can be multiple extraIndex, see
-   * the BigBed specification and the -extraIndex argument to bedToBigBed
+  /**
+   * Searches BigBed extra indexes (created via `-extraIndex` in `bedToBigBed`)
+   * for a given name. A file may have multiple extra indexes, e.g. for gene ID
+   * and gene name columns.
    *
-   * @param name - the name to search for
-   *
-   * @param opts - options object with optional AbortSignal
-   *
-   * @return array of Feature
+   * @param name - value to look up in the extra index
+   * @param opts - optional `RequestOptions` (e.g. `opts.signal` for abort)
+   * @returns `Promise<Feature[]>` — matching features with an added `field`
+   *   property indicating which extra-index column was matched
    */
   public async searchExtraIndex(name: string, opts: RequestOptions = {}) {
     const blocks = await this.searchExtraIndexBlocks(name, opts)

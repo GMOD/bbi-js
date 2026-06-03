@@ -68,185 +68,11 @@ recommend CDN usage, it is just a way to test things easily):
 
 See the [example](./example/) folder for a complete working demo.
 
-## Documentation
-
-### BigWig/BigBed constructors
-
-Accepts an object containing either
-
-- path - path to a local file
-- url - URL of a remote file
-- filehandle - a filehandle instance that you can implement as a custom class
-  yourself. path and url are based on
-  https://www.npmjs.com/package/generic-filehandle2 but by implementing a class
-  containing the Filehandle interface specified therein, you can pass it to this
-  module
-
-### BigWig
-
-#### getFeatures(refName, start, end, opts)
-
-- refName - a name of a chromosome in the file
-- start - a 0-based half open start coordinate
-- end - a 0-based half open end coordinate
-- opts.scale - indicates zoom level to use, specified as pxPerBp, e.g. being
-  zoomed out, you might have 100bp per pixel so opts.scale would be 1/100. the
-  zoom level that is returned is the one which has reductionLevel<=2/opts.scale
-  (reductionLevel is a property of the zoom level structure in the bigwig file
-  data)
-- opts.basesPerSpan - optional, inverse of opts.scale (bp per pixel)
-- opts.signal - optional, an AbortSignal to halt processing
-
-Returns a promise to an array of features. If an incorrect refName or no
-features are found the result is an empty array.
-
-Example:
-
-```typescript
-const feats = await bigwig.getFeatures('chr1', 0, 100)
-// returns array of features with start, end, score
-// coordinates on returned data are 0-based half open
-// no conversion to 1-based as in wig is done
-// note refseq is not returned on the object, it is clearly chr1 from the query though
-```
-
-#### getFeaturesMulti(regions, opts)
-
-Fetches features for many regions at once. `regions` is an array of
-`{ refName, start, end }`; `opts` is the same as getFeatures. Returns feature
-arrays aligned to input order (result `[i]` is for `regions[i]`).
-
-```typescript
-const perRegion = await bigwig.getFeaturesMulti([
-  { refName: 'chr1', start: 0, end: 1_000_000 },
-  { refName: 'chr2', start: 0, end: 1_000_000 },
-])
-```
-
-Reads for adjacent on-disk blocks are coalesced across region boundaries, so a
-whole-genome overview can use far fewer range requests than calling getFeatures
-per region — handy for rate-limited remote files. Regions may be in any order
-and may overlap.
-
-### Understanding scale and reductionLevel
-
-Here is what the reductionLevel structure looks like in a file. The zoomLevel
-that is chosen is the first reductionLevel<2\*opts.basesPerScale (or
-reductionLevel<2/opts.scale) when scanning backwards through this list
-
-```json
-[
-  { "reductionLevel": 40 },
-  { "reductionLevel": 160 },
-  { "reductionLevel": 640 },
-  { "reductionLevel": 2560 },
-  { "reductionLevel": 10240 },
-  { "reductionLevel": 40960 },
-  { "reductionLevel": 163840 }
-]
-```
-
-#### getFeaturesAsArrays(refName, start, end, opts)
-
-Same parameters as getFeatures, but returns typed arrays instead of an array of
-objects. This is more memory-efficient and reduces garbage collection pressure
-for large datasets.
-
-```typescript
-const result = await bigwig.getFeaturesAsArrays('chr1', 0, 100000)
-// For regular BigWig data:
-// { starts: Int32Array, ends: Int32Array, scores: Float32Array }
-
-// For summary/zoomed data (when using scale parameter):
-// { starts: Int32Array, ends: Int32Array, scores: Float32Array,
-//   minScores: Float32Array, maxScores: Float32Array }
-```
-
-Example usage:
-
-```typescript
-const { starts, ends, scores } = await bigwig.getFeaturesAsArrays(
-  'chr1',
-  0,
-  100000,
-)
-for (let i = 0; i < starts.length; i++) {
-  console.log(`Feature at ${starts[i]}-${ends[i]} with score ${scores[i]}`)
-}
-
-// Check if it's summary data using the isSummary discriminant
-const result = await bigwig.getFeaturesAsArrays('chr1', 0, 100000, {
-  scale: 0.01,
-})
-if (result.isSummary) {
-  // Summary data with min/max scores
-  const { minScores, maxScores } = result
-  for (let i = 0; i < result.starts.length; i++) {
-    console.log(`Range: ${minScores[i]} - ${maxScores[i]}`)
-  }
-}
-```
-
-TypeScript types:
-
-```typescript
-interface BigWigFeatureArrays {
-  starts: Int32Array
-  ends: Int32Array
-  scores: Float32Array
-  isSummary: false
-}
-
-interface SummaryFeatureArrays {
-  starts: Int32Array
-  ends: Int32Array
-  scores: Float32Array
-  minScores: Float32Array
-  maxScores: Float32Array
-  isSummary: true
-}
-```
-
-The `isSummary` discriminant allows TypeScript to properly narrow the union
-type, making it easier to safely access `minScores` and `maxScores` only when
-they exist.
-
-### BigBed
-
-#### getFeatures(refName, start, end, opts)
-
-- refName - a name of a chromosome in the file
-- start - a 0-based half open start coordinate
-- end - a 0-based half open end coordinate
-- opts.signal - optional, an AbortSignal to halt processing
-
-returns a promise to an array of features. no concept of zoom levels is used
-with bigbed data
-
-#### searchExtraIndex(name, opts)
-
-Specific, to bigbed files, this method searches the bigBed "extra indexes",
-there can be multiple indexes e.g. for the gene ID and gene name columns. See
-the usage of -extraIndex in bedToBigBed here
-https://genome.ucsc.edu/goldenpath/help/bigBed.html
-
-This function accepts two arguments
-
-- name: a string to search for in the BigBed extra indices
-- opts: an object that can optionally contain opts.signal, an abort signal
-
-Returns a Promise to an array of Features, with an extra field indicating the
-field that was matched
-
 ### How to parse BigBed results
 
-The BigBed line contents are returned as a raw text line e.g. {start: 0,
-end:100, rest: "ENST00000456328.2\t1000\t..."} where "rest" contains tab
-delimited text for the fields from 4 and on in the BED format. Since BED files
-from BigBed format often come with autoSql (a description of all the columns) it
-can be useful to parse it with BED parser that can handle autoSql. The rest line
-can be parsed by the @gmod/bed module, which is not by default integrated with
-this module, but can be combined with it as follows
+BigBed features are returned as `{ start, end, rest, uniqueId }` where `rest`
+is the raw tab-delimited text for BED columns 4+. Parse it with
+[`@gmod/bed`](https://www.npmjs.com/package/@gmod/bed):
 
 ```typescript
 import { BigBed } from '@gmod/bbi'
@@ -260,85 +86,657 @@ const lines = feats.map(f => {
   const { start, end, rest, uniqueId } = f
   return parser.parseLine(`chr7\t${start}\t${end}\t${rest}`, { uniqueId })
 })
-// @gmod/bbi returns features with {uniqueId, start, end, rest}
-// we reconstitute this as a line for @gmod/bed with a template string
-// note: the uniqueId is based on file offsets and helps to deduplicate exact feature copies if they exist
 ```
 
-Features before parsing with @gmod/bed:
+`uniqueId` is derived from file offsets and deduplicates exact feature copies.
+
+Feature before parsing:
 
 ```json
-{
-  "chromId": 0,
-  "start": 64068,
-  "end": 64107,
-  "rest": "uc003sil.1\t0\t-\t64068\t64068\t255,0,0\t.\tDQ584609",
-  "uniqueId": "bb-171"
-}
+{ "start": 64068, "end": 64107, "rest": "uc003sil.1\t0\t-\t64068\t64068\t255,0,0\t.\tDQ584609", "uniqueId": "bb-171" }
 ```
 
-Features after parsing with @gmod/bed:
+Feature after parsing with `@gmod/bed`:
 
 ```json
-{
-  "uniqueId": "bb-0",
-  "chrom": "chr7",
-  "chromStart": 54028,
-  "chromEnd": 73584,
-  "name": "uc003sii.2",
-  "score": 0,
-  "strand": -1,
-  "thickStart": 54028,
-  "thickEnd": 54028,
-  "reserved": "255,0,0",
-  "spID": "AL137655"
-}
+{ "uniqueId": "bb-0", "chrom": "chr7", "chromStart": 54028, "chromEnd": 73584, "name": "uc003sii.2", "score": 0, "strand": -1, "thickStart": 54028, "thickEnd": 54028, "reserved": "255,0,0", "spID": "AL137655" }
 ```
 
-### parseBigWig(bigwig, opts)
+## API Reference
+## Classes
 
-A convenience function that reads all features from every chromosome in a BigWig
-file, returning non-empty base-resolution results only (no zoom levels).
+### ArrayFeatureView
 
-- bigwig - a `BigWig` instance
-- opts - optional `RequestOptions` (e.g. `opts.signal` for abort)
+Wraps a `BigWigFeatureArrays` or `SummaryFeatureArrays` result and exposes
+a JBrowse-compatible `Feature`-style interface. Use `view.get(i, key)` to
+read individual feature fields, or iterate with `view.length`.
 
-Returns a `Promise<BigWigFeatureArrays[]>`, one entry per chromosome that has
-data.
+#### Constructors
 
-```typescript
-import { BigWig, parseBigWig } from '@gmod/bbi'
+##### Constructor
 
-const file = new BigWig({ path: 'volvox.bw' })
-const results = await parseBigWig(file)
-for (const { starts, ends, scores } of results) {
-  for (let i = 0; i < starts.length; i++) {
-    console.log(starts[i], ends[i], scores[i])
-  }
-}
+```ts
+new ArrayFeatureView(
+   arrays, 
+   source, 
+   refName): ArrayFeatureView;
 ```
 
-### ArrayFeatureView / BigWigFeature
+###### Parameters
 
-`ArrayFeatureView` wraps a `BigWigFeatureArrays` or `SummaryFeatureArrays`
-result and exposes a JBrowse-compatible `Feature`-style interface.
-`BigWigFeature` is a single-feature view into an `ArrayFeatureView`.
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `arrays` | \| [`BigWigFeatureArrays`](#bigwigfeaturearrays) \| [`SummaryFeatureArrays`](#summaryfeaturearrays) | typed arrays result from `getFeaturesAsArrays` |
+| `source` | `string` | source identifier (e.g. track name) attached to each feature |
+| `refName` | `string` | chromosome name attached to each feature |
 
-```typescript
-import { BigWig, ArrayFeatureView } from '@gmod/bbi'
+###### Returns
 
-const file = new BigWig({ path: 'volvox.bw' })
-const arrays = await file.getFeaturesAsArrays('chr1', 0, 100000)
-const view = new ArrayFeatureView(arrays, 'mySource', 'chr1')
+[`ArrayFeatureView`](#arrayfeatureview)
 
-for (let i = 0; i < view.length; i++) {
-  console.log(view.start(i), view.end(i), view.score(i))
-}
+#### Accessors
+
+##### length
+
+###### Get Signature
+
+```ts
+get length(): number;
 ```
 
-`BigWigFeature` instances are also iterable via `view.get(i, key)` and expose a
-`toJSON()` method. Keys: `start`, `end`, `score`, `refName`, `source`,
+Number of features in this view.
+
+###### Returns
+
+`number`
+
+#### Methods
+
+##### get()
+
+```ts
+get(i, key): string | number | boolean | undefined;
+```
+
+Returns the value of `key` for feature at index `i`.
+Valid keys: `start`, `end`, `score`, `refName`, `source`, `summary`,
+`minScore`, `maxScore`.
+
+###### Parameters
+
+| Parameter | Type |
+| ------ | ------ |
+| `i` | `number` |
+| `key` | `string` |
+
+###### Returns
+
+`string` \| `number` \| `boolean` \| `undefined`
+
+***
+
+### BigBed
+
+Parser for BigBed files. Inherits `getHeader`, `getFeatures`, and
+`getFeaturesMulti` from `BBI`.
+
+Features have an additional `rest` field containing raw tab-delimited BED
+columns 4+, and a `uniqueId` derived from the file offset. No zoom levels
+are used for BigBed data.
+
+#### Extends
+
+- `BBI`
+
+#### Constructors
+
+##### Constructor
+
+```ts
+new BigBed(args): BigBed;
+```
+
+###### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `args` | \{ `filehandle?`: `GenericFilehandle`; `path?`: `string`; `renameRefSeqs?`: (`a`) => `string`; `url?`: `string`; \} | - |
+| `args.filehandle?` | `GenericFilehandle` | a filehandle from generic-filehandle2 |
+| `args.path?` | `string` | path to a local file |
+| `args.renameRefSeqs?` | (`a`) => `string` | optional mapping function to rename internal reference sequence names before querying |
+| `args.url?` | `string` | URL of a remote file |
+
+###### Returns
+
+[`BigBed`](#bigbed)
+
+###### Inherited from
+
+```ts
+BBI.constructor
+```
+
+#### Methods
+
+##### getFeatures()
+
+```ts
+getFeatures(
+   refName, 
+   start, 
+   end, 
+opts?): Promise<Feature[]>;
+```
+
+Fetches features for a single region.
+
+###### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `refName` | `string` | chromosome name as it appears in the file |
+| `start` | `number` | 0-based half-open start coordinate |
+| `end` | `number` | 0-based half-open end coordinate |
+| `opts?` | [`RequestOptions2`](#requestoptions2) | optional scale/basesPerSpan for zoom level selection and AbortSignal |
+
+###### Returns
+
+`Promise`\<[`Feature`](#feature)[]\>
+
+`Promise<Feature[]>` — empty array if refName not found or no
+  features overlap the range
+
+###### Inherited from
+
+```ts
+BBI.getFeatures
+```
+
+##### getFeaturesAsArrays()
+
+```ts
+getFeaturesAsArrays(
+   refName, 
+   start, 
+   end, 
+   opts?): Promise<
+  | BigWigFeatureArrays
+| SummaryFeatureArrays>;
+```
+
+Same query as `getFeatures` but returns typed arrays instead of an array
+of objects, reducing GC pressure for large datasets.
+
+###### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `refName` | `string` | chromosome name as it appears in the file |
+| `start` | `number` | 0-based half-open start coordinate |
+| `end` | `number` | 0-based half-open end coordinate |
+| `opts?` | [`RequestOptions2`](#requestoptions2) | optional scale/basesPerSpan for zoom level selection and AbortSignal |
+
+###### Returns
+
+`Promise`\<
+  \| [`BigWigFeatureArrays`](#bigwigfeaturearrays)
+  \| [`SummaryFeatureArrays`](#summaryfeaturearrays)\>
+
+`Promise<BigWigFeatureArrays | SummaryFeatureArrays>` — use the
+  `isSummary` discriminant to distinguish the two shapes
+
+###### Inherited from
+
+```ts
+BBI.getFeaturesAsArrays
+```
+
+##### getFeaturesMulti()
+
+```ts
+getFeaturesMulti(regions, opts?): Promise<Feature[][]>;
+```
+
+Fetches features for many regions in a single pass. All regions share one
+zoom level, and adjacent on-disk blocks are coalesced across region
+boundaries, reducing range requests for whole-genome overviews.
+
+###### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `regions` | `object`[] | array of `{ refName, start, end }` query regions |
+| `opts?` | [`RequestOptions2`](#requestoptions2) | same options as `getFeatures` |
+
+###### Returns
+
+`Promise`\<[`Feature`](#feature)[][]\>
+
+`Promise<Feature[][]>` — one `Feature[]` per input region in the
+  same order (`result[i]` corresponds to `regions[i]`)
+
+###### Inherited from
+
+```ts
+BBI.getFeaturesMulti
+```
+
+##### getHeader()
+
+```ts
+getHeader(opts?): Promise<BigWigHeaderWithRefNames>;
+```
+
+Returns file header metadata including chromosome list, zoom levels, autoSql
+definition, and summary statistics.
+
+###### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `opts?` | [`RequestOptions`](#requestoptions) | optional `RequestOptions` (e.g. `opts.signal` for abort) |
+
+###### Returns
+
+`Promise`\<[`BigWigHeaderWithRefNames`](#bigwigheaderwithrefnames)\>
+
+`Promise<BigWigHeaderWithRefNames>`
+
+###### Inherited from
+
+```ts
+BBI.getHeader
+```
+
+##### searchExtraIndex()
+
+```ts
+searchExtraIndex(name, opts?): Promise<object[]>;
+```
+
+Searches BigBed extra indexes (created via `-extraIndex` in `bedToBigBed`)
+for a given name. A file may have multiple extra indexes, e.g. for gene ID
+and gene name columns.
+
+###### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `name` | `string` | value to look up in the extra index |
+| `opts` | [`RequestOptions`](#requestoptions) | optional `RequestOptions` (e.g. `opts.signal` for abort) |
+
+###### Returns
+
+`Promise`\<`object`[]\>
+
+`Promise<Feature[]>` — matching features with an added `field`
+  property indicating which extra-index column was matched
+
+***
+
+### BigWig
+
+Parser for BigWig files. Inherits `getHeader`, `getFeatures`,
+`getFeaturesMulti`, and `getFeaturesAsArrays` from `BBI`.
+
+Supports zoom levels — pass `opts.scale` or `opts.basesPerSpan` to
+automatically select the appropriate pre-computed zoom level.
+
+#### Extends
+
+- `BBI`
+
+#### Constructors
+
+##### Constructor
+
+```ts
+new BigWig(args): BigWig;
+```
+
+###### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `args` | \{ `filehandle?`: `GenericFilehandle`; `path?`: `string`; `renameRefSeqs?`: (`a`) => `string`; `url?`: `string`; \} | - |
+| `args.filehandle?` | `GenericFilehandle` | a filehandle from generic-filehandle2 |
+| `args.path?` | `string` | path to a local file |
+| `args.renameRefSeqs?` | (`a`) => `string` | optional mapping function to rename internal reference sequence names before querying |
+| `args.url?` | `string` | URL of a remote file |
+
+###### Returns
+
+[`BigWig`](#bigwig)
+
+###### Inherited from
+
+```ts
+BBI.constructor
+```
+
+#### Methods
+
+##### getFeatures()
+
+```ts
+getFeatures(
+   refName, 
+   start, 
+   end, 
+opts?): Promise<Feature[]>;
+```
+
+Fetches features for a single region.
+
+###### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `refName` | `string` | chromosome name as it appears in the file |
+| `start` | `number` | 0-based half-open start coordinate |
+| `end` | `number` | 0-based half-open end coordinate |
+| `opts?` | [`RequestOptions2`](#requestoptions2) | optional scale/basesPerSpan for zoom level selection and AbortSignal |
+
+###### Returns
+
+`Promise`\<[`Feature`](#feature)[]\>
+
+`Promise<Feature[]>` — empty array if refName not found or no
+  features overlap the range
+
+###### Inherited from
+
+```ts
+BBI.getFeatures
+```
+
+##### getFeaturesAsArrays()
+
+```ts
+getFeaturesAsArrays(
+   refName, 
+   start, 
+   end, 
+   opts?): Promise<
+  | BigWigFeatureArrays
+| SummaryFeatureArrays>;
+```
+
+Same query as `getFeatures` but returns typed arrays instead of an array
+of objects, reducing GC pressure for large datasets.
+
+###### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `refName` | `string` | chromosome name as it appears in the file |
+| `start` | `number` | 0-based half-open start coordinate |
+| `end` | `number` | 0-based half-open end coordinate |
+| `opts?` | [`RequestOptions2`](#requestoptions2) | optional scale/basesPerSpan for zoom level selection and AbortSignal |
+
+###### Returns
+
+`Promise`\<
+  \| [`BigWigFeatureArrays`](#bigwigfeaturearrays)
+  \| [`SummaryFeatureArrays`](#summaryfeaturearrays)\>
+
+`Promise<BigWigFeatureArrays | SummaryFeatureArrays>` — use the
+  `isSummary` discriminant to distinguish the two shapes
+
+###### Inherited from
+
+```ts
+BBI.getFeaturesAsArrays
+```
+
+##### getFeaturesMulti()
+
+```ts
+getFeaturesMulti(regions, opts?): Promise<Feature[][]>;
+```
+
+Fetches features for many regions in a single pass. All regions share one
+zoom level, and adjacent on-disk blocks are coalesced across region
+boundaries, reducing range requests for whole-genome overviews.
+
+###### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `regions` | `object`[] | array of `{ refName, start, end }` query regions |
+| `opts?` | [`RequestOptions2`](#requestoptions2) | same options as `getFeatures` |
+
+###### Returns
+
+`Promise`\<[`Feature`](#feature)[][]\>
+
+`Promise<Feature[][]>` — one `Feature[]` per input region in the
+  same order (`result[i]` corresponds to `regions[i]`)
+
+###### Inherited from
+
+```ts
+BBI.getFeaturesMulti
+```
+
+##### getHeader()
+
+```ts
+getHeader(opts?): Promise<BigWigHeaderWithRefNames>;
+```
+
+Returns file header metadata including chromosome list, zoom levels, autoSql
+definition, and summary statistics.
+
+###### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `opts?` | [`RequestOptions`](#requestoptions) | optional `RequestOptions` (e.g. `opts.signal` for abort) |
+
+###### Returns
+
+`Promise`\<[`BigWigHeaderWithRefNames`](#bigwigheaderwithrefnames)\>
+
+`Promise<BigWigHeaderWithRefNames>`
+
+###### Inherited from
+
+```ts
+BBI.getHeader
+```
+
+***
+
+### BigWigFeature
+
+Single-feature view into an `ArrayFeatureView`. Exposes a JBrowse-compatible
+`Feature`-style `get(key)` interface and a `toJSON()` method.
+
+Valid keys for `get()`: `start`, `end`, `score`, `refName`, `source`,
 `summary`, `minScore`, `maxScore`.
+
+#### Methods
+
+##### get()
+
+```ts
+get(key): any;
+```
+
+Returns the value of `key` for this feature.
+Valid keys: `start`, `end`, `score`, `refName`, `source`, `summary`,
+`minScore`, `maxScore`.
+
+###### Parameters
+
+| Parameter | Type |
+| ------ | ------ |
+| `key` | `string` |
+
+###### Returns
+
+`any`
+
+##### toJSON()
+
+```ts
+toJSON(): object;
+```
+
+Returns a plain-object representation of this feature.
+
+###### Returns
+
+`object`
+
+| Name | Type | Default value |
+| ------ | ------ | ------ |
+| `end` | `number` | - |
+| `maxScore` | `number` \| `undefined` | - |
+| `minScore` | `number` \| `undefined` | - |
+| `refName` | `string` | `view.refName` |
+| `score` | `number` | - |
+| `source` | `string` | `view.source` |
+| `start` | `number` | - |
+| `summary` | `boolean` | `view.isSummary` |
+| `uniqueId` | `string` | - |
+
+## Interfaces
+
+### BigWigFeatureArrays
+
+Typed-array result for base-resolution BigWig features (`isSummary: false`).
+
+***
+
+### BigWigHeader
+
+Raw parsed BigWig/BigBed file header (without chromosome maps).
+
+#### Extended by
+
+- [`BigWigHeaderWithRefNames`](#bigwigheaderwithrefnames)
+
+#### Properties
+
+| Property | Type | Description |
+| ------ | ------ | ------ |
+| <a id="autosql"></a> `autoSql` | `string` | autoSql schema string (BigBed only; empty string for BigWig). |
+
+***
+
+### BigWigHeaderWithRefNames
+
+BigWig/BigBed file header including chromosome name and ID maps. Returned by `getHeader()`.
+
+#### Extends
+
+- [`BigWigHeader`](#bigwigheader)
+
+#### Properties
+
+| Property | Type | Description | Inherited from |
+| ------ | ------ | ------ | ------ |
+| <a id="autosql-1"></a> `autoSql` | `string` | autoSql schema string (BigBed only; empty string for BigWig). | [`BigWigHeader`](#bigwigheader).[`autoSql`](#autosql) |
+| <a id="refsbyname"></a> `refsByName` | `Record`\<`string`, `number`\> | Map from chromosome name → internal integer ID. | - |
+| <a id="refsbynumber"></a> `refsByNumber` | `Record`\<`number`, [`RefInfo`](#refinfo)\> | Map from internal integer ID → `RefInfo`. | - |
+
+***
+
+### Feature
+
+A single feature returned by `getFeatures`.
+
+#### Properties
+
+| Property | Type | Description |
+| ------ | ------ | ------ |
+| <a id="end"></a> `end` | `number` | 0-based half-open end coordinate. |
+| <a id="field"></a> `field?` | `number` | Extra-index column that matched during a `searchExtraIndex` call (BigBed only). |
+| <a id="maxscore"></a> `maxScore?` | `number` | Maximum score in a summary interval (zoom data only). |
+| <a id="minscore"></a> `minScore?` | `number` | Minimum score in a summary interval (zoom data only). |
+| <a id="rest"></a> `rest?` | `string` | Raw tab-delimited BED columns 4+ (BigBed only). |
+| <a id="score"></a> `score?` | `number` | Signal score (BigWig) or BED score (BigBed). |
+| <a id="start"></a> `start` | `number` | 0-based half-open start coordinate. |
+| <a id="summary"></a> `summary?` | `boolean` | True when the feature comes from a zoom/summary level. |
+| <a id="uniqueid"></a> `uniqueId?` | `string` | Stable ID derived from the file offset; used to deduplicate exact copies (BigBed only). |
+
+***
+
+### RefInfo
+
+Chromosome metadata from the BigWig/BigBed header.
+
+***
+
+### RequestOptions
+
+Options accepted by all data-fetching methods.
+
+#### Extended by
+
+- [`RequestOptions2`](#requestoptions2)
+
+***
+
+### RequestOptions2
+
+Options for `getFeatures` / `getFeaturesMulti` / `getFeaturesAsArrays`.
+
+#### Extends
+
+- [`RequestOptions`](#requestoptions)
+
+#### Properties
+
+| Property | Type | Description |
+| ------ | ------ | ------ |
+| <a id="basesperspan"></a> `basesPerSpan?` | `number` | Bases per pixel — inverse of `scale`. Use one or the other. |
+| <a id="scale"></a> `scale?` | `number` | Pixels per base pair — selects the zoom level whose `reductionLevel <= 2 / scale`. Omit for base-resolution data. |
+
+***
+
+### Statistics
+
+Summary statistics stored in the BigWig file header.
+
+***
+
+### SummaryFeatureArrays
+
+Typed-array result for zoom/summary BigWig features (`isSummary: true`).
+
+***
+
+### ZoomLevel
+
+A zoom level entry from the BigWig file header.
+
+## Functions
+
+### parseBigWig()
+
+```ts
+function parseBigWig(bigwig, opts?): Promise<BigWigFeatureArrays[]>;
+```
+
+Reads all base-resolution features from every chromosome in a BigWig file.
+Zoom levels and chromosomes with no data are skipped.
+
+#### Parameters
+
+| Parameter | Type | Description |
+| ------ | ------ | ------ |
+| `bigwig` | [`BigWig`](#bigwig) | a `BigWig` instance |
+| `opts?` | [`RequestOptions2`](#requestoptions2) | optional `RequestOptions` (e.g. `opts.signal` for abort) |
+
+#### Returns
+
+`Promise`\<[`BigWigFeatureArrays`](#bigwigfeaturearrays)[]\>
+
+`Promise<BigWigFeatureArrays[]>` — one entry per chromosome that
+  has data, in chromosome order
 
 ## Publishing
 
