@@ -2,6 +2,13 @@ import { BBI } from './bbi.ts'
 
 import type { RequestOptions } from './types.ts'
 
+/**
+ * Parser for BigWig files. Inherits `getHeader`, `getFeatures`,
+ * `getFeaturesMulti`, and `getFeaturesAsArrays` from `BBI`.
+ *
+ * Supports zoom levels — pass `opts.scale` or `opts.basesPerSpan` to
+ * automatically select the appropriate pre-computed zoom level.
+ */
 export class BigWig extends BBI {
   /**
    * Retrieves a BlockView of a specific zoomLevel

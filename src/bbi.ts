@@ -27,6 +27,13 @@ export abstract class BBI {
 
   protected renameRefSeqs: (a: string) => string
 
+  /**
+   * Returns file header metadata including chromosome list, zoom levels, autoSql
+   * definition, and summary statistics.
+   *
+   * @param opts - optional `RequestOptions` (e.g. `opts.signal` for abort)
+   * @returns `Promise<BigWigHeaderWithRefNames>`
+   */
   public getHeader(opts?: RequestOptions) {
     if (!this.headerP) {
       this.headerP = this._getHeader(opts).catch((e: unknown) => {
@@ -37,15 +44,12 @@ export abstract class BBI {
     return this.headerP
   }
 
-  /*
-   * @param filehandle - a filehandle from generic-filehandle2
-   *
-   * @param path - a Local file path as a string
-   *
-   * @param url - a URL string
-   *
-   * @param renameRefSeqs - an optional method to rename the internal reference
-   * sequences using a mapping function
+  /**
+   * @param args.filehandle - a filehandle from generic-filehandle2
+   * @param args.path - path to a local file
+   * @param args.url - URL of a remote file
+   * @param args.renameRefSeqs - optional mapping function to rename internal
+   *   reference sequence names before querying
    */
   public constructor(args: {
     filehandle?: GenericFilehandle
@@ -307,6 +311,15 @@ export abstract class BBI {
     return this.getView(viewScale, opts)
   }
 
+  /**
+   * Fetches features for a single region.
+   *
+   * @param refName - chromosome name as it appears in the file
+   * @param start - 0-based half-open start coordinate
+   * @param end - 0-based half-open end coordinate
+   * @param opts - optional scale/basesPerSpan for zoom level selection and AbortSignal
+   * @returns `Promise<Feature[]>` — empty array if refName not found or no features overlap the range
+   */
   public async getFeatures(
     refName: string,
     start: number,
@@ -317,12 +330,15 @@ export abstract class BBI {
     return view.readWigData(this.renameRefSeqs(refName), start, end, opts)
   }
 
-  /*
-   * Fetch features for many regions at one zoom level in a single pass. All
-   * regions share one view (the zoom level depends on scale, not range), and
-   * blocks across regions are coalesced so adjacent on-disk blocks become one
-   * read. For whole-genome overviews this collapses one-request-per-chromosome
-   * into a handful of reads. Returns features per region, aligned to input.
+  /**
+   * Fetches features for many regions in a single pass. All regions share one
+   * zoom level, and adjacent on-disk blocks are coalesced across region
+   * boundaries, reducing range requests for whole-genome overviews.
+   *
+   * @param regions - array of `{ refName, start, end }` query regions
+   * @param opts - same options as `getFeatures`
+   * @returns `Promise<Feature[][]>` — one `Feature[]` per input region in the
+   *   same order (`result[i]` corresponds to `regions[i]`)
    */
   public async getFeaturesMulti(
     regions: { refName: string; start: number; end: number }[],
@@ -339,6 +355,17 @@ export abstract class BBI {
     )
   }
 
+  /**
+   * Same query as `getFeatures` but returns typed arrays instead of an array
+   * of objects, reducing GC pressure for large datasets.
+   *
+   * @param refName - chromosome name as it appears in the file
+   * @param start - 0-based half-open start coordinate
+   * @param end - 0-based half-open end coordinate
+   * @param opts - optional scale/basesPerSpan for zoom level selection and AbortSignal
+   * @returns `Promise<BigWigFeatureArrays | SummaryFeatureArrays>` — use the
+   *   `isSummary` discriminant to distinguish the two shapes
+   */
   public async getFeaturesAsArrays(
     refName: string,
     start: number,
