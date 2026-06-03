@@ -7,6 +7,7 @@ import type {
   BigWigFeatureArrays,
   BigWigHeader,
   BigWigHeaderWithRefNames,
+  Feature,
   RefInfo,
   RequestOptions2,
   RequestOptions,
@@ -314,6 +315,28 @@ export abstract class BBI {
   ) {
     const view = await this._getView(opts)
     return view.readWigData(this.renameRefSeqs(refName), start, end, opts)
+  }
+
+  /*
+   * Fetch features for many regions at one zoom level in a single pass. All
+   * regions share one view (the zoom level depends on scale, not range), and
+   * blocks across regions are coalesced so adjacent on-disk blocks become one
+   * read. For whole-genome overviews this collapses one-request-per-chromosome
+   * into a handful of reads. Returns features per region, aligned to input.
+   */
+  public async getFeaturesMulti(
+    regions: { refName: string; start: number; end: number }[],
+    opts?: RequestOptions2,
+  ): Promise<Feature[][]> {
+    const view = await this._getView(opts)
+    return view.readWigDataMulti(
+      regions.map(r => ({
+        refName: this.renameRefSeqs(r.refName),
+        start: r.start,
+        end: r.end,
+      })),
+      opts,
+    )
   }
 
   public async getFeaturesAsArrays(

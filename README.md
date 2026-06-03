@@ -110,6 +110,24 @@ const feats = await bigwig.getFeatures('chr1', 0, 100)
 // note refseq is not returned on the object, it is clearly chr1 from the query though
 ```
 
+#### getFeaturesMulti(regions, opts)
+
+Fetches features for many regions at once. `regions` is an array of
+`{ refName, start, end }`; `opts` is the same as getFeatures. Returns feature
+arrays aligned to input order (result `[i]` is for `regions[i]`).
+
+```typescript
+const perRegion = await bigwig.getFeaturesMulti([
+  { refName: 'chr1', start: 0, end: 1_000_000 },
+  { refName: 'chr2', start: 0, end: 1_000_000 },
+])
+```
+
+Reads for adjacent on-disk blocks are coalesced across region boundaries, so a
+whole-genome overview can use far fewer range requests than calling getFeatures
+per region — handy for rate-limited remote files. Regions may be in any order
+and may overlap.
+
 ### Understanding scale and reductionLevel
 
 Here is what the reductionLevel structure looks like in a file. The zoomLevel
