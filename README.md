@@ -68,8 +68,15 @@ Pass exactly one of:
 | `path` | Path to a local file |
 | `url` | URL of a remote file |
 | `filehandle` | A `GenericFilehandle` instance from [generic-filehandle2](https://www.npmjs.com/package/generic-filehandle2) |
+| `renameRefSeqs` | Optional `(name: string) => string` mapping applied to chromosome names before every query — useful when file-internal names differ from query names (e.g. `s => s.replace('chr', '')`) |
 
 ### BigWig
+
+#### `getHeader(opts?)`
+
+Returns `Promise<BigWigHeaderWithRefNames>` with chromosome list (`refsByName`,
+`refsByNumber`), zoom levels, summary statistics, and — for BigBed files — the
+`autoSql` schema string. The result is cached after the first call.
 
 #### `getFeatures(refName, start, end, opts?)`
 
@@ -169,6 +176,23 @@ coarsest zoom inward:
 ```
 
 If no zoom level matches (e.g. `scale: 1`), base-resolution data is returned.
+
+### `Feature` type
+
+Both `BigWig` and `BigBed` return `Feature` objects. Fields vary by file type
+and zoom level:
+
+| Field | Present on | Description |
+|---|---|---|
+| `start` | always | 0-based half-open start |
+| `end` | always | 0-based half-open end |
+| `score` | always | Signal value (BigWig) or BED score (BigBed) |
+| `rest` | BigBed | Raw tab-delimited BED columns 4+ |
+| `uniqueId` | BigBed | Stable ID from file offset; deduplicates exact copies |
+| `field` | BigBed (`searchExtraIndex`) | Which extra-index column matched |
+| `minScore` | zoom data | Minimum score across the summary interval |
+| `maxScore` | zoom data | Maximum score across the summary interval |
+| `summary` | zoom data | `true` when the feature comes from a zoom level |
 
 ### BigBed
 
