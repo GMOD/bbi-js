@@ -144,6 +144,43 @@ test('getFeaturesMulti is order-independent', async () => {
   expect(fhSorted.reads - beforeSorted).toBe(scrambledReads)
 })
 
+test.each([
+  ['summary zoom', 1 / 20000],
+  ['base level', 1],
+])('getFeaturesMultiAsArrays matches per-region (%s)', async (_label, scale) => {
+  const bw = new BigWig({ path: 'test/data/cDC.bw' })
+  const regions = [
+    { refName: 'chr1', start: 1_000_000, end: 3_000_000 },
+    { refName: 'chr2', start: 0, end: 5_000_000 },
+    { refName: 'chr1', start: 2_000_000, end: 4_000_000 }, // overlaps region 0
+  ]
+  const multi = await bw.getFeaturesMultiAsArrays(regions, { scale })
+  expect(multi.length).toBe(regions.length)
+  for (let i = 0; i < regions.length; i++) {
+    const r = regions[i]!
+    const truth = await bw.getFeaturesAsArrays(r.refName, r.start, r.end, {
+      scale,
+    })
+    expect(multi[i]).toStrictEqual(truth)
+  }
+})
+
+test('getFeaturesMultiAsArrays handles unknown refName and empty input', async () => {
+  const bw = new BigWig({ path: 'test/data/cDC.bw' })
+  const res = await bw.getFeaturesMultiAsArrays(
+    [
+      { refName: 'chr1', start: 0, end: 100000 },
+      { refName: 'nonexistent', start: 0, end: 100 },
+    ],
+    { scale: 1 },
+  )
+  expect(res.length).toBe(2)
+  expect(res[1]!.starts.length).toBe(0)
+  expect(res[1]!.ends.length).toBe(0)
+  expect(res[1]!.scores.length).toBe(0)
+  expect(await bw.getFeaturesMultiAsArrays([], { scale: 1 })).toStrictEqual([])
+})
+
 test('getFeaturesMulti handles unknown refName and empty input', async () => {
   const bw = new BigWig({ path: 'test/data/cDC.bw' })
   const scale = 1 / 1000

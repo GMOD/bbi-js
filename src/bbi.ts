@@ -339,6 +339,25 @@ export abstract class BBI {
     )
   }
 
+  /*
+   * Typed-array variant of getFeaturesMulti. Same coalescing across regions,
+   * returning per-region typed arrays aligned to input order.
+   */
+  public async getFeaturesMultiAsArrays(
+    regions: { refName: string; start: number; end: number }[],
+    opts?: RequestOptions2,
+  ): Promise<(BigWigFeatureArrays | SummaryFeatureArrays)[]> {
+    const view = await this._getView(opts)
+    return view.readWigDataMultiAsArrays(
+      regions.map(r => ({
+        refName: this.renameRefSeqs(r.refName),
+        start: r.start,
+        end: r.end,
+      })),
+      opts,
+    )
+  }
+
   public async getFeaturesAsArrays(
     refName: string,
     start: number,
