@@ -82,6 +82,18 @@ export interface RequestOptions {
   headers?: Record<string, string>
 }
 
+/**
+ * Download-progress callback. Called as data blocks are fetched, with cumulative
+ * downloaded bytes and the total bytes to fetch — both known up front since
+ * block byte sizes come from the R-tree index. Reported at block-group
+ * granularity (adjacent blocks coalesce into one read). Mirrors the equivalent
+ * callbacks in @gmod/bam, @gmod/cram, and @gmod/tabix.
+ */
+export type ProgressCallback = (
+  bytesDownloaded: number,
+  totalBytes: number,
+) => void
+
 /** Options for `getFeatures` / `getFeaturesMulti` / `getFeaturesAsArrays`. */
 export interface RequestOptions2 extends RequestOptions {
   /**
@@ -91,6 +103,8 @@ export interface RequestOptions2 extends RequestOptions {
   scale?: number
   /** Bases per pixel — inverse of `scale`. Use one or the other. */
   basesPerSpan?: number
+  /** Opt-in download-progress reporting; see {@link ProgressCallback}. */
+  onProgress?: ProgressCallback
 }
 
 /** Typed-array result for base-resolution BigWig features (`isSummary: false`). */

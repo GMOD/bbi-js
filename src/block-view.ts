@@ -9,7 +9,7 @@ import {
 } from './unzip.ts'
 import { decoder, getDataView, groupBlocks } from './util.ts'
 
-import type { Feature } from './types.ts'
+import type { Feature, ProgressCallback } from './types.ts'
 import type { BigWigFeatureArrays, SummaryFeatureArrays } from './unzip.ts'
 import type { Block } from './util.ts'
 import type { GenericFilehandle } from 'generic-filehandle2'
@@ -25,6 +25,26 @@ interface CoordRequest {
 interface Options {
   signal?: AbortSignal
   request?: CoordRequest
+  onProgress?: ProgressCallback
+}
+
+// Track block-download progress for a fetch loop. Total bytes are known up front
+// (block byte sizes come from the R-tree index), so this reports a determinate
+// fraction: call the returned fn with each fetched group's byte length.
+function blockProgress(
+  groups: { length: number }[],
+  onProgress: ProgressCallback | undefined,
+) {
+  let total = 0
+  for (const group of groups) {
+    total += group.length
+  }
+  let downloaded = 0
+  onProgress?.(0, total)
+  return (length: number) => {
+    downloaded += length
+    onProgress?.(downloaded, total)
+  }
 }
 
 // half-open [start,end) intersection: feature [s1,e1) overlaps query [s2,e2)
@@ -559,7 +579,7 @@ export class BlockView {
     }
 
     const { blockType, uncompressBufSize } = this
-    const { signal } = opts
+    const { signal, onProgress } = opts
     const parseInto = (resultData: Uint8Array, blockOffset: number) => {
       const tags = tagsByOffset.get(blockOffset)
       if (tags) {
@@ -572,10 +592,13 @@ export class BlockView {
       }
     }
 
-    for (const blockGroup of groupBlocks([...blockByOffset.values()])) {
+    const blockGroups = groupBlocks([...blockByOffset.values()])
+    const report = blockProgress(blockGroups, onProgress)
+    for (const blockGroup of blockGroups) {
       const data = await this.bbi.read(blockGroup.length, blockGroup.offset, {
         signal,
       })
+      report(blockGroup.length)
       const groupOffset = blockGroup.offset
       const subBlocks = blockGroup.blocks
 
@@ -649,13 +672,15 @@ export class BlockView {
     opts: Options = {},
   ): Promise<Feature[]> {
     const { blockType, uncompressBufSize } = this
-    const { signal, request } = opts
+    const { signal, request, onProgress } = opts
     const blockGroupsToFetch = groupBlocks(blocks)
+    const report = blockProgress(blockGroupsToFetch, onProgress)
     const allFeatures: Feature[] = []
     for (const blockGroup of blockGroupsToFetch) {
       const data = await this.bbi.read(blockGroup.length, blockGroup.offset, {
         signal,
       })
+      report(blockGroup.length)
       const groupOffset = blockGroup.offset
       const subBlocks = blockGroup.blocks
 
@@ -714,12 +739,16 @@ export class BlockView {
     parseGroup: (data: Uint8Array, localBlocks: Block[]) => Promise<T>,
     parseSingleBlock: (blockData: Uint8Array) => T,
     count: (chunk: T) => number,
+    onProgress?: ProgressCallback,
   ): Promise<T[]> {
     const chunks: T[] = []
-    for (const blockGroup of groupBlocks(blocks)) {
+    const blockGroups = groupBlocks(blocks)
+    const report = blockProgress(blockGroups, onProgress)
+    for (const blockGroup of blockGroups) {
       const data = await this.bbi.read(blockGroup.length, blockGroup.offset, {
         signal,
       })
+      report(blockGroup.length)
       const localBlocks = blockGroup.blocks.map(block => ({
         offset: block.offset - blockGroup.offset,
         length: block.length,
@@ -764,6 +793,7 @@ export class BlockView {
         ),
       blockData => parseBigWigBlockAsArrays(blockData, request),
       chunk => chunk.starts.length,
+      opts.onProgress,
     )
     const totalCount = chunks.reduce((n, chunk) => n + chunk.starts.length, 0)
     return {
@@ -805,6 +835,7 @@ export class BlockView {
         ),
       blockData => parseSummaryBlockAsArrays(blockData, request),
       chunk => chunk.starts.length,
+      opts.onProgress,
     )
     const totalCount = chunks.reduce((n, chunk) => n + chunk.starts.length, 0)
     return {
