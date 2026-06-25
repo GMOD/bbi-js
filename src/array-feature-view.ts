@@ -8,10 +8,13 @@ import type { BigWigFeatureArrays, SummaryFeatureArrays } from './types.ts'
  * `summary`, `minScore`, `maxScore`.
  */
 export class BigWigFeature {
-  constructor(
-    private view: ArrayFeatureView,
-    private i: number,
-  ) {}
+  private view: ArrayFeatureView
+  private i: number
+
+  constructor(view: ArrayFeatureView, i: number) {
+    this.view = view
+    this.i = i
+  }
 
   /** @internal */
   get(key: 'refName' | 'source'): string

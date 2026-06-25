@@ -414,19 +414,30 @@ export class BlockView {
       this.bbi.read(length, offset, { signal }),
   })
 
+  private bbi: GenericFilehandle
+  private refsByName: Record<string, number>
+  // Offset to the R-tree index in the file - this is part of the "cirTree"
+  // (combined ID R-tree), which combines a B+ tree for chromosome names
+  // with an R-tree for efficient spatial queries
+  private rTreeOffset: number
+  private uncompressBufSize: number
+  private blockType: string
+
   public constructor(
-    private bbi: GenericFilehandle,
-    private refsByName: Record<string, number>,
-    // Offset to the R-tree index in the file - this is part of the "cirTree"
-    // (combined ID R-tree), which combines a B+ tree for chromosome names
-    // with an R-tree for efficient spatial queries
-    private rTreeOffset: number,
-    private uncompressBufSize: number,
-    private blockType: string,
+    bbi: GenericFilehandle,
+    refsByName: Record<string, number>,
+    rTreeOffset: number,
+    uncompressBufSize: number,
+    blockType: string,
   ) {
     if (!(rTreeOffset >= 0)) {
       throw new Error('invalid rTreeOffset!')
     }
+    this.bbi = bbi
+    this.refsByName = refsByName
+    this.rTreeOffset = rTreeOffset
+    this.uncompressBufSize = uncompressBufSize
+    this.blockType = blockType
   }
 
   private async _collectBlocks(

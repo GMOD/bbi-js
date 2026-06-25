@@ -11,7 +11,10 @@ class CountingFile {
   reads = 0
   bytes = 0
   offsets: number[] = []
-  constructor(private inner: GenericFilehandle) {}
+  private inner: GenericFilehandle
+  constructor(inner: GenericFilehandle) {
+    this.inner = inner
+  }
   read(length: number, position: number, opts?: Record<string, unknown>) {
     this.reads++
     this.bytes += length
