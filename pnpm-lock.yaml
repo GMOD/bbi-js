@@ -15,8 +15,8 @@ importers:
         specifier: ^7.3.5
         version: 7.3.5
       generic-filehandle2:
-        specifier: ^2.1.9
-        version: 2.1.9
+        specifier: ^2.2.0
+        version: 2.2.0
     devDependencies:
       '@eslint/js':
         specifier: ^10.0.1
@@ -903,8 +903,8 @@ packages:
   function-bind@1.1.2:
     resolution: {integrity: sha512-7XHNxH7qX9xG5mIwxkhumTox/MIRNcOgDrxWsMt2pAr23WHp6MrRlN7FBSFpCpr+oVO0F744iUgR82nJMfG2SA==}
 
-  generic-filehandle2@2.1.9:
-    resolution: {integrity: sha512-2kMTEHulkO6G2JNPDrRufoU0BzO91WeYe8acyh7Xzq/slgTxtKBzk33gaTolQvx9ocFH4cvU6S96XRazcvS78Q==}
+  generic-filehandle2@2.2.0:
+    resolution: {integrity: sha512-gIE15MYVakEEzWvuNkUnTfjVWzodBi3T6stgRIXpWackW6FhiK5eOBBxif1Kq2wkiiegRGGqaxpv+qUmIzh3Lg==}
 
   get-tsconfig@4.14.0:
     resolution: {integrity: sha512-yTb+8DXzDREzgvYmh6s9vHsSVCHeC0G3PI5bEXNBHtmshPnO+S5O7qgLEOn0I5QvMy6kpZN8K1NKGyilLb93wA==}
@@ -2393,7 +2393,7 @@ snapshots:
 
   function-bind@1.1.2: {}
 
-  generic-filehandle2@2.1.9: {}
+  generic-filehandle2@2.2.0: {}
 
   get-tsconfig@4.14.0:
     dependencies:

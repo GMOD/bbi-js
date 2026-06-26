@@ -24,16 +24,17 @@ export function parseKey(buffer: Uint8Array, offset: number, keySize: number) {
 // sort blocks by file offset and
 // group blocks that are within 2KB of eachother
 export function groupBlocks(blocks: Block[]) {
-  blocks.sort((b0, b1) => b0.offset - b1.offset)
+  const sorted = blocks.toSorted((b0, b1) => b0.offset - b1.offset)
 
-  const blockGroups = []
+  const blockGroups: (Block & { blocks: Block[] })[] = []
   let lastBlock: (Block & { blocks: Block[] }) | undefined
-  let lastBlockEnd: number | undefined
-  for (const block of blocks) {
-    if (lastBlock && block.offset - lastBlockEnd! <= 2000) {
+  for (const block of sorted) {
+    if (
+      lastBlock &&
+      block.offset - (lastBlock.offset + lastBlock.length) <= 2000
+    ) {
       lastBlock.length = block.offset + block.length - lastBlock.offset
       lastBlock.blocks.push(block)
-      lastBlockEnd = block.offset + block.length
     } else {
       lastBlock = {
         blocks: [block],
@@ -41,7 +42,6 @@ export function groupBlocks(blocks: Block[]) {
         offset: block.offset,
       }
       blockGroups.push(lastBlock)
-      lastBlockEnd = block.offset + block.length
     }
   }
 

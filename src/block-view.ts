@@ -71,6 +71,15 @@ function coordFilter(s1: number, e1: number, s2: number, e2: number): boolean {
   return s1 < e2 && e1 > s2
 }
 
+// Mean score over the valid bases of a summary interval. When validCnt is 0
+// there are no valid bases and sumData is likewise 0, so returning sumData
+// matches the wasm summary parser (crate/src/lib.rs) and keeps the JS and wasm
+// parse paths bit-identical. Shared by both JS summary parsers below so they
+// can't drift from each other either.
+function summaryScore(sumData: number, validCnt: number): number {
+  return validCnt ? sumData / validCnt : sumData
+}
+
 function parseSummaryBlock(b: Uint8Array, request?: CoordRequest) {
   const features: Feature[] = []
   let offset = 0
@@ -102,7 +111,7 @@ function parseSummaryBlock(b: Uint8Array, request?: CoordRequest) {
         maxScore,
         minScore,
         summary: true,
-        score: validCnt ? sumData / validCnt : 0,
+        score: summaryScore(sumData, validCnt),
       })
     }
   }
@@ -357,7 +366,7 @@ function parseSummaryBlockAsArrays(
     ) {
       starts[idx] = start
       ends[idx] = end
-      scores[idx] = validCnt ? sumData / validCnt : 0
+      scores[idx] = summaryScore(sumData, validCnt)
       minScores[idx] = minScore
       maxScores[idx] = maxScore
       idx++
@@ -394,7 +403,11 @@ function concatTypedArray<T extends Int32Array | Float32Array>(
   return out
 }
 
-interface BigWigChunk { starts: Int32Array; ends: Int32Array; scores: Float32Array }
+interface BigWigChunk {
+  starts: Int32Array
+  ends: Int32Array
+  scores: Float32Array
+}
 type SummaryChunk = BigWigChunk & {
   minScores: Float32Array
   maxScores: Float32Array
@@ -597,8 +610,12 @@ export class BlockView {
       return undefined
     }
     if (!this.rTreePromise) {
+      // pass only signal, not onProgress: bbi reports determinate
+      // block-download progress itself via blockProgress, so the filehandle must
+      // not also fire onProgress for this small R-tree header read (matches the
+      // other block reads here, which likewise pass only signal)
       this.rTreePromise = this.bbi
-        .read(48, this.rTreeOffset, opts)
+        .read(48, this.rTreeOffset, { signal: opts?.signal })
         .catch((e: unknown) => {
           this.rTreePromise = undefined
           throw e
@@ -702,15 +719,11 @@ export class BlockView {
     })
   }
 
-  // Multi-region read: collect the R-tree blocks for every region, dedupe by
-  // file offset (a block surfaced by overlapping regions is fetched once but
-  // parsed per region), then group the union so physically adjacent blocks
-  // from different regions coalesce into a single read. Each block is tagged
-  // with the region(s) whose coord filter applies when parsing it. Returns
-  // features per region, aligned to the input order.
   // Collect the R-tree blocks for every region and dedupe them by file offset:
   // a block surfaced by multiple (overlapping) regions is fetched once but
-  // tagged with each region that wants it, so it gets parsed per region.
+  // tagged with each region that wants it, so it gets parsed per region. The
+  // caller groups the deduped union so physically adjacent blocks from
+  // different regions coalesce into a single read.
   private async _collectBlocksMulti(
     regions: { refName: string; start: number; end: number }[],
     opts: Options,
@@ -746,55 +759,23 @@ export class BlockView {
       opts,
     )
 
-    const { blockType, uncompressBufSize } = this
-    const { signal, onProgress } = opts
-    const parseInto = (resultData: Uint8Array, blockOffset: number) => {
-      const tags = tagsByOffset.get(blockOffset)
-      if (tags) {
-        for (const { regionIndex, request } of tags) {
-          const features = parseBlock(blockType, resultData, blockOffset, request)
-          for (const f of features) {
-            results[regionIndex]!.push(f)
+    const { blockType } = this
+    await this._forEachDecodedBlock(
+      [...blockByOffset.values()],
+      opts.signal,
+      opts.onProgress,
+      (data, blockOffset) => {
+        const tags = tagsByOffset.get(blockOffset)
+        if (tags) {
+          for (const { regionIndex, request } of tags) {
+            const features = parseBlock(blockType, data, blockOffset, request)
+            for (const f of features) {
+              results[regionIndex]!.push(f)
+            }
           }
         }
-      }
-    }
-
-    const blockGroups = groupBlocks([...blockByOffset.values()])
-    const report = blockProgress(blockGroups, onProgress)
-    for (const blockGroup of blockGroups) {
-      const data = await this.bbi.read(blockGroup.length, blockGroup.offset, {
-        signal,
-      })
-      report(blockGroup.length)
-      const groupOffset = blockGroup.offset
-      const subBlocks = blockGroup.blocks
-
-      if (uncompressBufSize > 0) {
-        const localBlocks = subBlocks.map(block => ({
-          offset: block.offset - groupOffset,
-          length: block.length,
-        }))
-        const { data: decompressedData, offsets } = await unzipBatch(
-          data,
-          localBlocks,
-          uncompressBufSize,
-        )
-        for (let i = 0; i < subBlocks.length; i++) {
-          const resultData = decompressedData.subarray(
-            offsets[i],
-            offsets[i + 1],
-          )
-          parseInto(resultData, subBlocks[i]!.offset)
-        }
-      } else {
-        for (const block of subBlocks) {
-          const start = block.offset - groupOffset
-          const resultData = data.subarray(start, start + block.length)
-          parseInto(resultData, block.offset)
-        }
-      }
-    }
+      },
+    )
     return results
   }
 
@@ -874,22 +855,39 @@ export class BlockView {
     opts: Options,
   ): Promise<T[][]> {
     const { blockByOffset, tagsByOffset } = collected
-    const { signal, onProgress } = opts
-    const { uncompressBufSize } = this
     const chunksByRegion: T[][] = Array.from({ length: regionCount }, () => [])
-    const parseInto = (resultData: Uint8Array, blockOffset: number) => {
-      const tags = tagsByOffset.get(blockOffset)
-      if (tags) {
-        for (const { regionIndex, request } of tags) {
-          const chunk = parseChunk(resultData, request)
-          if (chunk.starts.length > 0) {
-            chunksByRegion[regionIndex]!.push(chunk)
+    await this._forEachDecodedBlock(
+      [...blockByOffset.values()],
+      opts.signal,
+      opts.onProgress,
+      (data, blockOffset) => {
+        const tags = tagsByOffset.get(blockOffset)
+        if (tags) {
+          for (const { regionIndex, request } of tags) {
+            const chunk = parseChunk(data, request)
+            if (chunk.starts.length > 0) {
+              chunksByRegion[regionIndex]!.push(chunk)
+            }
           }
         }
-      }
-    }
+      },
+    )
+    return chunksByRegion
+  }
 
-    const blockGroups = groupBlocks([...blockByOffset.values()])
+  // Fetch each block group, decompress it (when compressed), and hand each
+  // block's decoded bytes plus its file offset to `visit`. Shared by every
+  // decompress-then-parse-in-JS reader (single-region, multi-region, and the
+  // typed-array multi path). The single-region typed-array path is separate
+  // because it fuses decompress+parse in one wasm call.
+  private async _forEachDecodedBlock(
+    blocks: Block[],
+    signal: AbortSignal | undefined,
+    onProgress: ProgressCallback | undefined,
+    visit: (data: Uint8Array, blockOffset: number) => void,
+  ): Promise<void> {
+    const { uncompressBufSize } = this
+    const blockGroups = groupBlocks(blocks)
     const report = blockProgress(blockGroups, onProgress)
     for (const blockGroup of blockGroups) {
       const data = await this.bbi.read(blockGroup.length, blockGroup.offset, {
@@ -910,81 +908,38 @@ export class BlockView {
           uncompressBufSize,
         )
         for (let i = 0; i < subBlocks.length; i++) {
-          const resultData = decompressedData.subarray(
-            offsets[i],
-            offsets[i + 1],
+          visit(
+            decompressedData.subarray(offsets[i], offsets[i + 1]),
+            subBlocks[i]!.offset,
           )
-          parseInto(resultData, subBlocks[i]!.offset)
         }
       } else {
         for (const block of subBlocks) {
           const start = block.offset - groupOffset
-          const resultData = data.subarray(start, start + block.length)
-          parseInto(resultData, block.offset)
+          visit(data.subarray(start, start + block.length), block.offset)
         }
       }
     }
-    return chunksByRegion
   }
 
   public async readFeatures(
     blocks: { offset: number; length: number }[],
     opts: Options = {},
   ): Promise<Feature[]> {
-    const { blockType, uncompressBufSize } = this
+    const { blockType } = this
     const { signal, request, onProgress } = opts
-    const blockGroupsToFetch = groupBlocks(blocks)
-    const report = blockProgress(blockGroupsToFetch, onProgress)
     const allFeatures: Feature[] = []
-    for (const blockGroup of blockGroupsToFetch) {
-      const data = await this.bbi.read(blockGroup.length, blockGroup.offset, {
-        signal,
-      })
-      report(blockGroup.length)
-      const groupOffset = blockGroup.offset
-      const subBlocks = blockGroup.blocks
-
-      if (uncompressBufSize > 0) {
-        const localBlocks = subBlocks.map(block => ({
-          offset: block.offset - groupOffset,
-          length: block.length,
-        }))
-        const { data: decompressedData, offsets } = await unzipBatch(
-          data,
-          localBlocks,
-          uncompressBufSize,
-        )
-        for (let i = 0; i < subBlocks.length; i++) {
-          const resultData = decompressedData.subarray(
-            offsets[i],
-            offsets[i + 1],
-          )
-          const features = parseBlock(
-            blockType,
-            resultData,
-            subBlocks[i]!.offset,
-            request,
-          )
-          for (const f of features) {
-            allFeatures.push(f)
-          }
+    await this._forEachDecodedBlock(
+      blocks,
+      signal,
+      onProgress,
+      (data, blockOffset) => {
+        const features = parseBlock(blockType, data, blockOffset, request)
+        for (const f of features) {
+          allFeatures.push(f)
         }
-      } else {
-        for (const block of subBlocks) {
-          const start = block.offset - groupOffset
-          const resultData = data.subarray(start, start + block.length)
-          const features = parseBlock(
-            blockType,
-            resultData,
-            block.offset,
-            request,
-          )
-          for (const f of features) {
-            allFeatures.push(f)
-          }
-        }
-      }
-    }
+      },
+    )
     return allFeatures
   }
 
