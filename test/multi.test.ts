@@ -11,7 +11,10 @@ class CountingFile {
   reads = 0
   bytes = 0
   offsets: number[] = []
-  constructor(private inner: GenericFilehandle) {}
+  private inner: GenericFilehandle
+  constructor(inner: GenericFilehandle) {
+    this.inner = inner
+  }
   read(length: number, position: number, opts?: Record<string, unknown>) {
     this.reads++
     this.bytes += length
@@ -157,4 +160,87 @@ test('getFeaturesMulti handles unknown refName and empty input', async () => {
   expect(res.length).toBe(2)
   expect(res[1]).toStrictEqual([])
   expect(await bw.getFeaturesMulti([], { scale })).toStrictEqual([])
+})
+
+test('getFeaturesAsArraysMulti matches per-region getFeaturesAsArrays', async () => {
+  const bw = new BigWig({ path: 'test/data/cDC.bw' })
+  const regions = [
+    { refName: 'chr1', start: 1_000_000, end: 3_000_000 },
+    { refName: 'chr1', start: 2_000_000, end: 4_000_000 }, // overlaps previous
+    { refName: 'chr2', start: 0, end: 5_000_000 },
+  ]
+  const scale = 1 / 5000
+
+  const multi = await bw.getFeaturesAsArraysMulti(regions, { scale })
+  expect(multi.regionOffsets.length).toBe(regions.length + 1)
+  expect(multi.regionOffsets[0]).toBe(0)
+  expect(multi.regionOffsets.at(-1)).toBe(multi.starts.length)
+
+  for (let i = 0; i < regions.length; i++) {
+    const r = regions[i]!
+    const truth = await bw.getFeaturesAsArrays(r.refName, r.start, r.end, {
+      scale,
+    })
+    const lo = multi.regionOffsets[i]!
+    const hi = multi.regionOffsets[i + 1]!
+    expect(Array.from(multi.starts.subarray(lo, hi))).toEqual(
+      Array.from(truth.starts),
+    )
+    expect(Array.from(multi.ends.subarray(lo, hi))).toEqual(
+      Array.from(truth.ends),
+    )
+    expect(Array.from(multi.scores.subarray(lo, hi))).toEqual(
+      Array.from(truth.scores),
+    )
+  }
+})
+
+test('getFeaturesAsArraysMulti returns summary arrays at zoomed scale', async () => {
+  const bw = new BigWig({ path: 'test/data/cDC.bw' })
+  const regions = [
+    { refName: 'chr1', start: 0, end: 60_000_000 },
+    { refName: 'chr2', start: 0, end: 60_000_000 },
+  ]
+  const scale = 1000 / 250_000_000
+
+  const multi = await bw.getFeaturesAsArraysMulti(regions, { scale })
+  expect(multi.isSummary).toBe(true)
+  if (multi.isSummary) {
+    for (let i = 0; i < regions.length; i++) {
+      const r = regions[i]!
+      const truth = await bw.getFeaturesAsArrays(r.refName, r.start, r.end, {
+        scale,
+      })
+      const lo = multi.regionOffsets[i]!
+      const hi = multi.regionOffsets[i + 1]!
+      expect(Array.from(multi.starts.subarray(lo, hi))).toEqual(
+        Array.from(truth.starts),
+      )
+      expect(Array.from(multi.minScores.subarray(lo, hi))).toEqual(
+        Array.from(truth.isSummary ? truth.minScores : []),
+      )
+      expect(Array.from(multi.maxScores.subarray(lo, hi))).toEqual(
+        Array.from(truth.isSummary ? truth.maxScores : []),
+      )
+    }
+  }
+})
+
+test('getFeaturesAsArraysMulti handles unknown refName and empty input', async () => {
+  const bw = new BigWig({ path: 'test/data/cDC.bw' })
+  const scale = 1 / 1000
+  const res = await bw.getFeaturesAsArraysMulti(
+    [
+      { refName: 'chr1', start: 0, end: 100000 },
+      { refName: 'nonexistent', start: 0, end: 100 },
+    ],
+    { scale },
+  )
+  expect(res.regionOffsets.length).toBe(3)
+  // the unknown region's slice is empty
+  expect(res.regionOffsets[2]! - res.regionOffsets[1]!).toBe(0)
+
+  const empty = await bw.getFeaturesAsArraysMulti([], { scale })
+  expect(empty.regionOffsets).toEqual([0])
+  expect(empty.starts.length).toBe(0)
 })

@@ -10,7 +10,12 @@ import {
 import { decoder, getDataView, groupBlocks } from './util.ts'
 
 import type { Feature, ProgressCallback } from './types.ts'
-import type { BigWigFeatureArrays, SummaryFeatureArrays } from './unzip.ts'
+import type {
+  BigWigFeatureArrays,
+  BigWigFeatureArraysMulti,
+  SummaryFeatureArrays,
+  SummaryFeatureArraysMulti,
+} from './unzip.ts'
 import type { Block } from './util.ts'
 import type { GenericFilehandle } from 'generic-filehandle2'
 
@@ -20,6 +25,19 @@ interface CoordRequest {
   chrId: number
   start: number
   end: number
+}
+
+// One block can serve several query regions (overlapping ranges surface the
+// same on-disk block). Each tag records which region wants the block and the
+// coord filter to apply when parsing it for that region.
+interface RegionTag {
+  regionIndex: number
+  request: CoordRequest
+}
+
+interface CollectedBlocksMulti {
+  blockByOffset: Map<number, Block>
+  tagsByOffset: Map<number, RegionTag[]>
 }
 
 interface Options {
@@ -376,6 +394,134 @@ function concatTypedArray<T extends Int32Array | Float32Array>(
   return out
 }
 
+interface BigWigChunk { starts: Int32Array; ends: Int32Array; scores: Float32Array }
+type SummaryChunk = BigWigChunk & {
+  minScores: Float32Array
+  maxScores: Float32Array
+}
+
+function concatBigWigChunks(chunks: BigWigChunk[]): BigWigFeatureArrays {
+  const totalCount = chunks.reduce((n, chunk) => n + chunk.starts.length, 0)
+  return {
+    starts: concatTypedArray(
+      chunks.map(c => c.starts),
+      totalCount,
+      Int32Array,
+    ),
+    ends: concatTypedArray(
+      chunks.map(c => c.ends),
+      totalCount,
+      Int32Array,
+    ),
+    scores: concatTypedArray(
+      chunks.map(c => c.scores),
+      totalCount,
+      Float32Array,
+    ),
+    isSummary: false as const,
+  }
+}
+
+function concatSummaryChunks(chunks: SummaryChunk[]): SummaryFeatureArrays {
+  const totalCount = chunks.reduce((n, chunk) => n + chunk.starts.length, 0)
+  return {
+    starts: concatTypedArray(
+      chunks.map(c => c.starts),
+      totalCount,
+      Int32Array,
+    ),
+    ends: concatTypedArray(
+      chunks.map(c => c.ends),
+      totalCount,
+      Int32Array,
+    ),
+    scores: concatTypedArray(
+      chunks.map(c => c.scores),
+      totalCount,
+      Float32Array,
+    ),
+    minScores: concatTypedArray(
+      chunks.map(c => c.minScores),
+      totalCount,
+      Float32Array,
+    ),
+    maxScores: concatTypedArray(
+      chunks.map(c => c.maxScores),
+      totalCount,
+      Float32Array,
+    ),
+    isSummary: true as const,
+  }
+}
+
+// Pack per-region chunk lists into one backing set of typed arrays, recording
+// each region's slice boundary in regionOffsets. A single allocation per array
+// instead of one object-with-arrays per region. Regions are laid out in input
+// order; regionOffsets has length regionCount + 1.
+function concatBigWigChunksMulti(
+  chunksByRegion: BigWigChunk[][],
+): BigWigFeatureArraysMulti {
+  let totalCount = 0
+  for (const chunks of chunksByRegion) {
+    for (const chunk of chunks) {
+      totalCount += chunk.starts.length
+    }
+  }
+  const starts = new Int32Array(totalCount)
+  const ends = new Int32Array(totalCount)
+  const scores = new Float32Array(totalCount)
+  const regionOffsets = [0]
+  let offset = 0
+  for (const chunks of chunksByRegion) {
+    for (const chunk of chunks) {
+      starts.set(chunk.starts, offset)
+      ends.set(chunk.ends, offset)
+      scores.set(chunk.scores, offset)
+      offset += chunk.starts.length
+    }
+    regionOffsets.push(offset)
+  }
+  return { starts, ends, scores, regionOffsets, isSummary: false as const }
+}
+
+function concatSummaryChunksMulti(
+  chunksByRegion: SummaryChunk[][],
+): SummaryFeatureArraysMulti {
+  let totalCount = 0
+  for (const chunks of chunksByRegion) {
+    for (const chunk of chunks) {
+      totalCount += chunk.starts.length
+    }
+  }
+  const starts = new Int32Array(totalCount)
+  const ends = new Int32Array(totalCount)
+  const scores = new Float32Array(totalCount)
+  const minScores = new Float32Array(totalCount)
+  const maxScores = new Float32Array(totalCount)
+  const regionOffsets = [0]
+  let offset = 0
+  for (const chunks of chunksByRegion) {
+    for (const chunk of chunks) {
+      starts.set(chunk.starts, offset)
+      ends.set(chunk.ends, offset)
+      scores.set(chunk.scores, offset)
+      minScores.set(chunk.minScores, offset)
+      maxScores.set(chunk.maxScores, offset)
+      offset += chunk.starts.length
+    }
+    regionOffsets.push(offset)
+  }
+  return {
+    starts,
+    ends,
+    scores,
+    minScores,
+    maxScores,
+    regionOffsets,
+    isSummary: true as const,
+  }
+}
+
 function parseBlock(
   blockType: string,
   data: Uint8Array,
@@ -414,19 +560,30 @@ export class BlockView {
       this.bbi.read(length, offset, { signal }),
   })
 
+  private bbi: GenericFilehandle
+  private refsByName: Record<string, number>
+  // Offset to the R-tree index in the file - this is part of the "cirTree"
+  // (combined ID R-tree), which combines a B+ tree for chromosome names
+  // with an R-tree for efficient spatial queries
+  private rTreeOffset: number
+  private uncompressBufSize: number
+  private blockType: string
+
   public constructor(
-    private bbi: GenericFilehandle,
-    private refsByName: Record<string, number>,
-    // Offset to the R-tree index in the file - this is part of the "cirTree"
-    // (combined ID R-tree), which combines a B+ tree for chromosome names
-    // with an R-tree for efficient spatial queries
-    private rTreeOffset: number,
-    private uncompressBufSize: number,
-    private blockType: string,
+    bbi: GenericFilehandle,
+    refsByName: Record<string, number>,
+    rTreeOffset: number,
+    uncompressBufSize: number,
+    blockType: string,
   ) {
     if (!(rTreeOffset >= 0)) {
       throw new Error('invalid rTreeOffset!')
     }
+    this.bbi = bbi
+    this.refsByName = refsByName
+    this.rTreeOffset = rTreeOffset
+    this.uncompressBufSize = uncompressBufSize
+    this.blockType = blockType
   }
 
   private async _collectBlocks(
@@ -551,16 +708,15 @@ export class BlockView {
   // from different regions coalesce into a single read. Each block is tagged
   // with the region(s) whose coord filter applies when parsing it. Returns
   // features per region, aligned to the input order.
-  public async readWigDataMulti(
+  // Collect the R-tree blocks for every region and dedupe them by file offset:
+  // a block surfaced by multiple (overlapping) regions is fetched once but
+  // tagged with each region that wants it, so it gets parsed per region.
+  private async _collectBlocksMulti(
     regions: { refName: string; start: number; end: number }[],
-    opts: Options = {},
-  ): Promise<Feature[][]> {
-    const results: Feature[][] = regions.map(() => [])
+    opts: Options,
+  ): Promise<CollectedBlocksMulti> {
     const blockByOffset = new Map<number, Block>()
-    const tagsByOffset = new Map<
-      number,
-      { regionIndex: number; request: CoordRequest }[]
-    >()
+    const tagsByOffset = new Map<number, RegionTag[]>()
     for (let regionIndex = 0; regionIndex < regions.length; regionIndex++) {
       const { refName, start, end } = regions[regionIndex]!
       const collected = await this._collectBlocks(refName, start, end, opts)
@@ -577,6 +733,18 @@ export class BlockView {
         }
       }
     }
+    return { blockByOffset, tagsByOffset }
+  }
+
+  public async readWigDataMulti(
+    regions: { refName: string; start: number; end: number }[],
+    opts: Options = {},
+  ): Promise<Feature[][]> {
+    const results: Feature[][] = regions.map(() => [])
+    const { blockByOffset, tagsByOffset } = await this._collectBlocksMulti(
+      regions,
+      opts,
+    )
 
     const { blockType, uncompressBufSize } = this
     const { signal, onProgress } = opts
@@ -665,6 +833,98 @@ export class BlockView {
           scores: new Float32Array(0),
           isSummary: false as const,
         }
+  }
+
+  // Multi-region typed-array read. Same block dedupe/coalesce strategy as
+  // readWigDataMulti, but parses each block into typed-array chunks and packs
+  // all regions into one backing set of arrays (see *Multi return types). Unlike
+  // the single-region path it can't use the fused decompress+parse wasm call
+  // (that filters by one coord range), so it decompresses raw then parses each
+  // block per region in JS.
+  public async readWigDataAsArraysMulti(
+    regions: { refName: string; start: number; end: number }[],
+    opts: Options = {},
+  ): Promise<BigWigFeatureArraysMulti | SummaryFeatureArraysMulti> {
+    const collected = await this._collectBlocksMulti(regions, opts)
+    if (this.blockType === 'summary') {
+      const chunksByRegion = await this._readBlocksAsArraysMulti(
+        collected,
+        regions.length,
+        (data, request) => parseSummaryBlockAsArrays(data, request),
+        opts,
+      )
+      return concatSummaryChunksMulti(chunksByRegion)
+    }
+    const chunksByRegion = await this._readBlocksAsArraysMulti(
+      collected,
+      regions.length,
+      (data, request) => parseBigWigBlockAsArrays(data, request),
+      opts,
+    )
+    return concatBigWigChunksMulti(chunksByRegion)
+  }
+
+  // Fetch the deduped block union, decompress each group, and parse every block
+  // into a typed-array chunk for each region that tagged it. Empty chunks are
+  // dropped. Returns one chunk list per region, in input order.
+  private async _readBlocksAsArraysMulti<T extends BigWigChunk>(
+    collected: CollectedBlocksMulti,
+    regionCount: number,
+    parseChunk: (data: Uint8Array, request: CoordRequest) => T,
+    opts: Options,
+  ): Promise<T[][]> {
+    const { blockByOffset, tagsByOffset } = collected
+    const { signal, onProgress } = opts
+    const { uncompressBufSize } = this
+    const chunksByRegion: T[][] = Array.from({ length: regionCount }, () => [])
+    const parseInto = (resultData: Uint8Array, blockOffset: number) => {
+      const tags = tagsByOffset.get(blockOffset)
+      if (tags) {
+        for (const { regionIndex, request } of tags) {
+          const chunk = parseChunk(resultData, request)
+          if (chunk.starts.length > 0) {
+            chunksByRegion[regionIndex]!.push(chunk)
+          }
+        }
+      }
+    }
+
+    const blockGroups = groupBlocks([...blockByOffset.values()])
+    const report = blockProgress(blockGroups, onProgress)
+    for (const blockGroup of blockGroups) {
+      const data = await this.bbi.read(blockGroup.length, blockGroup.offset, {
+        signal,
+      })
+      report(blockGroup.length)
+      const groupOffset = blockGroup.offset
+      const subBlocks = blockGroup.blocks
+
+      if (uncompressBufSize > 0) {
+        const localBlocks = subBlocks.map(block => ({
+          offset: block.offset - groupOffset,
+          length: block.length,
+        }))
+        const { data: decompressedData, offsets } = await unzipBatch(
+          data,
+          localBlocks,
+          uncompressBufSize,
+        )
+        for (let i = 0; i < subBlocks.length; i++) {
+          const resultData = decompressedData.subarray(
+            offsets[i],
+            offsets[i + 1],
+          )
+          parseInto(resultData, subBlocks[i]!.offset)
+        }
+      } else {
+        for (const block of subBlocks) {
+          const start = block.offset - groupOffset
+          const resultData = data.subarray(start, start + block.length)
+          parseInto(resultData, block.offset)
+        }
+      }
+    }
+    return chunksByRegion
   }
 
   public async readFeatures(
@@ -795,25 +1055,7 @@ export class BlockView {
       chunk => chunk.starts.length,
       opts.onProgress,
     )
-    const totalCount = chunks.reduce((n, chunk) => n + chunk.starts.length, 0)
-    return {
-      starts: concatTypedArray(
-        chunks.map(c => c.starts),
-        totalCount,
-        Int32Array,
-      ),
-      ends: concatTypedArray(
-        chunks.map(c => c.ends),
-        totalCount,
-        Int32Array,
-      ),
-      scores: concatTypedArray(
-        chunks.map(c => c.scores),
-        totalCount,
-        Float32Array,
-      ),
-      isSummary: false as const,
-    }
+    return concatBigWigChunks(chunks)
   }
 
   private async _readSummaryFeaturesAsArrays(
@@ -837,34 +1079,6 @@ export class BlockView {
       chunk => chunk.starts.length,
       opts.onProgress,
     )
-    const totalCount = chunks.reduce((n, chunk) => n + chunk.starts.length, 0)
-    return {
-      starts: concatTypedArray(
-        chunks.map(c => c.starts),
-        totalCount,
-        Int32Array,
-      ),
-      ends: concatTypedArray(
-        chunks.map(c => c.ends),
-        totalCount,
-        Int32Array,
-      ),
-      scores: concatTypedArray(
-        chunks.map(c => c.scores),
-        totalCount,
-        Float32Array,
-      ),
-      minScores: concatTypedArray(
-        chunks.map(c => c.minScores),
-        totalCount,
-        Float32Array,
-      ),
-      maxScores: concatTypedArray(
-        chunks.map(c => c.maxScores),
-        totalCount,
-        Float32Array,
-      ),
-      isSummary: true as const,
-    }
+    return concatSummaryChunks(chunks)
   }
 }

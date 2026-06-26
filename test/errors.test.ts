@@ -3,7 +3,10 @@ import { expect, test } from 'vitest'
 import { BigWig } from '../src/index.ts'
 
 class BufferFilehandle {
-  constructor(private buf: Uint8Array) {}
+  private buf: Uint8Array
+  constructor(buf: Uint8Array) {
+    this.buf = buf
+  }
   read(length: number, position: number) {
     return Promise.resolve(this.buf.subarray(position, position + length))
   }

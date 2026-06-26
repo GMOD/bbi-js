@@ -124,3 +124,20 @@ export interface SummaryFeatureArrays {
   maxScores: Float32Array
   isSummary: true
 }
+
+/**
+ * Multi-region typed-array result. Rather than one object per region, all
+ * regions share one backing set of typed arrays; `regionOffsets[i]..
+ * regionOffsets[i + 1]` is the half-open slice belonging to region `i`. Pull a
+ * single region out with e.g. `starts.subarray(regionOffsets[i],
+ * regionOffsets[i + 1])` — no copy. `regionOffsets` has length `regions.length
+ * + 1`.
+ */
+export interface BigWigFeatureArraysMulti extends BigWigFeatureArrays {
+  regionOffsets: number[]
+}
+
+/** Multi-region counterpart of {@link SummaryFeatureArrays}; see {@link BigWigFeatureArraysMulti} for the `regionOffsets` layout. */
+export interface SummaryFeatureArraysMulti extends SummaryFeatureArrays {
+  regionOffsets: number[]
+}
