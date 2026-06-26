@@ -67,4 +67,9 @@ export async function decompressAndParseSummaryBlocks(
   )
 }
 
-export type { BigWigFeatureArrays, SummaryFeatureArrays } from './types.ts'
+export type {
+  BigWigFeatureArrays,
+  BigWigFeatureArraysMulti,
+  SummaryFeatureArrays,
+  SummaryFeatureArraysMulti,
+} from './types.ts'

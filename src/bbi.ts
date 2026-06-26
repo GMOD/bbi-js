@@ -5,6 +5,7 @@ import { decoder, getDataView, parseKey } from './util.ts'
 
 import type {
   BigWigFeatureArrays,
+  BigWigFeatureArraysMulti,
   BigWigHeader,
   BigWigHeaderWithRefNames,
   Feature,
@@ -13,6 +14,7 @@ import type {
   RequestOptions,
   Statistics,
   SummaryFeatureArrays,
+  SummaryFeatureArraysMulti,
   ZoomLevel,
 } from './types.ts'
 import type { GenericFilehandle } from 'generic-filehandle2'
@@ -377,6 +379,33 @@ export abstract class BBI {
       this.renameRefSeqs(refName),
       start,
       end,
+      opts,
+    )
+  }
+
+  /**
+   * Multi-region counterpart of `getFeaturesAsArrays`. All regions share one
+   * zoom level and adjacent on-disk blocks coalesce across region boundaries
+   * (like `getFeaturesMulti`), but results pack into one backing set of typed
+   * arrays instead of one object per region, minimizing allocations.
+   *
+   * @param regions - array of `{ refName, start, end }` query regions
+   * @param opts - same options as `getFeatures`
+   * @returns `Promise<BigWigFeatureArraysMulti | SummaryFeatureArraysMulti>` —
+   *   use the `isSummary` discriminant to distinguish the two shapes; slice
+   *   region `i` with `regionOffsets[i]..regionOffsets[i + 1]`
+   */
+  public async getFeaturesAsArraysMulti(
+    regions: { refName: string; start: number; end: number }[],
+    opts?: RequestOptions2,
+  ): Promise<BigWigFeatureArraysMulti | SummaryFeatureArraysMulti> {
+    const view = await this._getView(opts)
+    return view.readWigDataAsArraysMulti(
+      regions.map(r => ({
+        refName: this.renameRefSeqs(r.refName),
+        start: r.start,
+        end: r.end,
+      })),
       opts,
     )
   }
