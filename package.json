@@ -52,7 +52,7 @@
   "dependencies": {
     "@gmod/abortable-promise-cache": "^3.0.4",
     "@jbrowse/quick-lru": "^7.3.5",
-    "generic-filehandle2": "^2.1.9"
+    "generic-filehandle2": "^2.2.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

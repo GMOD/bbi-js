@@ -610,8 +610,12 @@ export class BlockView {
       return undefined
     }
     if (!this.rTreePromise) {
+      // pass only signal, not onProgress: bbi reports determinate
+      // block-download progress itself via blockProgress, so the filehandle must
+      // not also fire onProgress for this small R-tree header read (matches the
+      // other block reads here, which likewise pass only signal)
       this.rTreePromise = this.bbi
-        .read(48, this.rTreeOffset, opts)
+        .read(48, this.rTreeOffset, { signal: opts?.signal })
         .catch((e: unknown) => {
           this.rTreePromise = undefined
           throw e
