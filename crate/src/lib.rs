@@ -52,13 +52,12 @@ pub fn inflate_raw_batch(
 
     let header_size = 4 + (num_blocks + 1) * 4;
 
-    let mut total_input_size = 0usize;
-    for i in 0..num_blocks {
-        total_input_size += input_lengths[i] as usize;
-    }
-    let estimated_output = total_input_size * 4;
-
-    let mut result = Vec::with_capacity(header_size + estimated_output);
+    // Each block decompresses to at most max_out bytes, so num_blocks * max_out
+    // is a true upper bound on the concatenated output. Reserving the real bound
+    // (rather than the old input.len() * 4 compression-ratio guess) means result
+    // never re-allocates, avoiding a transient spike in the grow-only WASM heap.
+    let max_output = num_blocks * max_out;
+    let mut result = Vec::with_capacity(header_size + max_output);
     result.resize(header_size, 0);
 
     result[0..4].copy_from_slice(&(num_blocks as u32).to_le_bytes());
