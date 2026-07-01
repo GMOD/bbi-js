@@ -34,8 +34,34 @@ function getTabField(str: string, fieldIndex: number) {
   return end === -1 ? str.slice(start) : str.slice(start, end)
 }
 
-// Recursively traverses a B+ tree to search for a specific name in the BigBed extraIndex
-// B+ trees are balanced tree structures optimized for disk-based searches
+// bedToBigBed writes B+ tree keys sorted by memcmp (raw byte order), so the
+// binary search must compare the same way. localeCompare applies locale
+// collation instead — it reorders underscores, mixed case, etc. relative to
+// byte order, sending the search down the wrong branch and missing valid keys
+// (e.g. GENCODE names like "Metazoa_SRP"). Code-unit comparison matches memcmp
+// for the ASCII/BMP names these indexes contain.
+function byteCompare(a: string, b: string) {
+  if (a < b) {
+    return -1
+  } else if (a > b) {
+    return 1
+  } else {
+    return 0
+  }
+}
+
+// Recursively traverses a B+ tree to find every entry matching `name` in a
+// BigBed extraIndex. A name can appear many times (one entry per record, e.g.
+// every transcript of a gene), and those entries can point at different data
+// blocks, so a single match is not enough — we collect the whole contiguous run
+// of equal keys in the matching leaf.
+//
+// This descends into a single child at each internal node, which finds all
+// copies as long as they fit within one leaf (< blockSize of them). A name with
+// more than blockSize occurrences would be split across sibling leaves and the
+// extras would be missed; that case doesn't occur for the transcript/gene-name
+// indexes bedToBigBed builds, but full correctness would need multi-child
+// descent (cf. UCSC bptFileFindMulti).
 async function readBPlusTreeNode(
   bbi: GenericFilehandle,
   nodeOffset: number,
@@ -45,7 +71,7 @@ async function readBPlusTreeNode(
   name: string,
   field: number,
   opts: RequestOptions,
-): Promise<Loc | undefined> {
+): Promise<Loc[]> {
   const len = 4 + blockSize * (keySize + valSize)
   const buffer = await bbi.read(len, nodeOffset, opts)
   const dataView = getDataView(buffer)
@@ -73,7 +99,7 @@ async function readBPlusTreeNode(
 
     while (left <= right) {
       const mid = Math.floor((left + right) / 2)
-      if (name.localeCompare(leafkeys[mid]!.key) >= 0) {
+      if (byteCompare(name, leafkeys[mid]!.key) >= 0) {
         targetIndex = mid
         left = mid + 1
       } else {
@@ -110,16 +136,18 @@ async function readBPlusTreeNode(
       })
     }
 
-    // Binary search for exact key match in sorted leaf node
+    // Binary search to land anywhere in the run of entries matching name
     let left = 0
     let right = keys.length - 1
+    let hit = -1
 
     while (left <= right) {
       const mid = Math.floor((left + right) / 2)
-      const cmp = name.localeCompare(keys[mid]!.key)
+      const cmp = byteCompare(name, keys[mid]!.key)
 
       if (cmp === 0) {
-        return { ...keys[mid]!, field }
+        hit = mid
+        break
       } else if (cmp < 0) {
         right = mid - 1
       } else {
@@ -127,9 +155,21 @@ async function readBPlusTreeNode(
       }
     }
 
-    return undefined
+    if (hit === -1) {
+      return []
+    }
+    // expand around the hit to cover all equal keys (duplicates are contiguous)
+    let lo = hit
+    while (lo > 0 && keys[lo - 1]!.key === name) {
+      lo--
+    }
+    let hi = hit
+    while (hi < keys.length - 1 && keys[hi + 1]!.key === name) {
+      hi++
+    }
+    return keys.slice(lo, hi + 1).map(k => ({ ...k, field }))
   }
-  return undefined
+  return []
 }
 
 /**
@@ -241,7 +281,7 @@ export class BigBed extends BBI {
       )
     })
     const results = await Promise.all(locs)
-    return results.filter((l): l is Loc => l !== undefined)
+    return results.flat()
   }
 
   /**
@@ -260,8 +300,14 @@ export class BigBed extends BBI {
       return []
     }
     const view = await this.getUnzoomedView(opts)
+    // Many index entries for the same name point at the same data block (several
+    // records packed into one block), so dedupe by offset+field to read and
+    // parse each block once instead of once per entry.
+    const uniqueBlocks = [
+      ...new Map(blocks.map(b => [`${b.offset}_${b.field}`, b])).values(),
+    ]
     const results = await Promise.all(
-      blocks.map(async block => {
+      uniqueBlocks.map(async block => {
         const features = await view.readFeatures([block], opts)
         return features.map(f => ({ ...f, field: block.field }))
       }),
