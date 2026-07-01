@@ -212,7 +212,7 @@ function parseBigWigBlock(buffer: Uint8Array, req?: CoordRequest) {
 
 function parseBigWigBlockAsArrays(
   buffer: Uint8Array,
-  req?: CoordRequest,
+  req: CoordRequest,
 ): { starts: Int32Array; ends: Int32Array; scores: Float32Array } {
   const dataView = getDataView(buffer)
   const blockStart = dataView.getInt32(4, true)
@@ -224,44 +224,6 @@ function parseBigWigBlockAsArrays(
   const starts = new Int32Array(itemCount)
   const ends = new Int32Array(itemCount)
   const scores = new Float32Array(itemCount)
-
-  if (!req) {
-    switch (blockType) {
-      case 1: {
-        let offset = 24
-        for (let i = 0; i < itemCount; i++) {
-          starts[i] = dataView.getInt32(offset, true)
-          ends[i] = dataView.getInt32(offset + 4, true)
-          scores[i] = dataView.getFloat32(offset + 8, true)
-          offset += 12
-        }
-        return { starts, ends, scores }
-      }
-      case 2: {
-        let offset = 24
-        for (let i = 0; i < itemCount; i++) {
-          const start = dataView.getInt32(offset, true)
-          starts[i] = start
-          ends[i] = start + itemSpan
-          scores[i] = dataView.getFloat32(offset + 4, true)
-          offset += 8
-        }
-        return { starts, ends, scores }
-      }
-      case 3: {
-        let offset = 24
-        for (let i = 0; i < itemCount; i++) {
-          const start = blockStart + i * itemStep
-          starts[i] = start
-          ends[i] = start + itemSpan
-          scores[i] = dataView.getFloat32(offset, true)
-          offset += 4
-        }
-        return { starts, ends, scores }
-      }
-    }
-    return { starts, ends, scores }
-  }
 
   const reqStart = req.start
   const reqEnd = req.end
@@ -327,7 +289,7 @@ function parseBigWigBlockAsArrays(
 
 function parseSummaryBlockAsArrays(
   b: Uint8Array,
-  request?: CoordRequest,
+  request: CoordRequest,
 ): {
   starts: Int32Array
   ends: Int32Array
@@ -360,9 +322,8 @@ function parseSummaryBlockAsArrays(
     const sumData = dataView.getFloat32(offset, true)
     offset += 8
     if (
-      !request ||
-      (chromId === request.chrId &&
-        coordFilter(start, end, request.start, request.end))
+      chromId === request.chrId &&
+      coordFilter(start, end, request.start, request.end)
     ) {
       starts[idx] = start
       ends[idx] = end
@@ -467,13 +428,11 @@ function concatSummaryChunks(chunks: SummaryChunk[]): SummaryFeatureArrays {
   }
 }
 
-// Pack per-region chunk lists into one backing set of typed arrays, recording
-// each region's slice boundary in regionOffsets. A single allocation per array
-// instead of one object-with-arrays per region. Regions are laid out in input
-// order; regionOffsets has length regionCount + 1.
-function concatBigWigChunksMulti(
-  chunksByRegion: BigWigChunk[][],
-): BigWigFeatureArraysMulti {
+// Pack the start/end/score arrays shared by every region into one backing
+// buffer each, recording each region's slice boundary in regionOffsets. A
+// single allocation per array instead of one object-with-arrays per region.
+// Regions are laid out in input order; regionOffsets has length regionCount + 1.
+function packRegions(chunksByRegion: BigWigChunk[][]) {
   let totalCount = 0
   for (const chunks of chunksByRegion) {
     for (const chunk of chunks) {
@@ -494,35 +453,30 @@ function concatBigWigChunksMulti(
     }
     regionOffsets.push(offset)
   }
-  return { starts, ends, scores, regionOffsets, isSummary: false as const }
+  return { starts, ends, scores, regionOffsets, totalCount }
+}
+
+function concatBigWigChunksMulti(
+  chunksByRegion: BigWigChunk[][],
+): BigWigFeatureArraysMulti {
+  const { starts, ends, scores, regionOffsets } = packRegions(chunksByRegion)
+  return { starts, ends, scores, regionOffsets, isSummary: false }
 }
 
 function concatSummaryChunksMulti(
   chunksByRegion: SummaryChunk[][],
 ): SummaryFeatureArraysMulti {
-  let totalCount = 0
-  for (const chunks of chunksByRegion) {
-    for (const chunk of chunks) {
-      totalCount += chunk.starts.length
-    }
-  }
-  const starts = new Int32Array(totalCount)
-  const ends = new Int32Array(totalCount)
-  const scores = new Float32Array(totalCount)
+  const { starts, ends, scores, regionOffsets, totalCount } =
+    packRegions(chunksByRegion)
   const minScores = new Float32Array(totalCount)
   const maxScores = new Float32Array(totalCount)
-  const regionOffsets = [0]
   let offset = 0
   for (const chunks of chunksByRegion) {
     for (const chunk of chunks) {
-      starts.set(chunk.starts, offset)
-      ends.set(chunk.ends, offset)
-      scores.set(chunk.scores, offset)
       minScores.set(chunk.minScores, offset)
       maxScores.set(chunk.maxScores, offset)
       offset += chunk.starts.length
     }
-    regionOffsets.push(offset)
   }
   return {
     starts,
@@ -531,7 +485,27 @@ function concatSummaryChunksMulti(
     minScores,
     maxScores,
     regionOffsets,
-    isSummary: true as const,
+    isSummary: true,
+  }
+}
+
+function emptyBigWigArrays(): BigWigFeatureArrays {
+  return {
+    starts: new Int32Array(0),
+    ends: new Int32Array(0),
+    scores: new Float32Array(0),
+    isSummary: false,
+  }
+}
+
+function emptySummaryArrays(): SummaryFeatureArrays {
+  return {
+    starts: new Int32Array(0),
+    ends: new Int32Array(0),
+    scores: new Float32Array(0),
+    minScores: new Float32Array(0),
+    maxScores: new Float32Array(0),
+    isSummary: true,
   }
 }
 
@@ -793,14 +767,7 @@ export class BlockView {
             { chrId: collected.chrId, start, end },
             opts,
           )
-        : {
-            starts: new Int32Array(0),
-            ends: new Int32Array(0),
-            scores: new Float32Array(0),
-            minScores: new Float32Array(0),
-            maxScores: new Float32Array(0),
-            isSummary: true as const,
-          }
+        : emptySummaryArrays()
     }
     return collected
       ? this._readBigWigFeaturesAsArrays(
@@ -808,12 +775,7 @@ export class BlockView {
           { chrId: collected.chrId, start, end },
           opts,
         )
-      : {
-          starts: new Int32Array(0),
-          ends: new Int32Array(0),
-          scores: new Float32Array(0),
-          isSummary: false as const,
-        }
+      : emptyBigWigArrays()
   }
 
   // Multi-region typed-array read. Same block dedupe/coalesce strategy as

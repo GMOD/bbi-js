@@ -308,7 +308,7 @@ export abstract class BBI {
   ): Promise<BlockView>
 
   private async _getView(opts?: RequestOptions2) {
-    const { basesPerSpan, scale } = opts || {}
+    const { basesPerSpan, scale } = opts ?? {}
     const viewScale = basesPerSpan ? 1 / basesPerSpan : (scale ?? 1)
     return this.getView(viewScale, opts)
   }

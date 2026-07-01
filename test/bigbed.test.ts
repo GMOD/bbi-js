@@ -52,6 +52,32 @@ test('searchExtraIndex in bigbed with multiple extra indexes on the gene name in
   const res2 = await t.searchExtraIndex('SYCE3')
   expect(res2).toMatchSnapshot()
 })
+// keys with underscores or that sit next to them in byte order (e.g.
+// "Metazoa_SRP", "YWHAH") are ordered by memcmp in the B+ tree; a
+// locale-collated binary search branches wrong and misses them
+test('searchExtraIndex finds names where byte order != locale order', async () => {
+  const t = new BigBed({
+    path: 'test/data/chr22_with_name_and_geneName_index.bb',
+  })
+  await t.readIndices()
+  // both previously returned [] because localeCompare ordered '_' and mixed
+  // case differently from the file's byte order
+  expect((await t.searchExtraIndex('Metazoa_SRP')).length).toBeGreaterThan(0)
+  expect((await t.searchExtraIndex('YWHAH')).length).toBeGreaterThan(0)
+})
+
+// a gene with many transcripts has many index entries pointing at different
+// data blocks; the leaf search must return the whole run, not a single entry
+test('searchExtraIndex returns all records for a name spanning many blocks', async () => {
+  const t = new BigBed({
+    path: 'test/data/chr22_with_name_and_geneName_index.bb',
+  })
+  await t.readIndices()
+  // CTA-125H2.2 has 28 transcript records; a single-entry search returned 11
+  const res = await t.searchExtraIndex('CTA-125H2.2')
+  expect(res.length).toBe(28)
+  expect(new Set(res.map(f => f.uniqueId)).size).toBe(res.length)
+})
 test('2057 contigs', async () => {
   const ti = new BigBed({ path: 'test/data/2057.bb' })
   const header = await ti.getHeader()
