@@ -693,6 +693,41 @@ export class BlockView {
     })
   }
 
+  // Sum of the compressed on-disk block lengths the R-tree reports overlapping
+  // [start, end) on `chrName`, WITHOUT reading or decompressing any block — only
+  // the small R-tree index nodes are fetched. A cheap upper bound on the bytes a
+  // readWigData fetch of this range would transfer. Zero when the ref is absent.
+  public async getBlockSizeForRange(
+    chrName: string,
+    start: number,
+    end: number,
+    opts?: Options,
+  ): Promise<number> {
+    const collected = await this._collectBlocks(chrName, start, end, opts)
+    let total = 0
+    if (collected) {
+      for (const block of collected.blocks) {
+        total += block.length
+      }
+    }
+    return total
+  }
+
+  // Multi-region counterpart of getBlockSizeForRange. Dedupes blocks by file
+  // offset (reusing _collectBlocksMulti) so a block shared by overlapping
+  // regions — which readWigDataMulti fetches once — is counted once.
+  public async getBlockSizeForRangeMulti(
+    regions: { refName: string; start: number; end: number }[],
+    opts: Options = {},
+  ): Promise<number> {
+    const { blockByOffset } = await this._collectBlocksMulti(regions, opts)
+    let total = 0
+    for (const block of blockByOffset.values()) {
+      total += block.length
+    }
+    return total
+  }
+
   // Collect the R-tree blocks for every region and dedupe them by file offset:
   // a block surfaced by multiple (overlapping) regions is fetched once but
   // tagged with each region that wants it, so it gets parsed per region. The

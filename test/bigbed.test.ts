@@ -146,3 +146,53 @@ test('_readIndices forwards abort signal to underlying reads', async () => {
     expect(opts).toMatchObject({ signal: aborter.signal })
   }
 })
+
+test('getRegionByteSize reports a positive compressed size for a populated region', async () => {
+  const ti = new BigBed({ path: 'test/data/hg18.bb' })
+  const bytes = await ti.getRegionByteSize('chr7', 0, 100000)
+  expect(bytes).toBeGreaterThan(0)
+})
+
+test('getRegionByteSize reads only the index, not the feature blocks', async () => {
+  // getFeatures reads the R-tree index AND downloads every overlapping block;
+  // getRegionByteSize reads the index alone. So the byte-size probe must move
+  // far fewer bytes off disk than the equivalent feature fetch.
+  const probeHandle = new LocalFile('test/data/hg18.bb')
+  const probeSpy = vi.spyOn(probeHandle, 'read')
+  await new BigBed({ filehandle: probeHandle }).getRegionByteSize(
+    'chr7',
+    0,
+    1_000_000,
+  )
+  const probeBytes = probeSpy.mock.calls.reduce(
+    (sum, call) => sum + (call[0]),
+    0,
+  )
+
+  const fetchHandle = new LocalFile('test/data/hg18.bb')
+  const fetchSpy = vi.spyOn(fetchHandle, 'read')
+  await new BigBed({ filehandle: fetchHandle }).getFeatures('chr7', 0, 1_000_000)
+  const fetchBytes = fetchSpy.mock.calls.reduce(
+    (sum, call) => sum + (call[0]),
+    0,
+  )
+
+  expect(probeBytes).toBeLessThan(fetchBytes)
+})
+
+test('getRegionByteSize is zero for an absent ref', async () => {
+  const ti = new BigBed({ path: 'test/data/hg18.bb' })
+  expect(await ti.getRegionByteSize('nonexistent', 0, 100000)).toBe(0)
+})
+
+test('getRegionByteSizeMulti dedupes blocks shared across adjacent regions', async () => {
+  const ti = new BigBed({ path: 'test/data/hg18.bb' })
+  const whole = await ti.getRegionByteSize('chr7', 0, 100000)
+  const split = await ti.getRegionByteSizeMulti([
+    { refName: 'chr7', start: 0, end: 50000 },
+    { refName: 'chr7', start: 50000, end: 100000 },
+  ])
+  // splitting the span in two and deduping by offset recovers the same set of
+  // blocks as one query over the union — not a doubled count
+  expect(split).toBe(whole)
+})

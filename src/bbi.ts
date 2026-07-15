@@ -333,6 +333,59 @@ export abstract class BBI {
   }
 
   /**
+   * Cheap compressed-download-size estimate for a region: the sum of the
+   * on-disk block lengths the index reports overlapping it, read from the R-tree
+   * index alone without downloading or decompressing any feature/data block. An
+   * upper bound on the bytes a `getFeatures` call over the same region and zoom
+   * (`opts`) would transfer — for gating over-large downloads before they start.
+   *
+   * @param refName - chromosome name as it appears in the file
+   * @param start - 0-based half-open start coordinate
+   * @param end - 0-based half-open end coordinate
+   * @param opts - same scale/basesPerSpan/AbortSignal options as `getFeatures`,
+   *   so the estimate matches the zoom level the fetch would use
+   * @returns `Promise<number>` — compressed bytes; 0 if refName not found
+   */
+  public async getRegionByteSize(
+    refName: string,
+    start: number,
+    end: number,
+    opts?: RequestOptions2,
+  ): Promise<number> {
+    const view = await this._getView(opts)
+    return view.getBlockSizeForRange(
+      this.renameRefSeqs(refName),
+      start,
+      end,
+      opts,
+    )
+  }
+
+  /**
+   * Multi-region counterpart of `getRegionByteSize`. All regions share one zoom
+   * level and blocks shared across overlapping regions are counted once (as
+   * `getFeaturesMulti` fetches them once).
+   *
+   * @param regions - array of `{ refName, start, end }` query regions
+   * @param opts - same options as `getRegionByteSize`
+   * @returns `Promise<number>` — total compressed bytes across the regions
+   */
+  public async getRegionByteSizeMulti(
+    regions: { refName: string; start: number; end: number }[],
+    opts?: RequestOptions2,
+  ): Promise<number> {
+    const view = await this._getView(opts)
+    return view.getBlockSizeForRangeMulti(
+      regions.map(r => ({
+        refName: this.renameRefSeqs(r.refName),
+        start: r.start,
+        end: r.end,
+      })),
+      opts,
+    )
+  }
+
+  /**
    * Fetches features for many regions in a single pass. All regions share one
    * zoom level, and adjacent on-disk blocks are coalesced across region
    * boundaries, reducing range requests for whole-genome overviews.
