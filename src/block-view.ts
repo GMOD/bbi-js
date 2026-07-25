@@ -7,7 +7,7 @@ import {
   decompressAndParseSummaryBlocks,
   unzipBatch,
 } from './unzip.ts'
-import { decoder, getDataView, groupBlocks } from './util.ts'
+import { decoder, getDataView, getUint64, groupBlocks } from './util.ts'
 
 import type { BlockType, Feature, ProgressCallback } from './types.ts'
 import type {
@@ -613,13 +613,9 @@ export class BlockView {
                 if (
                   blockIntersectsQuery(startChrom, startBase, endChrom, endBase)
                 ) {
-                  const childOrBlockOffset = Number(
-                    dv.getBigUint64(nodeOffset + 16, true),
-                  )
+                  const childOrBlockOffset = getUint64(dv, nodeOffset + 16)
                   if (isLeaf === 1) {
-                    const blockSize = Number(
-                      dv.getBigUint64(nodeOffset + 24, true),
-                    )
+                    const blockSize = getUint64(dv, nodeOffset + 24)
                     blocks.push({
                       offset: childOrBlockOffset,
                       length: blockSize,

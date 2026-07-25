@@ -1,7 +1,7 @@
 import { LocalFile, RemoteFile } from 'generic-filehandle2'
 
 import { BlockView } from './block-view.ts'
-import { decoder, getDataView, parseKey } from './util.ts'
+import { decoder, getDataView, getUint64, parseKey } from './util.ts'
 
 import type {
   BigWigFeatureArrays,
@@ -94,32 +94,32 @@ export abstract class BBI {
     const numZoomLevels = dataView.getUint16(offset, true)
     offset += 2
     // Offset to the B+ tree that maps chromosome names to integer IDs
-    const chromosomeTreeOffset = Number(dataView.getBigUint64(offset, true))
+    const chromosomeTreeOffset = getUint64(dataView, offset)
     offset += 8
-    const unzoomedDataOffset = Number(dataView.getBigUint64(offset, true))
+    const unzoomedDataOffset = getUint64(dataView, offset)
     offset += 8
-    const unzoomedIndexOffset = Number(dataView.getBigUint64(offset, true))
+    const unzoomedIndexOffset = getUint64(dataView, offset)
     offset += 8
     const fieldCount = dataView.getUint16(offset, true)
     offset += 2
     const definedFieldCount = dataView.getUint16(offset, true)
     offset += 2
-    const asOffset = Number(dataView.getBigUint64(offset, true))
+    const asOffset = getUint64(dataView, offset)
     offset += 8
-    const totalSummaryOffset = Number(dataView.getBigUint64(offset, true))
+    const totalSummaryOffset = getUint64(dataView, offset)
     offset += 8
     const uncompressBufSize = dataView.getUint32(offset, true)
     offset += 4
-    const extHeaderOffset = Number(dataView.getBigUint64(offset, true))
+    const extHeaderOffset = getUint64(dataView, offset)
     offset += 8
     const zoomLevels = [] as ZoomLevel[]
     for (let i = 0; i < numZoomLevels; i++) {
       const reductionLevel = dataView.getUint32(offset, true)
       offset += 4
       offset += 4 // reserved
-      const dataOffset = Number(dataView.getBigUint64(offset, true))
+      const dataOffset = getUint64(dataView, offset)
       offset += 8
-      const indexOffset = Number(dataView.getBigUint64(offset, true))
+      const indexOffset = getUint64(dataView, offset)
       offset += 8
       zoomLevels.push({
         reductionLevel,
@@ -153,7 +153,7 @@ export abstract class BBI {
     if (totalSummaryOffset) {
       const summaryView = getDataView(b, totalSummaryOffset)
       totalSummary = {
-        basesCovered: Number(summaryView.getBigUint64(0, true)),
+        basesCovered: getUint64(summaryView, 0),
         scoreMin: summaryView.getFloat64(8, true),
         scoreMax: summaryView.getFloat64(16, true),
         scoreSum: summaryView.getFloat64(24, true),
@@ -239,7 +239,7 @@ export abstract class BBI {
         const nextNodes = []
         for (let n = 0; n < count; n++) {
           offset += keySize
-          const childOffset = Number(dataView.getBigUint64(offset, true))
+          const childOffset = getUint64(dataView, offset)
           offset += 8
           nextNodes.push(readBPlusTreeNode(childOffset))
         }

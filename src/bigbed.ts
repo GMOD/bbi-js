@@ -1,5 +1,5 @@
 import { BBI } from './bbi.ts'
-import { getDataView, parseKey } from './util.ts'
+import { getDataView, getUint64, parseKey } from './util.ts'
 
 import type { RequestOptions } from './types.ts'
 import type { GenericFilehandle } from 'generic-filehandle2'
@@ -85,7 +85,7 @@ async function readBPlusTreeNode(
     for (let i = 0; i < cnt; i++) {
       const key = parseKey(buffer, offset, keySize)
       offset += keySize
-      const dataOffset = Number(dataView.getBigUint64(offset, true))
+      const dataOffset = getUint64(dataView, offset)
       offset += 8
       leafkeys.push({
         key,
@@ -124,7 +124,7 @@ async function readBPlusTreeNode(
     for (let i = 0; i < cnt; i++) {
       const key = parseKey(buffer, offset, keySize)
       offset += keySize
-      const dataOffset = Number(dataView.getBigUint64(offset, true))
+      const dataOffset = getUint64(dataView, offset)
       offset += 8
       const length = dataView.getUint32(offset, true)
       offset += 4
@@ -218,7 +218,7 @@ export class BigBed extends BBI {
 
     const dataView = getDataView(b)
     const count = dataView.getUint16(2, true)
-    const dataOffset = Number(dataView.getBigUint64(4, true))
+    const dataOffset = getUint64(dataView, 4)
 
     // no extra index is defined if count==0
     if (count === 0) {
@@ -235,7 +235,7 @@ export class BigBed extends BBI {
       const dataView = getDataView(buffer, i * blocklen)
       const type = dataView.getInt16(0, true)
       const fieldcount = dataView.getInt16(2, true)
-      const dataOffset = Number(dataView.getBigUint64(4, true))
+      const dataOffset = getUint64(dataView, 4)
       const field = dataView.getInt16(16, true)
       indices.push({
         type,

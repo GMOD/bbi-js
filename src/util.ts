@@ -13,6 +13,15 @@ export function getDataView(buffer: Uint8Array, byteOffset = 0) {
   )
 }
 
+// Read a little-endian uint64 as a JS number. Exact for values below 2^53,
+// which covers any real file offset, and avoids allocating a BigInt.
+export function getUint64(dataView: DataView, byteOffset: number) {
+  return (
+    dataView.getUint32(byteOffset, true) +
+    dataView.getUint32(byteOffset + 4, true) * 2 ** 32
+  )
+}
+
 // Decode a null-terminated fixed-width key from a B+ tree node
 export function parseKey(buffer: Uint8Array, offset: number, keySize: number) {
   const nullPos = buffer.indexOf(0, offset)
