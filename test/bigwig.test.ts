@@ -91,12 +91,16 @@ test('loads a larger bigwig file at different scales', async () => {
   expect(f4.slice(10, 20)).toMatchSnapshot()
 })
 
-test('performs regularization', async () => {
-  const ti = new BigWig({
-    path: 'test/data/volvox.bw',
-    renameRefSeqs: ref => ref.replace('contig', 'ctg'),
-  })
-  const feats = await ti.getFeatures('contigA', 4200, 5600)
+// refName mapping is the caller's job (the removed renameRefSeqs option applied
+// itself to both the header's names and the query name, so the names getHeader
+// reported were not the names you could query with). the header exposes the
+// file's own names, so a caller-side map composes predictably
+test('caller-side refName mapping', async () => {
+  const ti = new BigWig({ path: 'test/data/volvox.bw' })
+  const toFileName = (ref: string) => ref.replace('contig', 'ctg')
+  const { refsByName } = await ti.getHeader()
+  expect(Object.keys(refsByName)).toEqual(['ctgA'])
+  const feats = await ti.getFeatures(toFileName('contigA'), 4200, 5600)
   expect(feats.length).toEqual(1400)
 })
 
@@ -218,4 +222,46 @@ test('loads pvalues bigwig at multiple scales', async () => {
     scale: 0.00001,
   })
   expect(feats3.length).toBeGreaterThan(0)
+})
+
+// a [start, end) with start >= end covers no bases. the wasm decompress+parse
+// path used to treat req_start === 0 && req_end === 0 as a "no filter" sentinel,
+// so getFeaturesAsArrays('ref', 0, 0) returned every feature of the first block
+// (and, at zoom levels, features from other chromosomes) while getFeatures
+// correctly returned none
+test('degenerate ranges return nothing on every read path', async () => {
+  const ti = new BigWig({ path: 'test/data/cow.bw' })
+  const ref = 'GK000001.2'
+  for (const opts of [{}, { basesPerSpan: 10000 }]) {
+    for (const [start, end] of [
+      [0, 0],
+      [1000000, 1000000],
+      [1001000, 1000000],
+    ]) {
+      expect(await ti.getFeatures(ref, start!, end!, opts)).toEqual([])
+      expect(
+        (await ti.getFeaturesAsArrays(ref, start!, end!, opts)).starts.length,
+      ).toBe(0)
+      expect(
+        await ti.getFeaturesMulti(
+          [{ refName: ref, start: start!, end: end! }],
+          opts,
+        ),
+      ).toEqual([[]])
+      expect(await ti.getRegionByteSize(ref, start!, end!, opts)).toBe(0)
+    }
+  }
+})
+
+test('typed-array and object reads agree at every zoom level', async () => {
+  const ti = new BigWig({ path: 'test/data/cDC.bw' })
+  for (const opts of [{}, { basesPerSpan: 10000 }, { basesPerSpan: 1000000 }]) {
+    const objs = await ti.getFeatures('chr1', 0, 250_000_000, opts)
+    const arrays = await ti.getFeaturesAsArrays('chr1', 0, 250_000_000, opts)
+    expect(arrays.starts.length).toBe(objs.length)
+    expect([...arrays.starts]).toEqual(objs.map(f => f.start))
+    expect([...arrays.ends]).toEqual(objs.map(f => f.end))
+    // arrays store scores as float32, objects as float64, so compare at f32
+    expect([...arrays.scores]).toEqual(objs.map(f => Math.fround(f.score!)))
+  }
 })

@@ -8,6 +8,7 @@ import type {
   BigWigFeatureArraysMulti,
   BigWigHeader,
   BigWigHeaderWithRefNames,
+  BlockType,
   Feature,
   RefInfo,
   RequestOptions2,
@@ -26,8 +27,6 @@ export abstract class BBI {
   protected bbi: GenericFilehandle
 
   private headerP?: Promise<BigWigHeaderWithRefNames>
-
-  protected renameRefSeqs: (a: string) => string
 
   /**
    * Returns file header metadata including chromosome list, zoom levels, autoSql
@@ -50,17 +49,13 @@ export abstract class BBI {
    * @param args.filehandle - a filehandle from generic-filehandle2
    * @param args.path - path to a local file
    * @param args.url - URL of a remote file
-   * @param args.renameRefSeqs - optional mapping function to rename internal
-   *   reference sequence names before querying
    */
   public constructor(args: {
     filehandle?: GenericFilehandle
     path?: string
     url?: string
-    renameRefSeqs?: (a: string) => string
   }) {
-    const { filehandle, renameRefSeqs = s => s, path, url } = args
-    this.renameRefSeqs = renameRefSeqs
+    const { filehandle, path, url } = args
     if (filehandle) {
       this.bbi = filehandle
     } else if (url) {
@@ -207,27 +202,28 @@ export abstract class BBI {
 
     const chromosomeTreeOffset = header.chromosomeTreeOffset
 
-    const dataView = getDataView(
+    const treeHeader = getDataView(
       await this.bbi.read(32, chromosomeTreeOffset, opts),
     )
-    const keySize = dataView.getUint32(8, true)
-    const valSize = dataView.getUint32(12, true)
+    const blockSize = treeHeader.getUint32(4, true)
+    const keySize = treeHeader.getUint32(8, true)
+    const valSize = treeHeader.getUint32(12, true)
+    // Every node holds at most blockSize items, and an internal item (key +
+    // 8-byte child offset) is never wider than a leaf item, so this bounds any
+    // node. Reading it in one request avoids a second round trip per node just to
+    // learn the item count - which doubled the request count on remote files.
+    const maxNodeSize = 4 + blockSize * (keySize + Math.max(valSize, 8))
 
     // Recursively traverses the B+ tree to populate chromosome name-to-ID mappings
     const readBPlusTreeNode = async (currentOffset: number) => {
-      const header = getDataView(await this.bbi.read(4, currentOffset, opts))
-      const isLeafNode = header.getUint8(0)
-      const count = header.getUint16(2, true)
+      const b = await this.bbi.read(maxNodeSize, currentOffset, opts)
+      const dataView = getDataView(b)
+      const isLeafNode = dataView.getUint8(0)
+      const count = dataView.getUint16(2, true)
+      let offset = 4
 
       // Leaf nodes contain the actual chromosome name-to-ID mappings
       if (isLeafNode) {
-        const b = await this.bbi.read(
-          count * (keySize + valSize),
-          currentOffset + 4,
-          opts,
-        )
-        const dataView = getDataView(b)
-        let offset = 0
         for (let n = 0; n < count; n++) {
           const key = parseKey(b, offset, keySize)
           offset += keySize
@@ -235,16 +231,12 @@ export abstract class BBI {
           offset += 4
           const refSize = dataView.getUint32(offset, true)
           offset += 4
-          refsByName[this.renameRefSeqs(key)] = refId
+          refsByName[key] = refId
           refsByNumber[refId] = { name: key, id: refId, length: refSize }
         }
       } else {
         // Non-leaf nodes contain pointers to child nodes
-        const dataView = getDataView(
-          await this.bbi.read(count * (keySize + 8), currentOffset + 4, opts),
-        )
         const nextNodes = []
-        let offset = 0
         for (let n = 0; n < count; n++) {
           offset += keySize
           const childOffset = Number(dataView.getBigUint64(offset, true))
@@ -267,7 +259,7 @@ export abstract class BBI {
     refsByName: Record<string, number>,
     rTreeOffset: number,
     uncompressBufSize: number,
-    blockType: string,
+    blockType: BlockType,
   ) {
     const key = `${rTreeOffset}_${blockType}`
     let view = this.viewCache.get(key)
@@ -329,7 +321,7 @@ export abstract class BBI {
     opts?: RequestOptions2,
   ) {
     const view = await this._getView(opts)
-    return view.readWigData(this.renameRefSeqs(refName), start, end, opts)
+    return view.readWigData(refName, start, end, opts)
   }
 
   /**
@@ -353,12 +345,7 @@ export abstract class BBI {
     opts?: RequestOptions2,
   ): Promise<number> {
     const view = await this._getView(opts)
-    return view.getBlockSizeForRange(
-      this.renameRefSeqs(refName),
-      start,
-      end,
-      opts,
-    )
+    return view.getBlockSizeForRange(refName, start, end, opts)
   }
 
   /**
@@ -375,14 +362,7 @@ export abstract class BBI {
     opts?: RequestOptions2,
   ): Promise<number> {
     const view = await this._getView(opts)
-    return view.getBlockSizeForRangeMulti(
-      regions.map(r => ({
-        refName: this.renameRefSeqs(r.refName),
-        start: r.start,
-        end: r.end,
-      })),
-      opts,
-    )
+    return view.getBlockSizeForRangeMulti(regions, opts)
   }
 
   /**
@@ -400,14 +380,7 @@ export abstract class BBI {
     opts?: RequestOptions2,
   ): Promise<Feature[][]> {
     const view = await this._getView(opts)
-    return view.readWigDataMulti(
-      regions.map(r => ({
-        refName: this.renameRefSeqs(r.refName),
-        start: r.start,
-        end: r.end,
-      })),
-      opts,
-    )
+    return view.readWigDataMulti(regions, opts)
   }
 
   /**
@@ -428,12 +401,7 @@ export abstract class BBI {
     opts?: RequestOptions2,
   ): Promise<BigWigFeatureArrays | SummaryFeatureArrays> {
     const view = await this._getView(opts)
-    return view.readWigDataAsArrays(
-      this.renameRefSeqs(refName),
-      start,
-      end,
-      opts,
-    )
+    return view.readWigDataAsArrays(refName, start, end, opts)
   }
 
   /**
@@ -453,13 +421,6 @@ export abstract class BBI {
     opts?: RequestOptions2,
   ): Promise<BigWigFeatureArraysMulti | SummaryFeatureArraysMulti> {
     const view = await this._getView(opts)
-    return view.readWigDataAsArraysMulti(
-      regions.map(r => ({
-        refName: this.renameRefSeqs(r.refName),
-        start: r.start,
-        end: r.end,
-      })),
-      opts,
-    )
+    return view.readWigDataAsArraysMulti(regions, opts)
   }
 }

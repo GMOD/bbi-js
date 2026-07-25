@@ -33,7 +33,13 @@ export function groupBlocks(blocks: Block[]) {
       lastBlock &&
       block.offset - (lastBlock.offset + lastBlock.length) <= 2000
     ) {
-      lastBlock.length = block.offset + block.length - lastBlock.offset
+      // max(): a block contained within the group's existing extent (a duplicate,
+      // or one nested in a longer earlier block) must not shrink it, or the group
+      // read would be short and later blocks would decode from truncated bytes
+      lastBlock.length = Math.max(
+        lastBlock.length,
+        block.offset + block.length - lastBlock.offset,
+      )
       lastBlock.blocks.push(block)
     } else {
       lastBlock = {

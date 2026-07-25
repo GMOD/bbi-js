@@ -63,12 +63,21 @@ See the [example](./example/) folder for a complete working demo.
 
 Pass exactly one of:
 
-| Option | Description |
-|---|---|
-| `path` | Path to a local file |
-| `url` | URL of a remote file |
+| Option       | Description                                                                                                  |
+| ------------ | ------------------------------------------------------------------------------------------------------------ |
+| `path`       | Path to a local file                                                                                         |
+| `url`        | URL of a remote file                                                                                         |
 | `filehandle` | A `GenericFilehandle` instance from [generic-filehandle2](https://www.npmjs.com/package/generic-filehandle2) |
-| `renameRefSeqs` | Optional `(name: string) => string` mapping applied to chromosome names before every query — useful when file-internal names differ from query names (e.g. `s => s.replace('chr', '')`) |
+
+Chromosome names are always the file's own names, both in query arguments and in
+the `refsByName`/`refsByNumber` maps `getHeader()` returns. If your application
+uses different names, map them at the call site (the `renameRefSeqs` option was
+removed in v10):
+
+```typescript
+const toFileName = (name: string) => name.replace('chr', '')
+const feats = await bigwig.getFeatures(toFileName('chr1'), 0, 100_000)
+```
 
 ### BigWig
 
@@ -84,14 +93,14 @@ Returns a `Promise<Feature[]>` for the given region. Returns an empty array if
 the refName is not found or the region has no data. Coordinates are 0-based
 half-open.
 
-| Parameter | Description |
-|---|---|
-| `refName` | Chromosome/sequence name |
-| `start` | 0-based start (inclusive) |
-| `end` | 0-based end (exclusive) |
-| `opts.scale` | Pixels per basepair — selects the zoom level where `reductionLevel ≤ 2/scale`. Omit for base resolution. |
-| `opts.basesPerSpan` | Inverse of `scale` (basepairs per pixel) |
-| `opts.signal` | `AbortSignal` to cancel the request |
+| Parameter           | Description                                                                                              |
+| ------------------- | -------------------------------------------------------------------------------------------------------- |
+| `refName`           | Chromosome/sequence name                                                                                 |
+| `start`             | 0-based start (inclusive)                                                                                |
+| `end`               | 0-based end (exclusive)                                                                                  |
+| `opts.scale`        | Pixels per basepair — selects the zoom level where `reductionLevel ≤ 2/scale`. Omit for base resolution. |
+| `opts.basesPerSpan` | Inverse of `scale` (basepairs per pixel)                                                                 |
+| `opts.signal`       | `AbortSignal` to cancel the request                                                                      |
 
 ```typescript
 const features = await bigwig.getFeatures('chr1', 0, 100000)
@@ -119,12 +128,16 @@ const perRegion = await bigwig.getFeaturesMulti([
 
 Same parameters as `getFeatures`, but returns typed arrays instead of an array
 of objects — more memory-efficient and lower GC pressure for large datasets.
+BigWig only: BigBed records are variable-width and carry a `rest` string, so
+calling this on a `BigBed` throws — use `getFeatures` there instead.
 
 ```typescript
 const result = await bigwig.getFeaturesAsArrays('chr1', 0, 100000)
 // Base resolution: { starts: Int32Array, ends: Int32Array, scores: Float32Array, isSummary: false }
 
-const summary = await bigwig.getFeaturesAsArrays('chr1', 0, 100000, { scale: 0.01 })
+const summary = await bigwig.getFeaturesAsArrays('chr1', 0, 100000, {
+  scale: 0.01,
+})
 // Zoom level:    { starts, ends, scores, minScores: Float32Array, maxScores: Float32Array, isSummary: true }
 ```
 
@@ -182,17 +195,17 @@ If no zoom level matches (e.g. `scale: 1`), base-resolution data is returned.
 Both `BigWig` and `BigBed` return `Feature` objects. Fields vary by file type
 and zoom level:
 
-| Field | Present on | Description |
-|---|---|---|
-| `start` | always | 0-based half-open start |
-| `end` | always | 0-based half-open end |
-| `score` | always | Signal value (BigWig) or BED score (BigBed) |
-| `rest` | BigBed | Raw tab-delimited BED columns 4+ |
-| `uniqueId` | BigBed | Stable ID from file offset; deduplicates exact copies |
-| `field` | BigBed (`searchExtraIndex`) | Which extra-index column matched |
-| `minScore` | zoom data | Minimum score across the summary interval |
-| `maxScore` | zoom data | Maximum score across the summary interval |
-| `summary` | zoom data | `true` when the feature comes from a zoom level |
+| Field      | Present on                  | Description                                           |
+| ---------- | --------------------------- | ----------------------------------------------------- |
+| `start`    | always                      | 0-based half-open start                               |
+| `end`      | always                      | 0-based half-open end                                 |
+| `score`    | always                      | Signal value (BigWig) or BED score (BigBed)           |
+| `rest`     | BigBed                      | Raw tab-delimited BED columns 4+                      |
+| `uniqueId` | BigBed                      | Stable ID from file offset; deduplicates exact copies |
+| `field`    | BigBed (`searchExtraIndex`) | Which extra-index column matched                      |
+| `minScore` | zoom data                   | Minimum score across the summary interval             |
+| `maxScore` | zoom data                   | Maximum score across the summary interval             |
+| `summary`  | zoom data                   | `true` when the feature comes from a zoom level       |
 
 ### BigBed
 
@@ -200,25 +213,26 @@ and zoom level:
 
 Returns a `Promise<Feature[]>`. No zoom levels — always base resolution.
 
-| Parameter | Description |
-|---|---|
-| `refName` | Chromosome/sequence name |
-| `start` | 0-based start (inclusive) |
-| `end` | 0-based end (exclusive) |
+| Parameter     | Description                         |
+| ------------- | ----------------------------------- |
+| `refName`     | Chromosome/sequence name            |
+| `start`       | 0-based start (inclusive)           |
+| `end`         | 0-based end (exclusive)             |
 | `opts.signal` | `AbortSignal` to cancel the request |
 
 #### `searchExtraIndex(name, opts?)`
 
-Searches the BigBed [extra indexes](https://genome.ucsc.edu/goldenpath/help/bigBed.html)
-(created with `-extraIndex` in `bedToBigBed`) for a string match. Returns a
+Searches the BigBed
+[extra indexes](https://genome.ucsc.edu/goldenpath/help/bigBed.html) (created
+with `-extraIndex` in `bedToBigBed`) for a string match. Returns a
 `Promise<Feature[]>` with an additional `field` property indicating which index
 matched.
 
 ### Parsing BigBed features with @gmod/bed
 
 Raw BigBed features contain a `rest` field with tab-delimited columns 4+. Use
-[@gmod/bed](https://www.npmjs.com/package/@gmod/bed) together with the
-`autoSql` from the file header to parse them into named fields:
+[@gmod/bed](https://www.npmjs.com/package/@gmod/bed) together with the `autoSql`
+from the file header to parse them into named fields:
 
 ```typescript
 import { BigBed } from '@gmod/bbi'

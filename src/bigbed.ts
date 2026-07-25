@@ -209,6 +209,11 @@ export class BigBed extends BBI {
    */
   private async _readIndices(opts: RequestOptions) {
     const { extHeaderOffset } = await this.getHeader(opts)
+    // extHeaderOffset 0 means the file has no extension header at all; reading
+    // there would misparse the main file header as an extension header
+    if (extHeaderOffset === 0) {
+      return []
+    }
     const b = await this.bbi.read(64, extHeaderOffset, opts)
 
     const dataView = getDataView(b)
@@ -301,15 +306,24 @@ export class BigBed extends BBI {
     }
     const view = await this.getUnzoomedView(opts)
     // Many index entries for the same name point at the same data block (several
-    // records packed into one block), so dedupe by offset+field to read and
-    // parse each block once instead of once per entry.
-    const uniqueBlocks = [
-      ...new Map(blocks.map(b => [`${b.offset}_${b.field}`, b])).values(),
-    ]
+    // records packed into one block), so dedupe by offset+field to read and parse
+    // each block once instead of once per entry. Blocks are then handed to
+    // readFeatures per field rather than one call each, so on-disk-adjacent blocks
+    // coalesce into a single read.
+    const blocksByField = new Map<number, Map<number, Loc>>()
+    for (const block of blocks) {
+      const field = block.field ?? 0
+      const byOffset = blocksByField.get(field)
+      if (byOffset) {
+        byOffset.set(block.offset, block)
+      } else {
+        blocksByField.set(field, new Map([[block.offset, block]]))
+      }
+    }
     const results = await Promise.all(
-      uniqueBlocks.map(async block => {
-        const features = await view.readFeatures([block], opts)
-        return features.map(f => ({ ...f, field: block.field }))
+      [...blocksByField].map(async ([field, byOffset]) => {
+        const features = await view.readFeatures([...byOffset.values()], opts)
+        return features.map(f => ({ ...f, field }))
       }),
     )
     // field offset is adjusted by -3 to account for chrom, chromStart, chromEnd columns
@@ -317,8 +331,7 @@ export class BigBed extends BBI {
       if (!f.rest) {
         return false
       }
-      const fieldIndex = (f.field ?? 0) - 3
-      return getTabField(f.rest, fieldIndex) === name
+      return getTabField(f.rest, f.field - 3) === name
     })
   }
 }

@@ -35,9 +35,9 @@ class CountingFile {
 test('getFeaturesMulti matches per-region getFeatures', async () => {
   const bw = new BigWig({ path: 'test/data/cDC.bw' })
   const header = await bw.getHeader()
-  const regions = (Object.values(header.refsByNumber) as { name: string; length: number }[]).map(
-    r => ({ refName: r.name, start: 0, end: r.length }),
-  )
+  const regions = (
+    Object.values(header.refsByNumber) as { name: string; length: number }[]
+  ).map(r => ({ refName: r.name, start: 0, end: r.length }))
   const scale = 1000 / 250_000_000
 
   const multi = await bw.getFeaturesMulti(regions, { scale })

@@ -9,7 +9,7 @@ import {
 } from './unzip.ts'
 import { decoder, getDataView, groupBlocks } from './util.ts'
 
-import type { Feature, ProgressCallback } from './types.ts'
+import type { BlockType, Feature, ProgressCallback } from './types.ts'
 import type {
   BigWigFeatureArrays,
   BigWigFeatureArraysMulti,
@@ -345,21 +345,23 @@ function parseSummaryBlockAsArrays(
   return { starts, ends, scores, minScores, maxScores }
 }
 
-// Concatenate parsed per-block-group chunks into a single typed array. Returns
-// the lone chunk directly when possible to avoid an extra copy.
-function concatTypedArray<T extends Int32Array | Float32Array>(
-  chunks: T[],
+// Concatenate one field across parsed per-block-group chunks into a single typed
+// array. Returns the lone chunk's array directly when possible to avoid a copy.
+function concatField<T extends Int32Array | Float32Array, C>(
+  chunks: C[],
+  get: (chunk: C) => T,
   totalCount: number,
   Ctor: new (length: number) => T,
 ): T {
   if (chunks.length === 1) {
-    return chunks[0]!
+    return get(chunks[0]!)
   }
   const out = new Ctor(totalCount)
   let offset = 0
   for (const chunk of chunks) {
-    out.set(chunk, offset)
-    offset += chunk.length
+    const field = get(chunk)
+    out.set(field, offset)
+    offset += field.length
   }
   return out
 }
@@ -374,57 +376,35 @@ type SummaryChunk = BigWigChunk & {
   maxScores: Float32Array
 }
 
+function countFeatures(chunks: BigWigChunk[]) {
+  let total = 0
+  for (const chunk of chunks) {
+    total += chunk.starts.length
+  }
+  return total
+}
+
+// Also produces the empty result (all zero-length arrays) when given no chunks.
 function concatBigWigChunks(chunks: BigWigChunk[]): BigWigFeatureArrays {
-  const totalCount = chunks.reduce((n, chunk) => n + chunk.starts.length, 0)
+  const totalCount = countFeatures(chunks)
   return {
-    starts: concatTypedArray(
-      chunks.map(c => c.starts),
-      totalCount,
-      Int32Array,
-    ),
-    ends: concatTypedArray(
-      chunks.map(c => c.ends),
-      totalCount,
-      Int32Array,
-    ),
-    scores: concatTypedArray(
-      chunks.map(c => c.scores),
-      totalCount,
-      Float32Array,
-    ),
-    isSummary: false as const,
+    starts: concatField(chunks, c => c.starts, totalCount, Int32Array),
+    ends: concatField(chunks, c => c.ends, totalCount, Int32Array),
+    scores: concatField(chunks, c => c.scores, totalCount, Float32Array),
+    isSummary: false,
   }
 }
 
 function concatSummaryChunks(chunks: SummaryChunk[]): SummaryFeatureArrays {
-  const totalCount = chunks.reduce((n, chunk) => n + chunk.starts.length, 0)
+  const totalCount = countFeatures(chunks)
+  const { starts, ends, scores } = concatBigWigChunks(chunks)
   return {
-    starts: concatTypedArray(
-      chunks.map(c => c.starts),
-      totalCount,
-      Int32Array,
-    ),
-    ends: concatTypedArray(
-      chunks.map(c => c.ends),
-      totalCount,
-      Int32Array,
-    ),
-    scores: concatTypedArray(
-      chunks.map(c => c.scores),
-      totalCount,
-      Float32Array,
-    ),
-    minScores: concatTypedArray(
-      chunks.map(c => c.minScores),
-      totalCount,
-      Float32Array,
-    ),
-    maxScores: concatTypedArray(
-      chunks.map(c => c.maxScores),
-      totalCount,
-      Float32Array,
-    ),
-    isSummary: true as const,
+    starts,
+    ends,
+    scores,
+    minScores: concatField(chunks, c => c.minScores, totalCount, Float32Array),
+    maxScores: concatField(chunks, c => c.maxScores, totalCount, Float32Array),
+    isSummary: true,
   }
 }
 
@@ -489,28 +469,8 @@ function concatSummaryChunksMulti(
   }
 }
 
-function emptyBigWigArrays(): BigWigFeatureArrays {
-  return {
-    starts: new Int32Array(0),
-    ends: new Int32Array(0),
-    scores: new Float32Array(0),
-    isSummary: false,
-  }
-}
-
-function emptySummaryArrays(): SummaryFeatureArrays {
-  return {
-    starts: new Int32Array(0),
-    ends: new Int32Array(0),
-    scores: new Float32Array(0),
-    minScores: new Float32Array(0),
-    maxScores: new Float32Array(0),
-    isSummary: true,
-  }
-}
-
 function parseBlock(
-  blockType: string,
+  blockType: BlockType,
   data: Uint8Array,
   blockOffset: number,
   request?: CoordRequest,
@@ -522,9 +482,6 @@ function parseBlock(
       return parseBigWigBlock(data, request)
     case 'bigbed':
       return parseBigBedBlock(data, blockOffset, request)
-    default:
-      console.warn(`Don't know what to do with ${blockType}`)
-      return []
   }
 }
 
@@ -554,14 +511,14 @@ export class BlockView {
   // with an R-tree for efficient spatial queries
   private rTreeOffset: number
   private uncompressBufSize: number
-  private blockType: string
+  private blockType: BlockType
 
   public constructor(
     bbi: GenericFilehandle,
     refsByName: Record<string, number>,
     rTreeOffset: number,
     uncompressBufSize: number,
-    blockType: string,
+    blockType: BlockType,
   ) {
     if (!(rTreeOffset >= 0)) {
       throw new Error('invalid rTreeOffset!')
@@ -580,7 +537,9 @@ export class BlockView {
     opts?: Options,
   ): Promise<{ blocks: Block[]; chrId: number } | undefined> {
     const chrId = this.refsByName[chrName]
-    if (chrId === undefined) {
+    // [start, end) with start >= end covers no bases, so no block can contribute
+    // a feature - bail before spending any reads on the index
+    if (chrId === undefined || start >= end) {
       return undefined
     }
     if (!this.rTreePromise) {
@@ -607,14 +566,19 @@ export class BlockView {
     // Upper bound on size, based on a completely full leaf node.
     const maxRTreeBlockSpan = 4 + rTreeBlockSize * 32
 
+    // An R-tree node covers the (chrom, base) range [(startChrom, startBase),
+    // (endChrom, endBase)). Overlap is the lexicographic half-open test UCSC's
+    // cirTreeOverlaps uses: (chrId, start) < (endChrom, endBase) and (chrId, end)
+    // > (startChrom, startBase). Comparisons must stay strict - inclusive bounds
+    // pull in nodes that merely abut the query and contribute no features.
     const blockIntersectsQuery = (
       startChrom: number,
       startBase: number,
       endChrom: number,
       endBase: number,
     ) =>
-      (startChrom < chrId || (startChrom === chrId && startBase <= end)) &&
-      (endChrom > chrId || (endChrom === chrId && endBase >= start))
+      (startChrom < chrId || (startChrom === chrId && startBase < end)) &&
+      (endChrom > chrId || (endChrom === chrId && endBase > start))
 
     const blocks: Block[] = []
     let currentOffsets = [this.rTreeOffset + 48]
@@ -737,12 +701,24 @@ export class BlockView {
     regions: { refName: string; start: number; end: number }[],
     opts: Options,
   ): Promise<CollectedBlocksMulti> {
+    // Walk the regions' index nodes concurrently - the R-tree node cache dedupes
+    // the shared upper levels - then merge in region order so the block union and
+    // its tags stay deterministic.
+    const collectedPerRegion = await Promise.all(
+      regions.map(({ refName, start, end }) =>
+        this._collectBlocks(refName, start, end, opts),
+      ),
+    )
     const blockByOffset = new Map<number, Block>()
     const tagsByOffset = new Map<number, RegionTag[]>()
-    for (let regionIndex = 0; regionIndex < regions.length; regionIndex++) {
-      const { refName, start, end } = regions[regionIndex]!
-      const collected = await this._collectBlocks(refName, start, end, opts)
+    for (
+      let regionIndex = 0;
+      regionIndex < collectedPerRegion.length;
+      regionIndex++
+    ) {
+      const collected = collectedPerRegion[regionIndex]
       if (collected) {
+        const { start, end } = regions[regionIndex]!
         const request = { chrId: collected.chrId, start, end }
         for (const block of collected.blocks) {
           const tags = tagsByOffset.get(block.offset)
@@ -788,29 +764,32 @@ export class BlockView {
     return results
   }
 
+  // The typed-array readers only understand the fixed-width bigwig and summary
+  // record layouts. BigBed records are variable-width and carry a `rest` string,
+  // so feeding them to the bigwig parser yields silent garbage - reject instead.
+  private assertNotBigBed(method: string) {
+    if (this.blockType === 'bigbed') {
+      throw new Error(
+        `${method} is not supported for BigBed data; use getFeatures/getFeaturesMulti instead`,
+      )
+    }
+  }
+
   public async readWigDataAsArrays(
     chrName: string,
     start: number,
     end: number,
     opts?: Options,
   ): Promise<BigWigFeatureArrays | SummaryFeatureArrays> {
+    this.assertNotBigBed('getFeaturesAsArrays')
     const collected = await this._collectBlocks(chrName, start, end, opts)
-    if (this.blockType === 'summary') {
-      return collected
-        ? this._readSummaryFeaturesAsArrays(
-            collected.blocks,
-            { chrId: collected.chrId, start, end },
-            opts,
-          )
-        : emptySummaryArrays()
-    }
-    return collected
-      ? this._readBigWigFeaturesAsArrays(
-          collected.blocks,
-          { chrId: collected.chrId, start, end },
-          opts,
-        )
-      : emptyBigWigArrays()
+    // no blocks when the ref is absent or the range is degenerate, in which case
+    // the readers do no I/O and never consult chrId
+    const blocks = collected ? collected.blocks : []
+    const request = { chrId: collected ? collected.chrId : 0, start, end }
+    return this.blockType === 'summary'
+      ? this._readSummaryFeaturesAsArrays(blocks, request, opts)
+      : this._readBigWigFeaturesAsArrays(blocks, request, opts)
   }
 
   // Multi-region typed-array read. Same block dedupe/coalesce strategy as
@@ -823,23 +802,26 @@ export class BlockView {
     regions: { refName: string; start: number; end: number }[],
     opts: Options = {},
   ): Promise<BigWigFeatureArraysMulti | SummaryFeatureArraysMulti> {
+    this.assertNotBigBed('getFeaturesAsArraysMulti')
     const collected = await this._collectBlocksMulti(regions, opts)
     if (this.blockType === 'summary') {
-      const chunksByRegion = await this._readBlocksAsArraysMulti(
+      return concatSummaryChunksMulti(
+        await this._readBlocksAsArraysMulti(
+          collected,
+          regions.length,
+          (data, request) => parseSummaryBlockAsArrays(data, request),
+          opts,
+        ),
+      )
+    }
+    return concatBigWigChunksMulti(
+      await this._readBlocksAsArraysMulti(
         collected,
         regions.length,
-        (data, request) => parseSummaryBlockAsArrays(data, request),
+        (data, request) => parseBigWigBlockAsArrays(data, request),
         opts,
-      )
-      return concatSummaryChunksMulti(chunksByRegion)
-    }
-    const chunksByRegion = await this._readBlocksAsArraysMulti(
-      collected,
-      regions.length,
-      (data, request) => parseBigWigBlockAsArrays(data, request),
-      opts,
+      ),
     )
-    return concatBigWigChunksMulti(chunksByRegion)
   }
 
   // Fetch the deduped block union, decompress each group, and parse every block
@@ -872,8 +854,40 @@ export class BlockView {
     return chunksByRegion
   }
 
-  // Fetch each block group, decompress it (when compressed), and hand each
-  // block's decoded bytes plus its file offset to `visit`. Shared by every
+  // Coalesce `blocks` into groups of on-disk-adjacent blocks, fetch each group in
+  // one read, and hand the group's bytes to `visit` along with each block's offset
+  // rebased to the start of that read. Reporting download progress here keeps
+  // every reader's progress accounting identical.
+  private async _forEachBlockGroup(
+    blocks: Block[],
+    signal: AbortSignal | undefined,
+    onProgress: ProgressCallback | undefined,
+    visit: (
+      data: Uint8Array,
+      localBlocks: Block[],
+      groupOffset: number,
+    ) => Promise<void> | void,
+  ): Promise<void> {
+    const blockGroups = groupBlocks(blocks)
+    const report = blockProgress(blockGroups, onProgress)
+    for (const blockGroup of blockGroups) {
+      const data = await this.bbi.read(blockGroup.length, blockGroup.offset, {
+        signal,
+      })
+      report(blockGroup.length)
+      await visit(
+        data,
+        blockGroup.blocks.map(block => ({
+          offset: block.offset - blockGroup.offset,
+          length: block.length,
+        })),
+        blockGroup.offset,
+      )
+    }
+  }
+
+  // Decompress each block group (when compressed) and hand each block's decoded
+  // bytes plus its file offset to `visit`. Shared by every
   // decompress-then-parse-in-JS reader (single-region, multi-region, and the
   // typed-array multi path). The single-region typed-array path is separate
   // because it fuses decompress+parse in one wasm call.
@@ -884,39 +898,33 @@ export class BlockView {
     visit: (data: Uint8Array, blockOffset: number) => void,
   ): Promise<void> {
     const { uncompressBufSize } = this
-    const blockGroups = groupBlocks(blocks)
-    const report = blockProgress(blockGroups, onProgress)
-    for (const blockGroup of blockGroups) {
-      const data = await this.bbi.read(blockGroup.length, blockGroup.offset, {
-        signal,
-      })
-      report(blockGroup.length)
-      const groupOffset = blockGroup.offset
-      const subBlocks = blockGroup.blocks
-
-      if (uncompressBufSize > 0) {
-        const localBlocks = subBlocks.map(block => ({
-          offset: block.offset - groupOffset,
-          length: block.length,
-        }))
-        const { data: decompressedData, offsets } = await unzipBatch(
-          data,
-          localBlocks,
-          uncompressBufSize,
-        )
-        for (let i = 0; i < subBlocks.length; i++) {
-          visit(
-            decompressedData.subarray(offsets[i], offsets[i + 1]),
-            subBlocks[i]!.offset,
+    await this._forEachBlockGroup(
+      blocks,
+      signal,
+      onProgress,
+      async (data, localBlocks, groupOffset) => {
+        if (uncompressBufSize > 0) {
+          const { data: decompressed, offsets } = await unzipBatch(
+            data,
+            localBlocks,
+            uncompressBufSize,
           )
+          for (let i = 0; i < localBlocks.length; i++) {
+            visit(
+              decompressed.subarray(offsets[i], offsets[i + 1]),
+              groupOffset + localBlocks[i]!.offset,
+            )
+          }
+        } else {
+          for (const block of localBlocks) {
+            visit(
+              data.subarray(block.offset, block.offset + block.length),
+              groupOffset + block.offset,
+            )
+          }
         }
-      } else {
-        for (const block of subBlocks) {
-          const start = block.offset - groupOffset
-          visit(data.subarray(start, start + block.length), block.offset)
-        }
-      }
-    }
+      },
+    )
   }
 
   public async readFeatures(
@@ -940,50 +948,43 @@ export class BlockView {
     return allFeatures
   }
 
-  // Fetch each block group, then either batch-decompress+parse the whole group
+  // Either batch-decompress+parse a whole block group in one fused wasm call
   // (compressed) or parse each block individually (uncompressed). Returns the
-  // non-empty per-group chunks; empty chunks are dropped so callers can sum
-  // lengths and concatenate directly. The chunk shape T is inferred from the
-  // parse functions, which the bigwig/summary callers supply.
-  private async _readBlocksAsArrays<T>(
+  // non-empty chunks; empty chunks are dropped so callers can sum lengths and
+  // concatenate directly. The chunk shape T is inferred from the parse functions,
+  // which the bigwig/summary callers supply.
+  private async _readBlocksAsArrays<T extends BigWigChunk>(
     blocks: Block[],
     signal: AbortSignal | undefined,
     parseGroup: (data: Uint8Array, localBlocks: Block[]) => Promise<T>,
     parseSingleBlock: (blockData: Uint8Array) => T,
-    count: (chunk: T) => number,
     onProgress?: ProgressCallback,
   ): Promise<T[]> {
+    const { uncompressBufSize } = this
     const chunks: T[] = []
-    const blockGroups = groupBlocks(blocks)
-    const report = blockProgress(blockGroups, onProgress)
-    for (const blockGroup of blockGroups) {
-      const data = await this.bbi.read(blockGroup.length, blockGroup.offset, {
-        signal,
-      })
-      report(blockGroup.length)
-      const localBlocks = blockGroup.blocks.map(block => ({
-        offset: block.offset - blockGroup.offset,
-        length: block.length,
-      }))
-
-      if (this.uncompressBufSize > 0) {
-        const chunk = await parseGroup(data, localBlocks)
-        if (count(chunk) > 0) {
-          chunks.push(chunk)
-        }
-      } else {
-        for (const block of localBlocks) {
-          const blockData = data.subarray(
-            block.offset,
-            block.offset + block.length,
-          )
-          const chunk = parseSingleBlock(blockData)
-          if (count(chunk) > 0) {
-            chunks.push(chunk)
-          }
-        }
+    const keepNonEmpty = (chunk: T) => {
+      if (chunk.starts.length > 0) {
+        chunks.push(chunk)
       }
     }
+    await this._forEachBlockGroup(
+      blocks,
+      signal,
+      onProgress,
+      async (data, localBlocks) => {
+        if (uncompressBufSize > 0) {
+          keepNonEmpty(await parseGroup(data, localBlocks))
+        } else {
+          for (const block of localBlocks) {
+            keepNonEmpty(
+              parseSingleBlock(
+                data.subarray(block.offset, block.offset + block.length),
+              ),
+            )
+          }
+        }
+      },
+    )
     return chunks
   }
 
@@ -1004,7 +1005,6 @@ export class BlockView {
           request.end,
         ),
       blockData => parseBigWigBlockAsArrays(blockData, request),
-      chunk => chunk.starts.length,
       opts.onProgress,
     )
     return concatBigWigChunks(chunks)
@@ -1028,7 +1028,6 @@ export class BlockView {
           request.end,
         ),
       blockData => parseSummaryBlockAsArrays(blockData, request),
-      chunk => chunk.starts.length,
       opts.onProgress,
     )
     return concatSummaryChunks(chunks)

@@ -1,3 +1,9 @@
+/**
+ * Which on-disk block layout an index points at: base-resolution BigWig
+ * sections, BigBed records, or zoom-level summary records.
+ */
+export type BlockType = 'bigwig' | 'bigbed' | 'summary'
+
 /** A zoom level entry from the BigWig file header. */
 export interface ZoomLevel {
   reductionLevel: number
@@ -7,10 +13,6 @@ export interface ZoomLevel {
 
 /** A single feature returned by `getFeatures`. */
 export interface Feature {
-  /** @internal */
-  offset?: number
-  /** @internal */
-  chromId?: number
   /** 0-based half-open start coordinate. */
   start: number
   /** 0-based half-open end coordinate. */
@@ -65,7 +67,7 @@ export interface BigWigHeader {
   uncompressBufSize: number
   chromosomeTreeOffset: number
   extHeaderOffset: number
-  fileType: string
+  fileType: 'bigwig' | 'bigbed'
 }
 
 /** BigWig/BigBed file header including chromosome name and ID maps. Returned by `getHeader()`. */

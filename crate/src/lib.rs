@@ -4,6 +4,24 @@ use wasm_bindgen::prelude::*;
 
 const ZLIB_HEADER_SIZE: usize = 2;
 
+/// Slice out one block's raw deflate stream (the zlib header is skipped so
+/// libdeflater's raw-deflate path can be used). Returns an error rather than
+/// panicking on a corrupt offset/length: the crate builds with `panic = "abort"`,
+/// so an out-of-bounds index would trap and leave the wasm instance unusable for
+/// every later call instead of surfacing a catchable JS error.
+fn deflate_block<'a>(inputs: &'a [u8], offset: u32, length: u32) -> Result<&'a [u8], JsError> {
+    let len = (length as usize)
+        .checked_sub(ZLIB_HEADER_SIZE)
+        .ok_or_else(|| JsError::new("block is shorter than the 2-byte zlib header"))?;
+    let start = (offset as usize)
+        .checked_add(ZLIB_HEADER_SIZE)
+        .ok_or_else(|| JsError::new("block offset overflows"))?;
+    inputs
+        .get(start..)
+        .and_then(|rest| rest.get(..len))
+        .ok_or_else(|| JsError::new("compressed block extends past the input buffer"))
+}
+
 #[wasm_bindgen]
 pub fn inflate_raw(input: &[u8], output_size: usize) -> Result<Vec<u8>, JsError> {
     let mut decompressor = Decompressor::new();
@@ -68,9 +86,7 @@ pub fn inflate_raw_batch(
     let mut temp_buf = vec![0u8; max_out];
 
     for i in 0..num_blocks {
-        let start = input_offsets[i] as usize + ZLIB_HEADER_SIZE;
-        let len = input_lengths[i] as usize - ZLIB_HEADER_SIZE;
-        let input = &inputs[start..start + len];
+        let input = deflate_block(inputs, input_offsets[i], input_lengths[i])?;
 
         let offset_pos = offsets_start + i * 4;
         result[offset_pos..offset_pos + 4].copy_from_slice(&data_offset.to_le_bytes());
@@ -127,9 +143,7 @@ pub fn decompress_and_parse_bigwig(
     let mut scores: Vec<f32> = Vec::with_capacity(estimated_features);
 
     for i in 0..num_blocks {
-        let start = input_offsets[i] as usize + ZLIB_HEADER_SIZE;
-        let len = input_lengths[i] as usize - ZLIB_HEADER_SIZE;
-        let input = &inputs[start..start + len];
+        let input = deflate_block(inputs, input_offsets[i], input_lengths[i])?;
 
         let actual_size = decompressor
             .deflate_decompress(input, &mut temp_buf)
@@ -170,7 +184,6 @@ fn parse_bigwig_block_into(
     let item_count = read_u16_le(data, 22) as usize;
 
     let body = &data[24..];
-    let filter = req_start != 0 || req_end != 0;
 
     match block_type {
         1 => {
@@ -178,7 +191,7 @@ fn parse_bigwig_block_into(
             for rec in body.chunks_exact(12).take(item_count) {
                 let start = i32::from_le_bytes(rec[0..4].try_into().unwrap());
                 let end = i32::from_le_bytes(rec[4..8].try_into().unwrap());
-                if !filter || (start < req_end && end > req_start) {
+                if start < req_end && end > req_start {
                     let score = f32::from_le_bytes(rec[8..12].try_into().unwrap());
                     starts.push(start);
                     ends.push(end);
@@ -191,7 +204,7 @@ fn parse_bigwig_block_into(
             for rec in body.chunks_exact(8).take(item_count) {
                 let start = i32::from_le_bytes(rec[0..4].try_into().unwrap());
                 let end = start + item_span;
-                if !filter || (start < req_end && end > req_start) {
+                if start < req_end && end > req_start {
                     let score = f32::from_le_bytes(rec[4..8].try_into().unwrap());
                     starts.push(start);
                     ends.push(end);
@@ -204,7 +217,7 @@ fn parse_bigwig_block_into(
             for (i, rec) in body.chunks_exact(4).take(item_count).enumerate() {
                 let start = block_start + (i as i32) * item_step;
                 let end = start + item_span;
-                if !filter || (start < req_end && end > req_start) {
+                if start < req_end && end > req_start {
                     let score = f32::from_le_bytes(rec[0..4].try_into().unwrap());
                     starts.push(start);
                     ends.push(end);
@@ -240,12 +253,8 @@ pub fn decompress_and_parse_summary(
     let mut min_scores: Vec<f32> = Vec::with_capacity(estimated_features);
     let mut max_scores: Vec<f32> = Vec::with_capacity(estimated_features);
 
-    let filter = req_start != 0 || req_end != 0;
-
     for i in 0..num_blocks {
-        let start = input_offsets[i] as usize + ZLIB_HEADER_SIZE;
-        let len = input_lengths[i] as usize - ZLIB_HEADER_SIZE;
-        let input = &inputs[start..start + len];
+        let input = deflate_block(inputs, input_offsets[i], input_lengths[i])?;
 
         let actual_size = decompressor
             .deflate_decompress(input, &mut temp_buf)
@@ -257,8 +266,7 @@ pub fn decompress_and_parse_summary(
             let chrom_id = u32::from_le_bytes(rec[0..4].try_into().unwrap());
             let feat_start = u32::from_le_bytes(rec[4..8].try_into().unwrap()) as i32;
             let feat_end = u32::from_le_bytes(rec[8..12].try_into().unwrap()) as i32;
-            let passes = !filter || (chrom_id == req_chr_id && feat_start < req_end && feat_end > req_start);
-            if passes {
+            if chrom_id == req_chr_id && feat_start < req_end && feat_end > req_start {
                 let valid_cnt = u32::from_le_bytes(rec[12..16].try_into().unwrap());
                 let min_score = f32::from_le_bytes(rec[16..20].try_into().unwrap());
                 let max_score = f32::from_le_bytes(rec[20..24].try_into().unwrap());

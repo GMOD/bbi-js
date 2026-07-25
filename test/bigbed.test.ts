@@ -164,18 +164,16 @@ test('getRegionByteSize reads only the index, not the feature blocks', async () 
     0,
     1_000_000,
   )
-  const probeBytes = probeSpy.mock.calls.reduce(
-    (sum, call) => sum + (call[0]),
-    0,
-  )
+  const probeBytes = probeSpy.mock.calls.reduce((sum, call) => sum + call[0], 0)
 
   const fetchHandle = new LocalFile('test/data/hg18.bb')
   const fetchSpy = vi.spyOn(fetchHandle, 'read')
-  await new BigBed({ filehandle: fetchHandle }).getFeatures('chr7', 0, 1_000_000)
-  const fetchBytes = fetchSpy.mock.calls.reduce(
-    (sum, call) => sum + (call[0]),
+  await new BigBed({ filehandle: fetchHandle }).getFeatures(
+    'chr7',
     0,
+    1_000_000,
   )
+  const fetchBytes = fetchSpy.mock.calls.reduce((sum, call) => sum + call[0], 0)
 
   expect(probeBytes).toBeLessThan(fetchBytes)
 })
@@ -195,4 +193,17 @@ test('getRegionByteSizeMulti dedupes blocks shared across adjacent regions', asy
   // splitting the span in two and deduping by offset recovers the same set of
   // blocks as one query over the union — not a doubled count
   expect(split).toBe(whole)
+})
+
+// the typed-array readers only understand the fixed-width bigwig/summary record
+// layouts; run over variable-width bigbed records they silently produced garbage
+// (hg18.bb yielded 0 features where getFeatures finds 6)
+test('typed-array reads reject bigbed data instead of misparsing it', async () => {
+  const ti = new BigBed({ path: 'test/data/hg18.bb' })
+  await expect(ti.getFeaturesAsArrays('chr7', 0, 100000)).rejects.toThrow(
+    /not supported for BigBed/,
+  )
+  await expect(
+    ti.getFeaturesAsArraysMulti([{ refName: 'chr7', start: 0, end: 100000 }]),
+  ).rejects.toThrow(/not supported for BigBed/)
 })
