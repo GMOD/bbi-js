@@ -90,8 +90,8 @@ Returns `Promise<BigWigHeaderWithRefNames>` with chromosome list (`refsByName`,
 #### `getFeatures(refName, start, end, opts?)`
 
 Returns a `Promise<Feature[]>` for the given region. Returns an empty array if
-the refName is not found or the region has no data. Coordinates are 0-based
-half-open.
+the refName is not found, the region has no data, or `start >= end`. Coordinates
+are 0-based half-open.
 
 | Parameter           | Description                                                                                              |
 | ------------------- | -------------------------------------------------------------------------------------------------------- |
@@ -101,10 +101,21 @@ half-open.
 | `opts.scale`        | Pixels per basepair — selects the zoom level where `reductionLevel ≤ 2/scale`. Omit for base resolution. |
 | `opts.basesPerSpan` | Inverse of `scale` (basepairs per pixel)                                                                 |
 | `opts.signal`       | `AbortSignal` to cancel the request                                                                      |
+| `opts.onProgress`   | `(bytesDownloaded, totalBytes) => void`, called as data blocks are fetched                               |
 
 ```typescript
 const features = await bigwig.getFeatures('chr1', 0, 100000)
 // [{ start, end, score }, ...]
+```
+
+Every read method below accepts the same `opts`. `onProgress` reports a
+determinate fraction — the total is known up front because block byte sizes come
+from the index — at block-group granularity:
+
+```typescript
+await bigwig.getFeatures('chr1', 0, 100_000, {
+  onProgress: (downloaded, total) => console.log(`${downloaded}/${total}`),
+})
 ```
 
 #### `getFeaturesMulti(regions, opts?)`
@@ -169,6 +180,50 @@ interface SummaryFeatureArrays {
 }
 ```
 
+#### `getFeaturesAsArraysMulti(regions, opts?)`
+
+Multi-region counterpart of `getFeaturesAsArrays`, with the same cross-region
+read coalescing as `getFeaturesMulti`. Instead of one object per region, all
+regions share one backing set of typed arrays, and `regionOffsets` records where
+each region's half-open slice begins. Pulling a region out is a `subarray` with
+no copy. `regionOffsets` has length `regions.length + 1`.
+
+```typescript
+const multi = await bigwig.getFeaturesAsArraysMulti([
+  { refName: 'ctgA', start: 0, end: 1000 },
+  { refName: 'ctgA', start: 5000, end: 6000 },
+])
+// multi.regionOffsets -> [0, 998, 1998]
+
+const secondRegionStarts = multi.starts.subarray(
+  multi.regionOffsets[1],
+  multi.regionOffsets[2],
+)
+```
+
+Returns `BigWigFeatureArraysMulti | SummaryFeatureArraysMulti` — the array types
+above plus `regionOffsets: number[]`, discriminated by `isSummary` the same way.
+
+#### `getRegionByteSize(refName, start, end, opts?)`
+
+Sums the compressed on-disk block lengths the index reports overlapping the
+region, reading only the R-tree index — no feature block is downloaded or
+decompressed. An upper bound on what a `getFeatures` call over the same region
+and zoom (`opts`) would transfer, for gating over-large downloads before they
+start. Returns 0 if the refName is not found.
+
+```typescript
+const bytes = await bigwig.getRegionByteSize('chr1', 0, 100_000)
+if (bytes < 5_000_000) {
+  const features = await bigwig.getFeatures('chr1', 0, 100_000)
+}
+```
+
+#### `getRegionByteSizeMulti(regions, opts?)`
+
+Multi-region counterpart. Blocks shared across overlapping regions are counted
+once, matching the single fetch `getFeaturesMulti` would make.
+
 #### Understanding zoom levels
 
 `scale` (pixels per basepair) controls which pre-computed zoom level is served.
@@ -195,30 +250,34 @@ If no zoom level matches (e.g. `scale: 1`), base-resolution data is returned.
 Both `BigWig` and `BigBed` return `Feature` objects. Fields vary by file type
 and zoom level:
 
-| Field      | Present on                  | Description                                           |
-| ---------- | --------------------------- | ----------------------------------------------------- |
-| `start`    | always                      | 0-based half-open start                               |
-| `end`      | always                      | 0-based half-open end                                 |
-| `score`    | always                      | Signal value (BigWig) or BED score (BigBed)           |
-| `rest`     | BigBed                      | Raw tab-delimited BED columns 4+                      |
-| `uniqueId` | BigBed                      | Stable ID from file offset; deduplicates exact copies |
-| `field`    | BigBed (`searchExtraIndex`) | Which extra-index column matched                      |
-| `minScore` | zoom data                   | Minimum score across the summary interval             |
-| `maxScore` | zoom data                   | Maximum score across the summary interval             |
-| `summary`  | zoom data                   | `true` when the feature comes from a zoom level       |
+| Field      | Present on                  | Description                                                       |
+| ---------- | --------------------------- | ----------------------------------------------------------------- |
+| `start`    | always                      | 0-based half-open start                                           |
+| `end`      | always                      | 0-based half-open end                                             |
+| `score`    | BigWig                      | Signal value; mean over the interval on zoom data                 |
+| `rest`     | BigBed                      | Raw tab-delimited BED columns 4+, including the BED score         |
+| `uniqueId` | BigBed                      | Stable ID from block and record offset; deduplicates exact copies |
+| `field`    | BigBed (`searchExtraIndex`) | Which extra-index column matched                                  |
+| `minScore` | zoom data                   | Minimum score across the summary interval                         |
+| `maxScore` | zoom data                   | Maximum score across the summary interval                         |
+| `summary`  | zoom data                   | `true` when the feature comes from a zoom level                   |
+
+```typescript
+// BigWig, base resolution
+{ start: 2, end: 3, score: 1 }
+
+// BigWig, zoom level
+{ start: 2, end: 10242, minScore: 1, maxScore: 32, score: 18.44677734375, summary: true }
+```
 
 ### BigBed
 
-#### `getFeatures(refName, start, end, opts?)`
-
-Returns a `Promise<Feature[]>`. No zoom levels — always base resolution.
-
-| Parameter     | Description                         |
-| ------------- | ----------------------------------- |
-| `refName`     | Chromosome/sequence name            |
-| `start`       | 0-based start (inclusive)           |
-| `end`         | 0-based end (exclusive)             |
-| `opts.signal` | `AbortSignal` to cancel the request |
+`BigBed` shares `getHeader`, `getFeatures`, `getFeaturesMulti`,
+`getRegionByteSize`, and `getRegionByteSizeMulti` with `BigWig`. BigBed files
+have no zoom levels, so `scale`/`basesPerSpan` are ignored and every read is
+base resolution. The typed-array readers (`getFeaturesAsArrays`,
+`getFeaturesAsArraysMulti`) throw — BigBed records are variable-width and carry
+a `rest` string that does not fit a fixed-width typed array.
 
 #### `searchExtraIndex(name, opts?)`
 
@@ -251,19 +310,17 @@ Raw feature:
 
 ```json
 {
-  "chromId": 0,
-  "start": 64068,
-  "end": 64107,
-  "rest": "uc003sil.1\t0\t-\t64068\t64068\t255,0,0\t.\tDQ584609",
-  "uniqueId": "bb-171"
+  "start": 54028,
+  "end": 73584,
+  "rest": "uc003sii.2\t0\t-\t54028\t54028\t255,0,0\t.\tAL137655",
+  "uniqueId": "bb-1083-0"
 }
 ```
 
-Parsed feature:
+The same feature parsed:
 
 ```json
 {
-  "uniqueId": "bb-0",
   "chrom": "chr7",
   "chromStart": 54028,
   "chromEnd": 73584,
@@ -273,11 +330,13 @@ Parsed feature:
   "thickStart": 54028,
   "thickEnd": 54028,
   "reserved": "255,0,0",
-  "spID": "AL137655"
+  "spID": "AL137655",
+  "uniqueId": "bb-1083-0"
 }
 ```
 
-The `uniqueId` is derived from the file offset and helps deduplicate exact
+The `uniqueId` pairs the block's byte offset in the file with the record's
+offset inside that block, so it is unique file-wide and helps deduplicate exact
 feature copies.
 
 ### `parseBigWig(bigwig, opts?)`
@@ -317,8 +376,19 @@ for (let i = 0; i < view.length; i++) {
 }
 ```
 
-`BigWigFeature` exposes `get(i, key)` and `toJSON()`. Valid keys: `start`,
-`end`, `score`, `refName`, `source`, `summary`, `minScore`, `maxScore`.
+`ArrayFeatureView.get(i, key)` reads one field of feature `i`. `BigWigFeature`
+binds an index, so it exposes `get(key)`, `id()`, and `toJSON()`:
+
+```typescript
+import { BigWigFeature } from '@gmod/bbi'
+
+const feature = new BigWigFeature(view, 0)
+feature.get('score')
+feature.toJSON()
+```
+
+Valid keys for either `get`: `start`, `end`, `score`, `refName`, `source`,
+`summary`, `minScore`, `maxScore`.
 
 ## Publishing
 
