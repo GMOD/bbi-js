@@ -385,6 +385,17 @@ inflate.
   variable-width, so they decompress in wasm and parse in JS.
 - **Lazily initialized** on first use, then cached. Every read method is already
   `async`, so this adds no API surface.
+- **~2.5–3× faster than pure JS at decompression.** Inflating every
+  base-resolution block of the test fixtures takes libdeflater 2.5–3× less time
+  than [pako](https://github.com/nodeca/pako), measured across files from 139KB
+  to 3.3MB compressed. Reproduce with `pnpm benchonly inflate`
+  ([source](./benchmarks/inflate.bench.ts)) — both paths do identical work and
+  the benchmark asserts their output is byte-for-byte equal before timing.
+
+That multiplier applies to the decompression step, not to a whole query. How
+much of it you actually see depends on how much of the query is spent waiting on
+I/O — for a large remote read, download time dominates and the difference is
+small.
 
 The Rust lives in [`crate/`](./crate/). Building it (`pnpm build:wasm`) needs a
 Rust toolchain, but the generated bundle is checked into git, so consumers and
