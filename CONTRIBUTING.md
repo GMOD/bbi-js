@@ -8,6 +8,11 @@ pnpm test
 pnpm build
 ```
 
+`pnpm build` also rebuilds the Rust/wasm decompressor, which needs a Rust
+toolchain. The generated bundle is checked into git, so if you aren't touching
+`crate/` you can skip it with `pnpm build:esm && pnpm build:es5`. See
+[docs/wasm.md](./docs/wasm.md).
+
 Use `npm version patch/minor/major` to release — it runs lint, tests, and build,
 then pushes the version tag which triggers the publish workflow.
 

@@ -16,7 +16,7 @@ Parser for BigWig and BigBed file formats.
   - [`Feature` type](#feature-type)
   - [BigBed](#bigbed)
   - [Helpers](#helpers)
-- [Decompression (WebAssembly)](#decompression-webassembly)
+- [Decompression](#decompression)
 - [Migrating to v10](#migrating-to-v10)
 
 ## Installation
@@ -368,38 +368,12 @@ feature.toJSON()
 either `get`: `start`, `end`, `score`, `refName`, `source`, `summary`,
 `minScore`, `maxScore`.
 
-## Decompression (WebAssembly)
+## Decompression
 
-Block decompression and BigWig record parsing run in a Rust/WebAssembly module
-built on [libdeflater](https://github.com/ebiggers/libdeflate), not a JS
-inflate.
-
-- **Zero setup.** The `.wasm` is base64-inlined into the JS bundle — no separate
-  asset to fetch, copy, or teach your bundler about. Install and import; node,
-  browsers, and bundlers all work unchanged.
-- **Batched.** Every block in a query decompresses in one wasm call into a
-  single output buffer, rather than one call per block.
-- **Parses in Rust too.** For BigWig, the wasm decompresses _and_ walks the
-  fixed-width records, returning packed typed arrays that `getFeaturesAsArrays`
-  hands back with no per-record JS object allocation. BigBed records are
-  variable-width, so they decompress in wasm and parse in JS.
-- **Lazily initialized** on first use, then cached. Every read method is already
-  `async`, so this adds no API surface.
-- **~2.5–3× faster than pure JS at decompression.** Inflating every
-  base-resolution block of the test fixtures takes libdeflater 2.5–3× less time
-  than [pako](https://github.com/nodeca/pako), measured across files from 139KB
-  to 3.3MB compressed. Reproduce with `pnpm benchonly inflate`
-  ([source](./benchmarks/inflate.bench.ts)) — both paths do identical work and
-  the benchmark asserts their output is byte-for-byte equal before timing.
-
-That multiplier applies to the decompression step, not to a whole query. How
-much of it you actually see depends on how much of the query is spent waiting on
-I/O — for a large remote read, download time dominates and the difference is
-small.
-
-The Rust lives in [`crate/`](./crate/). Building it (`pnpm build:wasm`) needs a
-Rust toolchain, but the generated bundle is checked into git, so consumers and
-contributors who don't touch the Rust never need one.
+Blocks are decompressed in a Rust/WebAssembly module built on
+[libdeflater](https://github.com/ebiggers/libdeflate), roughly 2.5–3× faster
+than a pure-JS inflate. It is base64-inlined into the bundle and loads lazily,
+so there is nothing to install or configure. See [docs/wasm.md](./docs/wasm.md).
 
 ## Migrating to v10
 
