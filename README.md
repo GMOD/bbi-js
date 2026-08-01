@@ -5,6 +5,20 @@
 
 Parser for BigWig and BigBed file formats.
 
+- [Installation](#installation)
+- [Usage](#usage)
+- [API](#api)
+  - [Constructor](#constructor)
+  - [Options](#options)
+  - [Reading features](#reading-features)
+  - [Estimating download size](#estimating-download-size)
+  - [Zoom levels](#zoom-levels)
+  - [`Feature` type](#feature-type)
+  - [BigBed](#bigbed)
+  - [Helpers](#helpers)
+- [Decompression (WebAssembly)](#decompression-webassembly)
+- [Migrating to v10](#migrating-to-v10)
+
 ## Installation
 
 ```bash
@@ -13,34 +27,18 @@ npm install @gmod/bbi
 
 ## Usage
 
-### Local files
-
 ```typescript
 import { BigWig } from '@gmod/bbi'
-
-const file = new BigWig({ path: 'volvox.bw' })
-const header = await file.getHeader()
-const features = await file.getFeatures('chr1', 0, 100, { scale: 1 })
-```
-
-### Remote files
-
-```typescript
-import { BigWig } from '@gmod/bbi'
-
-const file = new BigWig({ url: 'https://example.com/file.bw' })
-const features = await file.getFeatures('chr1', 0, 100, { scale: 1 })
-```
-
-You can also pass a custom filehandle from
-[generic-filehandle2](https://github.com/GMOD/generic-filehandle2/):
-
-```typescript
 import { RemoteFile } from 'generic-filehandle2'
 
-const file = new BigWig({
+const local = new BigWig({ path: 'volvox.bw' }) // node only
+const remote = new BigWig({ url: 'https://example.com/file.bw' })
+const custom = new BigWig({
   filehandle: new RemoteFile('https://example.com/file.bw'),
 })
+
+const header = await remote.getHeader()
+const features = await remote.getFeatures('chr1', 0, 100_000)
 ```
 
 ### Browser (CDN)
@@ -59,58 +57,47 @@ See the [example](./example/) folder for a complete working demo.
 
 ## API
 
-### Constructor (BigWig / BigBed)
+`BigWig` and `BigBed` share the same interface, except where noted.
 
-Pass exactly one of:
+### Constructor
 
-| Option       | Description                                                                                                  |
-| ------------ | ------------------------------------------------------------------------------------------------------------ |
-| `path`       | Path to a local file                                                                                         |
-| `url`        | URL of a remote file                                                                                         |
-| `filehandle` | A `GenericFilehandle` instance from [generic-filehandle2](https://www.npmjs.com/package/generic-filehandle2) |
+Pass exactly one of `path` (a local file, node only), `url` (a remote file), or
+`filehandle` (a `GenericFilehandle` from
+[generic-filehandle2](https://www.npmjs.com/package/generic-filehandle2)).
+
+Use `filehandle` when you need control over how bytes are fetched — auth
+headers, a custom `fetch`, a `Blob` from a file input:
+
+```typescript
+const file = new BigWig({
+  filehandle: new RemoteFile('https://example.com/file.bw', {
+    headers: { Authorization: `Bearer ${token}` },
+  }),
+})
+```
 
 Chromosome names are always the file's own names, both in query arguments and in
 the `refsByName`/`refsByNumber` maps `getHeader()` returns. If your application
-uses different names, map them at the call site (the `renameRefSeqs` option was
-removed in v10):
+uses different names, map them at the call site:
 
 ```typescript
 const toFileName = (name: string) => name.replace('chr', '')
 const feats = await bigwig.getFeatures(toFileName('chr1'), 0, 100_000)
 ```
 
-### BigWig
+### Options
 
-#### `getHeader(opts?)`
+Every read method takes the same optional `opts`:
 
-Returns `Promise<BigWigHeaderWithRefNames>` with chromosome list (`refsByName`,
-`refsByNumber`), zoom levels, summary statistics, and — for BigBed files — the
-`autoSql` schema string. The result is cached after the first call.
+| Option         | Description                                                      |
+| -------------- | ---------------------------------------------------------------- |
+| `scale`        | Pixels per basepair — selects a [zoom level](#zoom-levels)       |
+| `basesPerSpan` | Inverse of `scale` (basepairs per pixel); use one or the other   |
+| `signal`       | `AbortSignal` to cancel the request                              |
+| `onProgress`   | `(bytesDownloaded, totalBytes) => void`, called as blocks arrive |
 
-#### `getFeatures(refName, start, end, opts?)`
-
-Returns a `Promise<Feature[]>` for the given region. Returns an empty array if
-the refName is not found, the region has no data, or `start >= end`. Coordinates
-are 0-based half-open.
-
-| Parameter           | Description                                                                                              |
-| ------------------- | -------------------------------------------------------------------------------------------------------- |
-| `refName`           | Chromosome/sequence name                                                                                 |
-| `start`             | 0-based start (inclusive)                                                                                |
-| `end`               | 0-based end (exclusive)                                                                                  |
-| `opts.scale`        | Pixels per basepair — selects the zoom level where `reductionLevel ≤ 2/scale`. Omit for base resolution. |
-| `opts.basesPerSpan` | Inverse of `scale` (basepairs per pixel)                                                                 |
-| `opts.signal`       | `AbortSignal` to cancel the request                                                                      |
-| `opts.onProgress`   | `(bytesDownloaded, totalBytes) => void`, called as data blocks are fetched                               |
-
-```typescript
-const features = await bigwig.getFeatures('chr1', 0, 100000)
-// [{ start, end, score }, ...]
-```
-
-Every read method below accepts the same `opts`. `onProgress` reports a
-determinate fraction — the total is known up front because block byte sizes come
-from the index — at block-group granularity:
+`onProgress` reports a determinate fraction — the total is known up front,
+because block byte sizes come from the index — at block-group granularity:
 
 ```typescript
 await bigwig.getFeatures('chr1', 0, 100_000, {
@@ -118,15 +105,35 @@ await bigwig.getFeatures('chr1', 0, 100_000, {
 })
 ```
 
+### Reading features
+
+#### `getHeader(opts?)`
+
+Returns `Promise<BigWigHeaderWithRefNames>` with the chromosome list
+(`refsByName`, `refsByNumber`), zoom levels, summary statistics, and — for
+BigBed files — the `autoSql` schema string. The result is cached after the first
+call.
+
+#### `getFeatures(refName, start, end, opts?)`
+
+Returns a `Promise<Feature[]>` for the given region. Coordinates are 0-based
+half-open. Returns an empty array if the refName is not found, the region has no
+data, or `start >= end`.
+
+```typescript
+const features = await bigwig.getFeatures('chr1', 0, 100_000)
+// [{ start, end, score }, ...]
+```
+
 #### `getFeaturesMulti(regions, opts?)`
 
-Fetches features for multiple regions in one call. Returns arrays aligned to
-input order (`result[i]` corresponds to `regions[i]`).
+Fetches features for multiple regions in one call, returning
+`Promise<Feature[][]>` aligned to input order (`result[i]` corresponds to
+`regions[i]`). Regions may be in any order and may overlap.
 
 Reads for adjacent on-disk blocks are coalesced across region boundaries, so a
 whole-genome overview needs far fewer range requests than calling `getFeatures`
-per region — useful for rate-limited remote files. Regions may be in any order
-and may overlap.
+per region — useful for rate-limited remote files.
 
 ```typescript
 const perRegion = await bigwig.getFeaturesMulti([
@@ -139,44 +146,23 @@ const perRegion = await bigwig.getFeaturesMulti([
 
 Same parameters as `getFeatures`, but returns typed arrays instead of an array
 of objects — more memory-efficient and lower GC pressure for large datasets.
-BigWig only: BigBed records are variable-width and carry a `rest` string, so
-calling this on a `BigBed` throws — use `getFeatures` there instead.
+BigWig only; see [BigBed](#bigbed).
 
 ```typescript
-const result = await bigwig.getFeaturesAsArrays('chr1', 0, 100000)
-// Base resolution: { starts: Int32Array, ends: Int32Array, scores: Float32Array, isSummary: false }
+const result = await bigwig.getFeaturesAsArrays('chr1', 0, 100_000)
+// { starts: Int32Array, ends: Int32Array, scores: Float32Array, isSummary: false }
 
-const summary = await bigwig.getFeaturesAsArrays('chr1', 0, 100000, {
+const summary = await bigwig.getFeaturesAsArrays('chr1', 0, 100_000, {
   scale: 0.01,
 })
-// Zoom level:    { starts, ends, scores, minScores: Float32Array, maxScores: Float32Array, isSummary: true }
+// { starts, ends, scores, minScores: Float32Array, maxScores: Float32Array, isSummary: true }
 ```
 
-The `isSummary` discriminant lets TypeScript narrow the union type:
+The `isSummary` discriminant narrows the union:
 
 ```typescript
 if (result.isSummary) {
   // minScores and maxScores are available here
-}
-```
-
-Types:
-
-```typescript
-interface BigWigFeatureArrays {
-  starts: Int32Array
-  ends: Int32Array
-  scores: Float32Array
-  isSummary: false
-}
-
-interface SummaryFeatureArrays {
-  starts: Int32Array
-  ends: Int32Array
-  scores: Float32Array
-  minScores: Float32Array
-  maxScores: Float32Array
-  isSummary: true
 }
 ```
 
@@ -201,16 +187,18 @@ const secondRegionStarts = multi.starts.subarray(
 )
 ```
 
-Returns `BigWigFeatureArraysMulti | SummaryFeatureArraysMulti` — the array types
+Returns `BigWigFeatureArraysMulti | SummaryFeatureArraysMulti` — the shapes
 above plus `regionOffsets: number[]`, discriminated by `isSummary` the same way.
+
+### Estimating download size
 
 #### `getRegionByteSize(refName, start, end, opts?)`
 
 Sums the compressed on-disk block lengths the index reports overlapping the
 region, reading only the R-tree index — no feature block is downloaded or
 decompressed. An upper bound on what a `getFeatures` call over the same region
-and zoom (`opts`) would transfer, for gating over-large downloads before they
-start. Returns 0 if the refName is not found.
+and zoom would transfer, for gating over-large downloads before they start.
+Returns 0 if the refName is not found.
 
 ```typescript
 const bytes = await bigwig.getRegionByteSize('chr1', 0, 100_000)
@@ -224,12 +212,11 @@ if (bytes < 5_000_000) {
 Multi-region counterpart. Blocks shared across overlapping regions are counted
 once, matching the single fetch `getFeaturesMulti` would make.
 
-#### Understanding zoom levels
+### Zoom levels
 
-`scale` (pixels per basepair) controls which pre-computed zoom level is served.
-The file stores zoom levels at increasing `reductionLevel` values; the library
-picks the first level where `reductionLevel ≤ 2/scale`, scanning from the
-coarsest zoom inward:
+BigWig files store pre-computed summaries at increasing `reductionLevel` values.
+The `scale` option (pixels per basepair) picks the first level where
+`reductionLevel ≤ 2/scale`, scanning from the coarsest zoom inward:
 
 ```json
 [
@@ -250,17 +237,17 @@ If no zoom level matches (e.g. `scale: 1`), base-resolution data is returned.
 Both `BigWig` and `BigBed` return `Feature` objects. Fields vary by file type
 and zoom level:
 
-| Field      | Present on                  | Description                                                       |
-| ---------- | --------------------------- | ----------------------------------------------------------------- |
-| `start`    | always                      | 0-based half-open start                                           |
-| `end`      | always                      | 0-based half-open end                                             |
-| `score`    | BigWig                      | Signal value; mean over the interval on zoom data                 |
-| `rest`     | BigBed                      | Raw tab-delimited BED columns 4+, including the BED score         |
-| `uniqueId` | BigBed                      | Stable ID from block and record offset; deduplicates exact copies |
-| `field`    | BigBed (`searchExtraIndex`) | Which extra-index column matched                                  |
-| `minScore` | zoom data                   | Minimum score across the summary interval                         |
-| `maxScore` | zoom data                   | Maximum score across the summary interval                         |
-| `summary`  | zoom data                   | `true` when the feature comes from a zoom level                   |
+| Field      | Present on                  | Description                                                                                                               |
+| ---------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `start`    | always                      | 0-based half-open start                                                                                                   |
+| `end`      | always                      | 0-based half-open end                                                                                                     |
+| `score`    | BigWig                      | Signal value; mean over the interval on zoom data                                                                         |
+| `rest`     | BigBed                      | Raw tab-delimited BED columns 4+, including the BED score                                                                 |
+| `uniqueId` | BigBed                      | Block byte offset paired with the record's offset inside that block, so it is unique file-wide; deduplicates exact copies |
+| `field`    | BigBed (`searchExtraIndex`) | Which extra-index column matched                                                                                          |
+| `minScore` | zoom data                   | Minimum score across the summary interval                                                                                 |
+| `maxScore` | zoom data                   | Maximum score across the summary interval                                                                                 |
+| `summary`  | zoom data                   | `true` when the feature comes from a zoom level                                                                           |
 
 ```typescript
 // BigWig, base resolution
@@ -272,12 +259,13 @@ and zoom level:
 
 ### BigBed
 
-`BigBed` shares `getHeader`, `getFeatures`, `getFeaturesMulti`,
-`getRegionByteSize`, and `getRegionByteSizeMulti` with `BigWig`. BigBed files
-have no zoom levels, so `scale`/`basesPerSpan` are ignored and every read is
-base resolution. The typed-array readers (`getFeaturesAsArrays`,
-`getFeaturesAsArraysMulti`) throw — BigBed records are variable-width and carry
-a `rest` string that does not fit a fixed-width typed array.
+`BigBed` supports every method above except the typed-array readers.
+`getFeaturesAsArrays` and `getFeaturesAsArraysMulti` throw: BigBed records are
+variable-width and carry a `rest` string, which does not fit a fixed-width typed
+array. Use `getFeatures`/`getFeaturesMulti` instead.
+
+bbi-js always reads BigBed at base resolution, so `scale`/`basesPerSpan` are
+accepted but ignored — any zoom levels `bedToBigBed` wrote are not consulted.
 
 #### `searchExtraIndex(name, opts?)`
 
@@ -287,7 +275,7 @@ with `-extraIndex` in `bedToBigBed`) for a string match. Returns a
 `Promise<Feature[]>` with an additional `field` property indicating which index
 matched.
 
-### Parsing BigBed features with @gmod/bed
+#### Parsing BigBed features with @gmod/bed
 
 Raw BigBed features contain a `rest` field with tab-delimited columns 4+. Use
 [@gmod/bed](https://www.npmjs.com/package/@gmod/bed) together with the `autoSql`
@@ -299,14 +287,14 @@ import BED from '@gmod/bed'
 
 const file = new BigBed({ path: './data/hg18.bb' })
 const { autoSql } = await file.getHeader()
-const feats = await file.getFeatures('chr7', 0, 100000)
+const feats = await file.getFeatures('chr7', 0, 100_000)
 const parser = new BED({ autoSql })
 const lines = feats.map(({ start, end, rest, uniqueId }) =>
   parser.parseLine(`chr7\t${start}\t${end}\t${rest}`, { uniqueId }),
 )
 ```
 
-Raw feature:
+A raw feature, and the same feature parsed:
 
 ```json
 {
@@ -316,8 +304,6 @@ Raw feature:
   "uniqueId": "bb-1083-0"
 }
 ```
-
-The same feature parsed:
 
 ```json
 {
@@ -335,14 +321,13 @@ The same feature parsed:
 }
 ```
 
-The `uniqueId` pairs the block's byte offset in the file with the record's
-offset inside that block, so it is unique file-wide and helps deduplicate exact
-feature copies.
+### Helpers
 
-### `parseBigWig(bigwig, opts?)`
+#### `parseBigWig(bigwig, opts?)`
 
 Reads all features from every chromosome at base resolution, skipping
-chromosomes with no data.
+chromosomes with no data. Returns `Promise<BigWigFeatureArrays[]>`, one entry
+per chromosome with data.
 
 ```typescript
 import { BigWig, parseBigWig } from '@gmod/bbi'
@@ -356,39 +341,63 @@ for (const { starts, ends, scores } of results) {
 }
 ```
 
-Returns `Promise<BigWigFeatureArrays[]>`, one entry per chromosome with data.
-
-### `ArrayFeatureView` / `BigWigFeature`
+#### `ArrayFeatureView` / `BigWigFeature`
 
 `ArrayFeatureView` wraps a `BigWigFeatureArrays` or `SummaryFeatureArrays`
 result and exposes a JBrowse-compatible `Feature`-style interface.
 `BigWigFeature` is a single-feature view into an `ArrayFeatureView`.
 
 ```typescript
-import { BigWig, ArrayFeatureView } from '@gmod/bbi'
+import { BigWig, ArrayFeatureView, BigWigFeature } from '@gmod/bbi'
 
 const file = new BigWig({ path: 'volvox.bw' })
-const arrays = await file.getFeaturesAsArrays('chr1', 0, 100000)
+const arrays = await file.getFeaturesAsArrays('chr1', 0, 100_000)
 const view = new ArrayFeatureView(arrays, 'mySource', 'chr1')
 
 for (let i = 0; i < view.length; i++) {
   console.log(view.start(i), view.end(i), view.score(i))
 }
-```
 
-`ArrayFeatureView.get(i, key)` reads one field of feature `i`. `BigWigFeature`
-binds an index, so it exposes `get(key)`, `id()`, and `toJSON()`:
-
-```typescript
-import { BigWigFeature } from '@gmod/bbi'
-
+// BigWigFeature binds an index, so it exposes get(key), id(), and toJSON()
 const feature = new BigWigFeature(view, 0)
 feature.get('score')
 feature.toJSON()
 ```
 
-Valid keys for either `get`: `start`, `end`, `score`, `refName`, `source`,
-`summary`, `minScore`, `maxScore`.
+`ArrayFeatureView.get(i, key)` reads one field of feature `i`. Valid keys for
+either `get`: `start`, `end`, `score`, `refName`, `source`, `summary`,
+`minScore`, `maxScore`.
+
+## Decompression (WebAssembly)
+
+Block decompression and BigWig record parsing run in a Rust/WebAssembly module
+built on [libdeflater](https://github.com/ebiggers/libdeflate), not a JS
+inflate.
+
+- **Zero setup.** The `.wasm` is base64-inlined into the JS bundle — no separate
+  asset to fetch, copy, or teach your bundler about. Install and import; node,
+  browsers, and bundlers all work unchanged.
+- **Batched.** Every block in a query decompresses in one wasm call into a
+  single output buffer, rather than one call per block.
+- **Parses in Rust too.** For BigWig, the wasm decompresses _and_ walks the
+  fixed-width records, returning packed typed arrays that `getFeaturesAsArrays`
+  hands back with no per-record JS object allocation. BigBed records are
+  variable-width, so they decompress in wasm and parse in JS.
+- **Lazily initialized** on first use, then cached. Every read method is already
+  `async`, so this adds no API surface.
+
+The Rust lives in [`crate/`](./crate/). Building it (`pnpm build:wasm`) needs a
+Rust toolchain, but the generated bundle is checked into git, so consumers and
+contributors who don't touch the Rust never need one.
+
+## Migrating to v10
+
+- `renameRefSeqs` was removed. Map chromosome names at the call site instead;
+  see [Constructor](#constructor).
+- `RequestOptions.headers` was removed. It only ever applied to header and index
+  reads, never to feature blocks, and per-request headers do not fit the
+  block-level caching. Set headers on the filehandle instead; see
+  [Constructor](#constructor).
 
 ## Publishing
 

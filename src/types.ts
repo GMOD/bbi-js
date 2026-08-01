@@ -78,10 +78,14 @@ export interface BigWigHeaderWithRefNames extends BigWigHeader {
   refsByNumber: Record<number, RefInfo>
 }
 
-/** Options accepted by all data-fetching methods. */
+/**
+ * Options accepted by all data-fetching methods. Per-request HTTP headers are
+ * deliberately absent: block reads are cached by file offset, so headers that
+ * vary per request cannot be honored. Set them on the filehandle instead, e.g.
+ * `new RemoteFile(url, { headers })`.
+ */
 export interface RequestOptions {
   signal?: AbortSignal
-  headers?: Record<string, string>
 }
 
 /**
