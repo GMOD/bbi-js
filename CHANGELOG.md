@@ -1,3 +1,28 @@
+## [10.0.2](https://github.com/GMOD/bbi-js/compare/v10.0.1...v10.0.2) (2026-08-04)
+
+### Bug Fixes
+
+- Stop one aborted caller from rejecting concurrent callers
+
+### Chores
+
+- Sha-pin actions, take pnpm version from packageManager, node 24
+- Pin pnpm via the `packageManager` field, so local pnpm and CI agree
+- Share one eslint-plugin-unicorn opt-out list across the repos
+- Turn off unicorn/prefer-early-return across the repos
+- Add git-cliff for changelog generation
+
+### Documentation
+
+- Restructure README; drop the dead RequestOptions.headers
+- Move the wasm notes into docs/wasm.md, leave a pointer in the README
+- Backfill CHANGELOG.md for v9.0.11 through v10.0.1
+- Mark breaking changes in the generated changelog
+
+### Other Changes
+
+- Measure wasm vs pure-JS deflate, cite the number in the README
+
 ## [Unreleased](https://github.com/GMOD/bbi-js/compare/v10.0.1...HEAD)
 
 ### Bug Fixes
