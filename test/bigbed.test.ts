@@ -104,6 +104,24 @@ test('bigbed file consistent file ID', async () => {
   expect(f11).toEqual(f22)
 })
 
+// parseBigBedBlock only materializes `rest` for records that pass the coord
+// filter, so the record cursor must advance off the null terminator whether or
+// not the record was kept. If it didn't, a narrow query would desync partway
+// through a block and return garbage for everything after the first skipped
+// record.
+test('a narrow query returns exactly the whole-chrom features it overlaps', async () => {
+  const ti = new BigBed({ path: 'test/data/clinvarCnv.bb' })
+  const { refsByNumber } = await ti.getHeader()
+  const ref = Object.values(refsByNumber)[0]!
+  const all = await ti.getFeatures(ref.name, 0, ref.length)
+  const [start, end] = [9_500_000, 10_500_000]
+  const narrow = await ti.getFeatures(ref.name, start, end)
+
+  expect(narrow.length).toBeGreaterThan(0)
+  expect(narrow.length).toBeLessThan(all.length)
+  expect(narrow).toEqual(all.filter(f => f.start < end && f.end > start))
+})
+
 test('bigbed feature uniqueIds are unique across blocks', async () => {
   const ti = new BigBed({ path: 'test/data/chr22_with_name_index.bb' })
   const { refsByNumber } = await ti.getHeader()

@@ -129,15 +129,18 @@ function parseBigBedBlock(
   while (currOffset < data.byteLength) {
     const recordStart = currOffset
     const chromId = dataView.getUint32(currOffset, true)
-    currOffset += 4
-    const start = dataView.getInt32(currOffset, true)
-    currOffset += 4
-    const end = dataView.getInt32(currOffset, true)
-    currOffset += 4
+    const start = dataView.getInt32(currOffset + 4, true)
+    const end = dataView.getInt32(currOffset + 8, true)
+    currOffset += 12
+    // Scanning for the record terminator is unavoidable (it's how the next
+    // record is found) but decoding the bytes between it is not, so `rest` is
+    // only materialized for records that survive the filter. Worth 25-40% of
+    // getFeatures on clinvarCnv.bb: the R-tree already prunes non-overlapping
+    // blocks, so the records this skips are the partly-out-of-range ones in a
+    // query's edge blocks, plus every re-parse in the multi-region path (where
+    // one block is parsed once per region tagging it).
     const nullPos = data.indexOf(0, currOffset)
     const restEnd = nullPos === -1 ? data.length : nullPos
-    const rest = decoder.decode(data.subarray(currOffset, restEnd))
-    currOffset = restEnd + 1
     if (
       !request ||
       (chromId === request.chrId &&
@@ -146,13 +149,14 @@ function parseBigBedBlock(
       items.push({
         start,
         end,
-        rest,
+        rest: decoder.decode(data.subarray(currOffset, restEnd)),
         // blockOffset is the block's byte offset in the file (unique per block)
         // and recordStart is the record's offset within the block, so the pair
         // is globally unique across the file
         uniqueId: `bb-${blockOffset}-${recordStart}`,
       })
     }
+    currOffset = restEnd + 1
   }
   return items
 }
@@ -493,10 +497,11 @@ function parseBlock(
  */
 
 export class BlockView {
-  // R-tree index header cache - R-trees are spatial data structures used to
-  // efficiently query genomic intervals by chromosome and position
-  private rTreePromise?: Promise<Uint8Array>
-
+  // R-trees are spatial data structures used to efficiently query genomic
+  // intervals by chromosome and position. Concurrent queries share these node
+  // reads, so the cache aggregates their abort signals: the underlying read is
+  // only aborted once EVERY consumer has aborted, and one caller giving up
+  // cannot reject the others. Also holds the R-tree header (see _collectBlocks).
   private rTreeNodeCache = new AbortablePromiseCache<Block, Uint8Array>({
     cache: new QuickLRU({ maxSize: 1000 }),
 
@@ -542,19 +547,17 @@ export class BlockView {
     if (chrId === undefined || start >= end) {
       return undefined
     }
-    if (!this.rTreePromise) {
-      // pass only signal, not onProgress: bbi reports determinate
-      // block-download progress itself via blockProgress, so the filehandle must
-      // not also fire onProgress for this small R-tree header read (matches the
-      // other block reads here, which likewise pass only signal)
-      this.rTreePromise = this.bbi
-        .read(48, this.rTreeOffset, { signal: opts?.signal })
-        .catch((e: unknown) => {
-          this.rTreePromise = undefined
-          throw e
-        })
-    }
-    const buffer = await this.rTreePromise
+    // Shared across every query on this view, so it goes through the same
+    // signal-aggregating cache as the node reads rather than a bare memoized
+    // promise - see the rTreeNodeCache comment. Only opts.signal is passed, not
+    // onProgress: bbi reports determinate block-download progress itself via
+    // blockProgress, so the filehandle must not also fire onProgress for this
+    // small index read (matches the block reads here, which pass only signal).
+    const buffer = await this.rTreeNodeCache.get(
+      `rtreeheader_${this.rTreeOffset}`,
+      { length: 48, offset: this.rTreeOffset },
+      opts?.signal,
+    )
     const dataView = getDataView(buffer)
     const magic = dataView.getUint32(0, true)
     if (magic !== CIR_TREE_MAGIC) {

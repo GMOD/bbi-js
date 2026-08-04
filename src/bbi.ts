@@ -1,3 +1,5 @@
+import AbortablePromiseCache from '@gmod/abortable-promise-cache'
+import QuickLRU from '@jbrowse/quick-lru'
 import { LocalFile, RemoteFile } from 'generic-filehandle2'
 
 import { BlockView } from './block-view.ts'
@@ -26,7 +28,19 @@ const BIG_BED_MAGIC = -2021002517
 export abstract class BBI {
   protected bbi: GenericFilehandle
 
-  private headerP?: Promise<BigWigHeaderWithRefNames>
+  // Memoizing a bare promise built from the FIRST caller's signal makes that
+  // caller's abort reject every other caller awaiting the same promise - in
+  // JBrowse, panning away from one block would fail its still-wanted siblings.
+  // This cache aggregates consumers' signals instead (AggregateAbortController),
+  // so the read is only aborted once every consumer has aborted, and it evicts
+  // on rejection so a failed fetch is retried rather than cached.
+  private headerCache = new AbortablePromiseCache<
+    undefined,
+    BigWigHeaderWithRefNames
+  >({
+    cache: new QuickLRU({ maxSize: 1 }),
+    fill: (_data, signal) => this._getHeader({ signal }),
+  })
 
   /**
    * Returns file header metadata including chromosome list, zoom levels, autoSql
@@ -36,13 +50,7 @@ export abstract class BBI {
    * @returns `Promise<BigWigHeaderWithRefNames>`
    */
   public getHeader(opts?: RequestOptions) {
-    if (!this.headerP) {
-      this.headerP = this._getHeader(opts).catch((e: unknown) => {
-        this.headerP = undefined
-        throw e
-      })
-    }
-    return this.headerP
+    return this.headerCache.get('header', undefined, opts?.signal)
   }
 
   /**

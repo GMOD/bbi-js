@@ -1,3 +1,6 @@
+import AbortablePromiseCache from '@gmod/abortable-promise-cache'
+import QuickLRU from '@jbrowse/quick-lru'
+
 import { BBI } from './bbi.ts'
 import { getDataView, getUint64, parseKey } from './util.ts'
 
@@ -181,16 +184,15 @@ async function readBPlusTreeNode(
  * are used for BigBed data.
  */
 export class BigBed extends BBI {
-  private indicesP?: Promise<Index[]>
+  // Signal-aggregating rather than a bare memoized promise, for the same reason
+  // as BBI's header cache: one caller aborting must not reject the others.
+  private indicesCache = new AbortablePromiseCache<undefined, Index[]>({
+    cache: new QuickLRU({ maxSize: 1 }),
+    fill: (_data, signal) => this._readIndices({ signal }),
+  })
 
   public readIndices(opts: RequestOptions = {}) {
-    if (!this.indicesP) {
-      this.indicesP = this._readIndices(opts).catch((e: unknown) => {
-        this.indicesP = undefined
-        throw e
-      })
-    }
-    return this.indicesP
+    return this.indicesCache.get('indices', undefined, opts.signal)
   }
 
   /*
