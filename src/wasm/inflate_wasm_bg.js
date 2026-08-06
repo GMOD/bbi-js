@@ -152,7 +152,7 @@ export function inflate_raw_unknown_size(input) {
         wasm.__wbindgen_add_to_stack_pointer(16);
     }
 }
-export function __wbg_Error_ef53bc310eb298a0(arg0, arg1) {
+export function __wbg_Error_92b29b0548f8b746(arg0, arg1) {
     const ret = Error(getStringFromWasm0(arg0, arg1));
     return addHeapObject(ret);
 }

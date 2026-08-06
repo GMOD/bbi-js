@@ -12,12 +12,15 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
         with:
+          # required when the action is pinned by sha — the @stable ref form
+          # would otherwise supply it from the branch name
           toolchain: stable
           targets: wasm32-unknown-unknown
       - uses: cargo-bins/cargo-binstall@e00d2c94cc0067b77737821097a62d91c0301baa # v1.21.1
       - name: Install wasm-bindgen-cli matching Cargo.lock
         run: |
-          VERSION=$(grep -A1 '^name = "wasm-bindgen"$' crate/Cargo.lock | grep -oP 'version = "\K[^"]+' | head -1)
+          VERSION=$(cargo metadata --format-version 1 --manifest-path crate/Cargo.toml \
+            | jq -r '.packages[] | select(.name=="wasm-bindgen") | .version')
           echo "Installing wasm-bindgen-cli@$VERSION"
           cargo binstall wasm-bindgen-cli@$VERSION --no-confirm
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
@@ -51,12 +54,15 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
         with:
+          # required when the action is pinned by sha — the @stable ref form
+          # would otherwise supply it from the branch name
           toolchain: stable
           targets: wasm32-unknown-unknown
       - uses: cargo-bins/cargo-binstall@e00d2c94cc0067b77737821097a62d91c0301baa # v1.21.1
       - name: Install wasm-bindgen-cli matching Cargo.lock
         run: |
-          VERSION=$(grep -A1 '^name = "wasm-bindgen"$' crate/Cargo.lock | grep -oP 'version = "\K[^"]+' | head -1)
+          VERSION=$(cargo metadata --format-version 1 --manifest-path crate/Cargo.toml \
+            | jq -r '.packages[] | select(.name=="wasm-bindgen") | .version')
           echo "Installing wasm-bindgen-cli@$VERSION"
           cargo binstall wasm-bindgen-cli@$VERSION --no-confirm
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
