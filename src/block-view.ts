@@ -1,7 +1,5 @@
-import AbortablePromiseCache from '@gmod/abortable-promise-cache'
-import QuickLRU from '@jbrowse/quick-lru'
-
 import { mergeRanges } from './range.ts'
+import { SharedReadCache } from './shared-read-cache.ts'
 import {
   decompressAndParseBigWigBlocks,
   decompressAndParseSummaryBlocks,
@@ -502,12 +500,11 @@ export class BlockView {
   // reads, so the cache aggregates their abort signals: the underlying read is
   // only aborted once EVERY consumer has aborted, and one caller giving up
   // cannot reject the others. Also holds the R-tree header (see _collectBlocks).
-  private rTreeNodeCache = new AbortablePromiseCache<Block, Uint8Array>({
-    cache: new QuickLRU({ maxSize: 1000 }),
-
-    fill: async ({ length, offset }, signal) =>
+  private rTreeNodeCache = new SharedReadCache<Block, Uint8Array>(
+    1000,
+    async ({ length, offset }, signal) =>
       this.bbi.read(length, offset, { signal }),
-  })
+  )
 
   private bbi: GenericFilehandle
   private refsByName: Record<string, number>
