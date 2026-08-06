@@ -1,26 +1,24 @@
 import { LocalFile } from 'generic-filehandle2'
 import { expect, test } from 'vitest'
 
+import { FilehandleDouble } from './filehandle-double.ts'
 import { BigBed, BigWig } from '../src/index.ts'
 
-import type { GenericFilehandle } from 'generic-filehandle2'
+import type { FilehandleOptions, GenericFilehandle } from 'generic-filehandle2'
 
 // Wraps a filehandle so every read takes a tick and honors AbortSignal, the way
 // a real RemoteFile does. LocalFile resolves too fast (and ignores the signal)
 // to expose a shared-promise race.
-class SlowFile {
+class SlowFile extends FilehandleDouble {
   reads = 0
   private inner: GenericFilehandle
   private latencyMs: number
   constructor(inner: GenericFilehandle, latencyMs = 20) {
+    super()
     this.inner = inner
     this.latencyMs = latencyMs
   }
-  async read(
-    length: number,
-    position: number,
-    opts?: { signal?: AbortSignal },
-  ) {
+  async read(length: number, position: number, opts?: FilehandleOptions) {
     this.reads++
     await new Promise((resolve, reject) => {
       const id = setTimeout(resolve, this.latencyMs)
@@ -32,14 +30,23 @@ class SlowFile {
     opts?.signal?.throwIfAborted()
     return this.inner.read(length, position, opts)
   }
-  readFile(opts?: Record<string, unknown>) {
-    return this.inner.readFile(opts)
+}
+
+// Fails the first read, then delegates. Used to check that a rejected shared
+// read is evicted rather than cached.
+class FlakyFile extends FilehandleDouble {
+  private inner: GenericFilehandle
+  private failed = false
+  constructor(inner: GenericFilehandle) {
+    super()
+    this.inner = inner
   }
-  stat() {
-    return this.inner.stat()
-  }
-  close() {
-    return Promise.resolve()
+  read(length: number, position: number, opts?: FilehandleOptions) {
+    if (!this.failed) {
+      this.failed = true
+      return Promise.reject(new Error('transient network failure'))
+    }
+    return this.inner.read(length, position, opts)
   }
 }
 
@@ -96,18 +103,8 @@ test('aborting one readIndices caller does not reject a concurrent one', async (
 test('a failed shared read is retried rather than cached', async () => {
   // The cache evicts on rejection, so a transient failure must not poison every
   // later getHeader on the same instance.
-  let fail = true
-  const inner = new LocalFile('test/data/volvox.bw')
   const bw = new BigWig({
-    filehandle: {
-      read: (length: number, position: number) => {
-        if (fail) {
-          fail = false
-          return Promise.reject(new Error('transient network failure'))
-        }
-        return inner.read(length, position)
-      },
-    } as unknown as GenericFilehandle,
+    filehandle: new FlakyFile(new LocalFile('test/data/volvox.bw')),
   })
 
   await expect(bw.getHeader()).rejects.toThrow(/transient network failure/)
