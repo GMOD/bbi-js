@@ -36,7 +36,7 @@ jobs:
       # which is otherwise never type-checked: a test can call a renamed option
       # or a changed signature and go on passing by testing nothing.
       - run: pnpm typecheck
-      - run: pnpm test
+      - run: pnpm test --run
       - run: pnpm test:pack
 
   publish:

@@ -29,8 +29,7 @@
     "src"
   ],
   "scripts": {
-    "test": "vitest --run",
-    "test:watch": "vitest",
+    "test": "vitest",
     "test:pack": "./scripts/test-pack.sh",
     "clean": "rimraf dist esm",
     "format": "prettier --write .",
