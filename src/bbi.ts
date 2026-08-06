@@ -1,7 +1,7 @@
+import { SharedReadCache } from '@gmod/shared-read-cache'
 import { LocalFile, RemoteFile } from 'generic-filehandle2'
 
 import { BlockView } from './block-view.ts'
-import { SharedReadCache } from './shared-read-cache.ts'
 import { decoder, getDataView, getUint64, parseKey } from './util.ts'
 
 import type {
@@ -32,7 +32,11 @@ export abstract class BBI {
   private headerCache = new SharedReadCache<
     undefined,
     BigWigHeaderWithRefNames
-  >(1, (_key, signal) => this._getHeader({ signal }))
+  >({
+    maxSize: 1,
+    cacheKey: () => 'header',
+    fill: (_key, signal) => this._getHeader({ signal }),
+  })
 
   /**
    * Returns file header metadata including chromosome list, zoom levels, autoSql
@@ -42,7 +46,7 @@ export abstract class BBI {
    * @returns `Promise<BigWigHeaderWithRefNames>`
    */
   public getHeader(opts?: RequestOptions) {
-    return this.headerCache.get('header', undefined, opts?.signal)
+    return this.headerCache.get(undefined, opts?.signal)
   }
 
   /**

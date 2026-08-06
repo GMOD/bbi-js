@@ -1,5 +1,6 @@
+import { SharedReadCache } from '@gmod/shared-read-cache'
+
 import { mergeRanges } from './range.ts'
-import { SharedReadCache } from './shared-read-cache.ts'
 import {
   decompressAndParseBigWigBlocks,
   decompressAndParseSummaryBlocks,
@@ -494,17 +495,25 @@ function parseBlock(
  * Genome Explorer by Thomas Down.
  */
 
+/** A read of the R-tree index: a block, optionally under a distinct key. */
+interface NodeRead extends Block {
+  tag?: string
+}
+
 export class BlockView {
   // R-trees are spatial data structures used to efficiently query genomic
   // intervals by chromosome and position. Concurrent queries share these node
   // reads, so the cache aggregates their abort signals: the underlying read is
   // only aborted once EVERY consumer has aborted, and one caller giving up
   // cannot reject the others. Also holds the R-tree header (see _collectBlocks).
-  private rTreeNodeCache = new SharedReadCache<Block, Uint8Array>(
-    1000,
-    async ({ length, offset }, signal) =>
+  private rTreeNodeCache = new SharedReadCache<NodeRead, Uint8Array>({
+    maxSize: 1000,
+    // `tag` keeps the R-tree header in its own entry rather than sharing one
+    // with a node read that happens to be the same length at the same offset.
+    cacheKey: ({ length, offset, tag }) => tag ?? `${length}_${offset}`,
+    fill: ({ length, offset }, signal) =>
       this.bbi.read(length, offset, { signal }),
-  )
+  })
 
   private bbi: GenericFilehandle
   private refsByName: Record<string, number>
@@ -551,8 +560,11 @@ export class BlockView {
     // blockProgress, so the filehandle must not also fire onProgress for this
     // small index read (matches the block reads here, which pass only signal).
     const buffer = await this.rTreeNodeCache.get(
-      `rtreeheader_${this.rTreeOffset}`,
-      { length: 48, offset: this.rTreeOffset },
+      {
+        length: 48,
+        offset: this.rTreeOffset,
+        tag: `rtreeheader_${this.rTreeOffset}`,
+      },
       opts?.signal,
     )
     const dataView = getDataView(buffer)
@@ -592,7 +604,6 @@ export class BlockView {
         const length = max - min
         const offset = min
         const resultBuffer = await this.rTreeNodeCache.get(
-          `${length}_${offset}`,
           { length, offset },
           opts?.signal,
         )

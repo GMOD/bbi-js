@@ -58,6 +58,7 @@
     "genomics"
   ],
   "dependencies": {
+    "@gmod/shared-read-cache": "^1.0.0",
     "generic-filehandle2": "^2.2.0"
   },
   "devDependencies": {
