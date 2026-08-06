@@ -348,11 +348,10 @@ function decodeText(ptr, len) {
     }
     // .slice() is load-bearing: getUint8ArrayMemory0() is a view over
     // WebAssembly.Memory, whose buffer is a RESIZABLE ArrayBuffer, and
-    // TextDecoder.decode rejects those in browsers. Without the copy this
-    // throws for every string leaving Rust -- which is every error message,
-    // so the module could not report its own errors. The Vec<u8> return path
-    // already slices; this is the same rule for strings. See
-    // bgzf-filehandle agent-docs/adr/0002.
+    // TextDecoder.decode rejects those in browsers. Without the copy every
+    // string leaving Rust throws -- and the only strings this crate returns
+    // are error messages, so the module could not report its own errors.
+    // Emitted by crate/build-wasm.sh; an edit here is lost on the next build.
     return cachedTextDecoder.decode(getUint8ArrayMemory0().subarray(ptr, ptr + len).slice());
 }
 

@@ -42,3 +42,16 @@ else
   echo "wasm-bindgen changed getStringFromWasm0; re-check the resizable-buffer patch" >&2
   exit 1
 fi
+
+# Leave the reason beside the stray .slice(), for whoever opens the generated
+# file and wonders why it is there. Emitted here for the same reason the patch
+# itself is: this file is rewritten by wasm-bindgen above, so a comment added to
+# src/wasm by hand is gone on the next build -- which is exactly what happened
+# to the one b9d1007 wrote, leaving a phantom 14-line deletion in every rebuild
+# since. webpack carries it into the inlined bundle (production mode, but
+# `optimization.minimize` is off, so comments survive).
+if ! grep -qF '// .slice() is load-bearing' "$glue"; then
+  perl -pi -e 'print "    // .slice() is load-bearing: getUint8ArrayMemory0() is a view over\n    // WebAssembly.Memory, whose buffer is a RESIZABLE ArrayBuffer, and\n    // TextDecoder.decode rejects those in browsers. Without the copy every\n    // string leaving Rust throws -- and the only strings this crate returns\n    // are error messages, so the module could not report its own errors.\n    // Emitted by crate/build-wasm.sh; an edit here is lost on the next build.\n" if /\Qsubarray(ptr, ptr + len).slice()\E/;' "$glue"
+  grep -qF '// .slice() is load-bearing' "$glue" || { echo "annotation did not apply to $glue" >&2; exit 1; }
+  echo "annotated the string-decode copy"
+fi
