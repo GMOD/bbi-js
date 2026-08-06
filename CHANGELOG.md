@@ -1,3 +1,27 @@
+## [11.0.0](https://github.com/GMOD/bbi-js/compare/v10.0.2...v11.0.0) (2026-08-06)
+
+### Bug Fixes
+
+- Copy out of wasm memory before decoding strings
+- Report onProgress consistently when a query overlaps no blocks
+- Name the file when the header's totalSummary offset is past EOF
+
+### Chores
+
+- Drop eslint-plugin-unicorn
+- Typecheck and format-check the whole tree in CI
+- Explain why the typecheck step exists
+- Let npm publish stop auto-correcting repository.url
+- Exempt our own packages from the release quarantine
+- Bump pnpm/action-setup to v6.0.10
+- Run the test suite as `pnpm test --run`
+
+### Refactoring
+
+- Make bigbed's Loc.field required
+- **BREAKING** Drop @gmod/abortable-promise-cache and @jbrowse/quick-lru
+- Use @gmod/shared-read-cache instead of a local copy
+
 ## [10.0.2](https://github.com/GMOD/bbi-js/compare/v10.0.1...v10.0.2) (2026-08-04)
 
 ### Bug Fixes
