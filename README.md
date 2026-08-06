@@ -105,6 +105,11 @@ await bigwig.getFeatures('chr1', 0, 100_000, {
 })
 ```
 
+It is called at least once per read, starting at `(0, total)` and ending at
+`(total, total)`. A query that overlaps no blocks — an unknown refName, an empty
+region — reports the single call `(0, 0)`, so guard against a zero total before
+dividing.
+
 ### Reading features
 
 #### `getHeader(opts?)`

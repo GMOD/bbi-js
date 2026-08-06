@@ -159,6 +159,16 @@ export abstract class BBI {
 
     let totalSummary: Statistics
     if (totalSummaryOffset) {
+      // Only reachable on a truncated/corrupt file: the refetch above already
+      // grew the request past totalSummaryOffset + 40 unless we hit EOF first,
+      // in which case b.length is the whole file. Without this the DataView
+      // below throws a bare "Start offset N is outside the bounds of the
+      // buffer".
+      if (totalSummaryOffset + 8 * 5 > b.length) {
+        throw new Error(
+          `totalSummary at offset ${totalSummaryOffset} extends past the end of the file (${b.length} bytes), file may be truncated or corrupt`,
+        )
+      }
       const summaryView = getDataView(b, totalSummaryOffset)
       totalSummary = {
         basesCovered: getUint64(summaryView, 0),

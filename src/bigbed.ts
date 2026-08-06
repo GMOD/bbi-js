@@ -11,7 +11,8 @@ interface Loc {
   key: string
   offset: number
   length: number
-  field?: number
+  /** which extra-index column this entry came from */
+  field: number
 }
 
 interface Index {
@@ -314,7 +315,7 @@ export class BigBed extends BBI {
     // coalesce into a single read.
     const blocksByField = new Map<number, Map<number, Loc>>()
     for (const block of blocks) {
-      const field = block.field ?? 0
+      const { field } = block
       const byOffset = blocksByField.get(field)
       if (byOffset) {
         byOffset.set(block.offset, block)

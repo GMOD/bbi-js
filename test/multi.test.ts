@@ -1,34 +1,27 @@
 import { LocalFile } from 'generic-filehandle2'
 import { expect, test } from 'vitest'
 
+import { FilehandleDouble } from './filehandle-double.ts'
 import { BigWig } from '../src/index.ts'
 
-import type { GenericFilehandle } from 'generic-filehandle2'
+import type { FilehandleOptions, GenericFilehandle } from 'generic-filehandle2'
 
 // wraps a filehandle to count read() calls so we can assert that multi-region
 // queries coalesce on-disk-adjacent blocks into fewer reads
-class CountingFile {
+class CountingFile extends FilehandleDouble {
   reads = 0
   bytes = 0
   offsets: number[] = []
   private inner: GenericFilehandle
   constructor(inner: GenericFilehandle) {
+    super()
     this.inner = inner
   }
-  read(length: number, position: number, opts?: Record<string, unknown>) {
+  read(length: number, position: number, opts?: FilehandleOptions) {
     this.reads++
     this.bytes += length
     this.offsets.push(position)
     return this.inner.read(length, position, opts)
-  }
-  readFile(opts?: Record<string, unknown>) {
-    return this.inner.readFile(opts)
-  }
-  stat() {
-    return this.inner.stat()
-  }
-  close() {
-    return Promise.resolve()
   }
 }
 

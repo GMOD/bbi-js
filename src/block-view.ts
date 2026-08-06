@@ -646,13 +646,12 @@ export class BlockView {
     opts?: Options,
   ): Promise<Feature[]> {
     const collected = await this._collectBlocks(chrName, start, end, opts)
-    if (!collected) {
-      return []
-    }
-    const { blocks, chrId } = collected
-    return this.readFeatures(blocks, {
+    // no blocks when the ref is absent or the range is degenerate; still go
+    // through readFeatures (which does no I/O for an empty block list) so every
+    // reader reports progress identically - see ProgressCallback
+    return this.readFeatures(collected?.blocks ?? [], {
       ...opts,
-      request: { chrId, start, end },
+      request: { chrId: collected?.chrId ?? 0, start, end },
     })
   }
 
@@ -733,17 +732,14 @@ export class BlockView {
     return { blockByOffset, tagsByOffset }
   }
 
-  public async readWigDataMulti(
-    regions: { refName: string; start: number; end: number }[],
-    opts: Options = {},
-  ): Promise<Feature[][]> {
-    const results: Feature[][] = regions.map(() => [])
-    const { blockByOffset, tagsByOffset } = await this._collectBlocksMulti(
-      regions,
-      opts,
-    )
-
-    const { blockType } = this
+  // Fetch the deduped block union and hand each block's decoded bytes to
+  // `visit` once per region that tagged it. Shared by both multi-region
+  // readers, which differ only in what they do with the parsed records.
+  private async _forEachTaggedBlock(
+    { blockByOffset, tagsByOffset }: CollectedBlocksMulti,
+    opts: Options,
+    visit: (data: Uint8Array, blockOffset: number, tag: RegionTag) => void,
+  ): Promise<void> {
     await this._forEachDecodedBlock(
       [...blockByOffset.values()],
       opts.signal,
@@ -751,12 +747,29 @@ export class BlockView {
       (data, blockOffset) => {
         const tags = tagsByOffset.get(blockOffset)
         if (tags) {
-          for (const { regionIndex, request } of tags) {
-            const features = parseBlock(blockType, data, blockOffset, request)
-            for (const f of features) {
-              results[regionIndex]!.push(f)
-            }
+          for (const tag of tags) {
+            visit(data, blockOffset, tag)
           }
+        }
+      },
+    )
+  }
+
+  public async readWigDataMulti(
+    regions: { refName: string; start: number; end: number }[],
+    opts: Options = {},
+  ): Promise<Feature[][]> {
+    const results: Feature[][] = regions.map(() => [])
+    const collected = await this._collectBlocksMulti(regions, opts)
+
+    const { blockType } = this
+    await this._forEachTaggedBlock(
+      collected,
+      opts,
+      (data, blockOffset, { regionIndex, request }) => {
+        const features = parseBlock(blockType, data, blockOffset, request)
+        for (const f of features) {
+          results[regionIndex]!.push(f)
         }
       },
     )
@@ -784,8 +797,8 @@ export class BlockView {
     const collected = await this._collectBlocks(chrName, start, end, opts)
     // no blocks when the ref is absent or the range is degenerate, in which case
     // the readers do no I/O and never consult chrId
-    const blocks = collected ? collected.blocks : []
-    const request = { chrId: collected ? collected.chrId : 0, start, end }
+    const blocks = collected?.blocks ?? []
+    const request = { chrId: collected?.chrId ?? 0, start, end }
     return this.blockType === 'summary'
       ? this._readSummaryFeaturesAsArrays(blocks, request, opts)
       : this._readBigWigFeaturesAsArrays(blocks, request, opts)
@@ -808,7 +821,7 @@ export class BlockView {
         await this._readBlocksAsArraysMulti(
           collected,
           regions.length,
-          (data, request) => parseSummaryBlockAsArrays(data, request),
+          parseSummaryBlockAsArrays,
           opts,
         ),
       )
@@ -817,36 +830,28 @@ export class BlockView {
       await this._readBlocksAsArraysMulti(
         collected,
         regions.length,
-        (data, request) => parseBigWigBlockAsArrays(data, request),
+        parseBigWigBlockAsArrays,
         opts,
       ),
     )
   }
 
-  // Fetch the deduped block union, decompress each group, and parse every block
-  // into a typed-array chunk for each region that tagged it. Empty chunks are
-  // dropped. Returns one chunk list per region, in input order.
+  // Parse every block into a typed-array chunk for each region that tagged it.
+  // Empty chunks are dropped. Returns one chunk list per region, in input order.
   private async _readBlocksAsArraysMulti<T extends BigWigChunk>(
     collected: CollectedBlocksMulti,
     regionCount: number,
     parseChunk: (data: Uint8Array, request: CoordRequest) => T,
     opts: Options,
   ): Promise<T[][]> {
-    const { blockByOffset, tagsByOffset } = collected
     const chunksByRegion: T[][] = Array.from({ length: regionCount }, () => [])
-    await this._forEachDecodedBlock(
-      [...blockByOffset.values()],
-      opts.signal,
-      opts.onProgress,
-      (data, blockOffset) => {
-        const tags = tagsByOffset.get(blockOffset)
-        if (tags) {
-          for (const { regionIndex, request } of tags) {
-            const chunk = parseChunk(data, request)
-            if (chunk.starts.length > 0) {
-              chunksByRegion[regionIndex]!.push(chunk)
-            }
-          }
+    await this._forEachTaggedBlock(
+      collected,
+      opts,
+      (data, _blockOffset, { regionIndex, request }) => {
+        const chunk = parseChunk(data, request)
+        if (chunk.starts.length > 0) {
+          chunksByRegion[regionIndex]!.push(chunk)
         }
       },
     )

@@ -94,6 +94,11 @@ export interface RequestOptions {
  * block byte sizes come from the R-tree index. Reported at block-group
  * granularity (adjacent blocks coalesce into one read). Mirrors the equivalent
  * callbacks in @gmod/bam, @gmod/cram, and @gmod/tabix.
+ *
+ * Every read method calls this at least once, starting at `(0, totalBytes)` and
+ * ending at `(totalBytes, totalBytes)`. A query that overlaps no blocks (unknown
+ * refName, empty region) reports the single call `(0, 0)`, so guard against a
+ * zero total before dividing.
  */
 export type ProgressCallback = (
   bytesDownloaded: number,
