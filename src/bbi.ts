@@ -424,6 +424,14 @@ export abstract class BBI {
    * (like `getFeaturesMulti`), but results pack into one backing set of typed
    * arrays instead of one object per region, minimizing allocations.
    *
+   * Note the returned arrays are not guaranteed to sit in distinct
+   * `ArrayBuffer`s: with a single region this serves the query from the same
+   * fused parser `getFeaturesAsArrays` uses, whose `starts`, `ends` and
+   * `scores` are views into one buffer. So transfer `.buffer` through
+   * `postMessage` at most once per distinct buffer — a transfer list naming all
+   * three throws on a repeated entry. Two or more regions still pack into a
+   * buffer per field.
+   *
    * @param regions - array of `{ refName, start, end }` query regions
    * @param opts - same options as `getFeatures`
    * @returns `Promise<BigWigFeatureArraysMulti | SummaryFeatureArraysMulti>` —
