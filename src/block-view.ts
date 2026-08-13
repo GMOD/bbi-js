@@ -814,15 +814,33 @@ export class BlockView {
 
   // Multi-region typed-array read. Same block dedupe/coalesce strategy as
   // readWigDataMulti, but parses each block into typed-array chunks and packs
-  // all regions into one backing set of arrays (see *Multi return types). Unlike
-  // the single-region path it can't use the fused decompress+parse wasm call
-  // (that filters by one coord range), so it decompresses raw then parses each
-  // block per region in JS.
+  // all regions into one backing set of arrays (see *Multi return types). With
+  // two or more regions it can't use the fused decompress+parse wasm call (that
+  // filters by one coord range), so it decompresses raw then parses each block
+  // per region in JS.
+  //
+  // One region is not that case, and is worth special-casing rather than
+  // treating as the degenerate multi: it is the shape every single-locus
+  // consumer sends (a genome browser showing one contig calls this with a
+  // one-element array), and routing it through the multi machinery costs it the
+  // fused parse, the per-block chunk allocations, and the packRegions copy for
+  // no benefit — there is nothing to dedupe, coalesce or pack across. The
+  // single-region reader already returns exactly this shape minus the offsets.
   public async readWigDataAsArraysMulti(
     regions: { refName: string; start: number; end: number }[],
     opts: Options = {},
   ): Promise<BigWigFeatureArraysMulti | SummaryFeatureArraysMulti> {
     this.assertNotBigBed('getFeaturesAsArraysMulti')
+    const only = regions.length === 1 ? regions[0] : undefined
+    if (only) {
+      const arrays = await this.readWigDataAsArrays(
+        only.refName,
+        only.start,
+        only.end,
+        opts,
+      )
+      return { ...arrays, regionOffsets: [0, arrays.starts.length] }
+    }
     const collected = await this._collectBlocksMulti(regions, opts)
     if (this.blockType === 'summary') {
       return concatSummaryChunksMulti(

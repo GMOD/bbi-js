@@ -219,6 +219,47 @@ test('getFeaturesAsArraysMulti returns summary arrays at zoomed scale', async ()
   }
 })
 
+// A one-element array takes a different code path (the fused single-region
+// reader) than two or more regions do, so pin that it still answers in the
+// multi shape and agrees field-for-field with the single-region call — at both
+// an unzoomed and a summary scale, since those are separate parsers.
+test.each([
+  ['unzoomed', 1 / 100],
+  ['summary', 1000 / 250_000_000],
+])('getFeaturesAsArraysMulti with one region (%s)', async (_label, scale) => {
+  const bw = new BigWig({ path: 'test/data/cDC.bw' })
+  const region = { refName: 'chr1', start: 1_000_000, end: 3_000_000 }
+
+  const multi = await bw.getFeaturesAsArraysMulti([region], { scale })
+  const truth = await bw.getFeaturesAsArrays(
+    region.refName,
+    region.start,
+    region.end,
+    { scale },
+  )
+
+  expect(multi.starts.length).toBeGreaterThan(0)
+  expect(multi.regionOffsets).toEqual([0, truth.starts.length])
+  expect(multi.isSummary).toBe(truth.isSummary)
+  expect(Array.from(multi.starts)).toEqual(Array.from(truth.starts))
+  expect(Array.from(multi.ends)).toEqual(Array.from(truth.ends))
+  expect(Array.from(multi.scores)).toEqual(Array.from(truth.scores))
+  if (multi.isSummary && truth.isSummary) {
+    expect(Array.from(multi.minScores)).toEqual(Array.from(truth.minScores))
+    expect(Array.from(multi.maxScores)).toEqual(Array.from(truth.maxScores))
+  }
+})
+
+test('getFeaturesAsArraysMulti with one unknown region', async () => {
+  const bw = new BigWig({ path: 'test/data/cDC.bw' })
+  const res = await bw.getFeaturesAsArraysMulti(
+    [{ refName: 'nonexistent', start: 0, end: 100 }],
+    { scale: 1 / 1000 },
+  )
+  expect(res.regionOffsets).toEqual([0, 0])
+  expect(res.starts.length).toBe(0)
+})
+
 test('getFeaturesAsArraysMulti handles unknown refName and empty input', async () => {
   const bw = new BigWig({ path: 'test/data/cDC.bw' })
   const scale = 1 / 1000
