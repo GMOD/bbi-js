@@ -1,3 +1,19 @@
+## [11.1.0](https://github.com/GMOD/bbi-js/compare/v11.0.1...v11.1.0) (2026-08-13)
+
+### Chores
+
+- Render only the commit subject, and link the commit ([8285dcd](https://github.com/GMOD/bbi-js/commit/8285dcd50ce1dbe93123c86b1caaaab7f2842152))
+- Create a GitHub release for each published tag ([b4bae12](https://github.com/GMOD/bbi-js/commit/b4bae12cc60f4335634301c16aa137903d07b0b7))
+- Enforce type strippability in tsconfig ([b49eb1a](https://github.com/GMOD/bbi-js/commit/b49eb1a0cf83c205d0ca308026aa30d05633eaa0))
+
+### Documentation
+
+- Note the one-region array-buffer sharing on getFeaturesAsArraysMulti ([974e132](https://github.com/GMOD/bbi-js/commit/974e132b42f7f250e43835cbc2d7c2f538c64b26))
+
+### Performance Improvements
+
+- Serve a one-region getFeaturesAsArraysMulti from the fused parser ([bfdcc67](https://github.com/GMOD/bbi-js/commit/bfdcc67cd3cd2b2e0af991696aaf671130fb8f38))
+
 ## [11.0.1](https://github.com/GMOD/bbi-js/compare/v11.0.0...v11.0.1) (2026-08-10)
 
 ### Chores
