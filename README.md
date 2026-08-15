@@ -440,6 +440,12 @@ Blocks are decompressed in a Rust/WebAssembly module built on
 than a pure-JS inflate. It is base64-inlined into the bundle and loads lazily,
 so there is nothing to install or configure. See [docs/wasm.md](./docs/wasm.md).
 
+Records are parsed by one of four parsers — two in JS, two fused into the wasm
+decompression call — picked from the file's compression, the reader you called
+and the number of regions you asked for. All four produce the same features;
+[docs/parser-selection.md](./docs/parser-selection.md) charts the choice and
+explains why each branch exists.
+
 ## Migrating to v10
 
 - `renameRefSeqs` was removed. Map chromosome names at the call site instead;

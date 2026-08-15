@@ -1,0 +1,119 @@
+digraph parser_selection {
+  rankdir = TB
+  bgcolor = "transparent"
+  nodesep = 0.4
+  ranksep = 0.45
+
+  node [
+    fontname = "Helvetica,Arial,sans-serif"
+    fontsize = 11
+    fontcolor = "#1f2328"
+    color = "#8c959f"
+    style = "filled"
+    margin = "0.18,0.10"
+  ]
+  edge [
+    fontname = "Helvetica,Arial,sans-serif"
+    fontsize = 9
+    fontcolor = "#57606a"
+    color = "#8c959f"
+    arrowsize = 0.7
+  ]
+
+  // ---- entry -------------------------------------------------------------
+  call [
+    label = "getFeatures · getFeaturesMulti\ngetFeaturesAsArrays · getFeaturesAsArraysMulti"
+    shape = box
+    style = "filled,rounded"
+    fillcolor = "#ffffff"
+  ]
+
+  // ---- which block layout (BBI.getView) ----------------------------------
+  d_file [label = "BigBed?" shape = diamond fillcolor = "#fff8c5"]
+  d_zoom [label = "zoom level with\nreductionLevel ≤ 2 / scale?" shape = diamond fillcolor = "#fff8c5"]
+
+  bt_bed [label = "blockType = bigbed\nvariable-width + rest string" shape = box fillcolor = "#ffffff"]
+  bt_sum [label = "blockType = summary\n32-byte records" shape = box fillcolor = "#ffffff"]
+  bt_wig [label = "blockType = bigwig\n24-byte header + fixed records" shape = box fillcolor = "#ffffff"]
+
+  call -> d_file
+  d_file -> bt_bed [label = "  yes"]
+  d_file -> d_zoom [label = "  no (BigWig)"]
+  d_zoom -> bt_sum [label = "  yes"]
+  d_zoom -> bt_wig [label = "  no"]
+
+  // ---- which reader ------------------------------------------------------
+  d_reader_bed [label = "typed arrays\nrequested?" shape = diamond fillcolor = "#fff8c5"]
+  d_reader_wig [label = "typed arrays\nrequested?" shape = diamond fillcolor = "#fff8c5"]
+
+  bt_bed -> d_reader_bed
+  bt_sum -> d_reader_wig
+  bt_wig -> d_reader_wig
+
+  throw [
+    label = "throw\n\"not supported for BigBed\""
+    shape = box
+    style = "filled,rounded"
+    fillcolor = "#ffebe9"
+    color = "#cf222e"
+  ]
+  d_reader_bed -> throw [label = "  yes"]
+
+  d_regions [label = "how many regions?" shape = diamond fillcolor = "#fff8c5"]
+  d_reader_wig -> d_regions [label = "  arrays"]
+
+  // ---- compressed? -------------------------------------------------------
+  d_zip_fused [label = "uncompressBufSize > 0?" shape = diamond fillcolor = "#fff8c5"]
+  d_zip_arr   [label = "uncompressBufSize > 0?" shape = diamond fillcolor = "#fff8c5"]
+  d_zip_obj   [label = "uncompressBufSize > 0?" shape = diamond fillcolor = "#fff8c5"]
+
+  d_regions -> d_zip_fused [label = "  1 region"]
+  d_regions -> d_zip_arr [label = "  2 or more\n  (one coord filter\n  can't serve them)"]
+
+  d_reader_bed -> d_zip_obj [label = "  objects"]
+  d_reader_wig -> d_zip_obj [label = "  objects"]
+
+  // ---- leaves ------------------------------------------------------------
+  leaf_fused [
+    label = "wasm decompress_and_parse_bigwig\nwasm decompress_and_parse_summary\ninflate + parse + coord filter, one call"
+    shape = box
+    style = "filled,rounded"
+    fillcolor = "#dafbe1"
+    color = "#1a7f37"
+  ]
+  leaf_arr_zip [
+    label = "wasm inflate_raw_batch\n→ JS parseBigWigBlockAsArrays\n→ JS parseSummaryBlockAsArrays"
+    shape = box
+    style = "filled,rounded"
+    fillcolor = "#ddf4ff"
+    color = "#0969da"
+  ]
+  leaf_arr_raw [
+    label = "no wasm — slice the block\n→ JS parseBigWigBlockAsArrays\n→ JS parseSummaryBlockAsArrays"
+    shape = box
+    style = "filled,rounded"
+    fillcolor = "#f6f8fa"
+  ]
+  leaf_obj_zip [
+    label = "wasm inflate_raw_batch\n→ JS parseBigWigBlock\n→ JS parseSummaryBlock\n→ JS parseBigBedBlock"
+    shape = box
+    style = "filled,rounded"
+    fillcolor = "#ddf4ff"
+    color = "#0969da"
+  ]
+  leaf_obj_raw [
+    label = "no wasm — slice the block\n→ JS parseBigWigBlock\n→ JS parseSummaryBlock\n→ JS parseBigBedBlock"
+    shape = box
+    style = "filled,rounded"
+    fillcolor = "#f6f8fa"
+  ]
+
+  d_zip_fused -> leaf_fused [label = "  yes"]
+  d_zip_fused -> leaf_arr_raw [label = "  no"]
+  d_zip_arr -> leaf_arr_zip [label = "  yes"]
+  d_zip_arr -> leaf_arr_raw [label = "  no"]
+  d_zip_obj -> leaf_obj_zip [label = "  yes"]
+  d_zip_obj -> leaf_obj_raw [label = "  no"]
+
+  { rank = same; leaf_fused; leaf_arr_zip; leaf_arr_raw; leaf_obj_zip; leaf_obj_raw }
+}

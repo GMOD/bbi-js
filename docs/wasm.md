@@ -52,7 +52,9 @@ Three entry points, all in [`crate/src/lib.rs`](../crate/src/lib.rs):
 | `decompress_and_parse_bigwig`  | BigWig base-resolution blocks      |
 | `decompress_and_parse_summary` | BigWig zoom/summary blocks         |
 
-Two things are worth knowing about the shape of this:
+Not every read reaches them — [parser-selection.md](./parser-selection.md)
+charts which of the four parsers a given call gets. Three things are worth
+knowing about the shape of this:
 
 **Calls are batched.** Every block in a query is handed over in one call, packed
 into a single input buffer with a `Uint32Array` of offsets and lengths, and
