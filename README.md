@@ -5,7 +5,7 @@
 
 Parser for BigWig and BigBed file formats.
 
-## Installation
+## Install
 
 ```bash
 npm install @gmod/bbi
@@ -41,17 +41,6 @@ const features = await remote.getFeatures('chr1', 0, 100_000)
 
 See the [example](./example/) folder for a complete working demo.
 
-## Docs
-
-- [docs/api.md](docs/api.md) — constructor, options, every read method, the
-  `Feature` type, BigBed and the helpers
-- [docs/concurrency.md](docs/concurrency.md) — how many range requests a query
-  makes, and the measured effect of overlapping them
-- [docs/parser-selection.md](docs/parser-selection.md) — which of the four
-  record parsers a call reaches, and why each exists
-- [docs/wasm.md](docs/wasm.md) — the Rust/WebAssembly decompressor
-- [CONTRIBUTING.md](CONTRIBUTING.md) — development, release and publishing
-
 ## Decompression
 
 Blocks are inflated by a Rust/WebAssembly
@@ -70,12 +59,22 @@ called and the region count. All four produce the same features.
   block-level caching. Set headers on the filehandle instead; see
   [docs/api.md](docs/api.md#constructor).
 
+## Docs
+
+- [docs/api.md](docs/api.md) — constructor, options, every read method, the
+  `Feature` type, BigBed and the helpers
+- [docs/concurrency.md](docs/concurrency.md) — how many range requests a query
+  makes, and the measured effect of overlapping them
+- [docs/parser-selection.md](docs/parser-selection.md) — which of the four
+  record parsers a call reaches, and why each exists
+- [docs/wasm.md](docs/wasm.md) — the Rust/WebAssembly decompressor
+- [CONTRIBUTING.md](CONTRIBUTING.md) — development, release and publishing
+
 ## Academic Use
 
-This package was written with funding from the [NHGRI](http://genome.gov) as
-part of the [JBrowse](http://jbrowse.org) project. If you use it in an academic
-project that you publish, please cite the most recent JBrowse paper, which will
-be linked from [jbrowse.org](http://jbrowse.org).
+Written with [NHGRI](http://genome.gov) funding as part of
+[JBrowse](http://jbrowse.org). If you use this in a publication, please cite the
+most recent JBrowse paper at [jbrowse.org](http://jbrowse.org).
 
 ## License
 
