@@ -39,8 +39,7 @@ the two are far apart.** A query also spends time fetching bytes, walking the
 R-tree, and building results, and on the measurements we have those dominate: an
 older whole-genome `parseBigWig` comparison came out only ~5% apart end to end,
 which puts inflate at well under a tenth of that run. Don't quote 2.5–3× as a
-library-level speedup — it is the cost of one stage, and how much of it surfaces
-depends entirely on what else the query is doing.
+library-level speedup.
 
 ## What runs in Rust
 
