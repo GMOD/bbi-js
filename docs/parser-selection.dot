@@ -1,6 +1,11 @@
 digraph parser_selection {
   rankdir = TB
-  bgcolor = "transparent"
+  // White, not transparent. Node labels sit on filled shapes and survive either
+  // way, but edge labels ("yes", "no (BigWig)") are bare #57606a text on the
+  // canvas — on GitHub's dark theme that is ~2.6:1 against #0d1117, well under
+  // readable. SYNC: ~/src/gmod/bam-js/docs/dataflow.dot,
+  // ~/src/gmod/tabix-js/docs/dataflow.dot
+  bgcolor = "white"
   nodesep = 0.4
   ranksep = 0.45
 
