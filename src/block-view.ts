@@ -97,11 +97,65 @@ function summaryScore(sumData: number, validCnt: number): number {
   return validCnt ? sumData / validCnt : sumData
 }
 
+const BIGWIG_HEADER_BYTES = 24
+const SUMMARY_RECORD_BYTES = 32
+// by the section header's blockType: bedgraph, varstep, fixedstep
+const BIGWIG_RECORD_BYTES: Record<number, number | undefined> = {
+  1: 12,
+  2: 8,
+  3: 4,
+}
+
+// A well-formed file never holds a partial record: a section declares its own
+// item count and a zoom block is a whole number of 32-byte records. Reaching
+// one means a corrupt file or a short decompression, and dropping it silently
+// would serve a track that is missing data with nothing to say so.
+//
+// Checked once per block against the declared count, never per record, so the
+// parse loops below are unchanged. crate/src/lib.rs raises the same error.
+function assertWholeRecords(kind: string, have: number, need: number) {
+  if (have < need) {
+    throw new Error(
+      `truncated ${kind} block: ${have} bytes, expected ${need}; file may be corrupt`,
+    )
+  }
+}
+
+function summaryRecordCount(b: Uint8Array) {
+  if (b.byteLength % SUMMARY_RECORD_BYTES !== 0) {
+    assertWholeRecords(
+      'summary',
+      b.byteLength,
+      (Math.floor(b.byteLength / SUMMARY_RECORD_BYTES) + 1) *
+        SUMMARY_RECORD_BYTES,
+    )
+  }
+  return b.byteLength / SUMMARY_RECORD_BYTES
+}
+
+// Callers read itemCount off their own DataView and pass it, so this adds no
+// allocation and no per-record work.
+function assertBigWigBlockFits(
+  byteLength: number,
+  blockType: number,
+  itemCount: number,
+) {
+  const recordBytes = BIGWIG_RECORD_BYTES[blockType]
+  if (recordBytes !== undefined) {
+    assertWholeRecords(
+      'bigwig',
+      byteLength,
+      BIGWIG_HEADER_BYTES + itemCount * recordBytes,
+    )
+  }
+}
+
 function parseSummaryBlock(b: Uint8Array, request?: CoordRequest) {
   const features: Feature[] = []
+  const count = summaryRecordCount(b)
   let offset = 0
   const dataView = getDataView(b)
-  while (offset < b.byteLength) {
+  for (let i = 0; i < count; i++) {
     const chromId = dataView.getUint32(offset, true)
     offset += 4
     const start = dataView.getUint32(offset, true)
@@ -179,14 +233,16 @@ function parseBigBedBlock(
 }
 
 function parseBigWigBlock(buffer: Uint8Array, req?: CoordRequest) {
+  const items: Feature[] = []
+  assertWholeRecords('bigwig', buffer.byteLength, BIGWIG_HEADER_BYTES)
   const dataView = getDataView(buffer)
   const blockStart = dataView.getInt32(4, true)
   const itemStep = dataView.getUint32(12, true)
   const itemSpan = dataView.getUint32(16, true)
   const blockType = dataView.getUint8(20)
   const itemCount = dataView.getUint16(22, true)
+  assertBigWigBlockFits(buffer.byteLength, blockType, itemCount)
   let offset = 24
-  const items: Feature[] = []
   switch (blockType) {
     case 1: {
       for (let i = 0; i < itemCount; i++) {
@@ -235,12 +291,15 @@ function parseBigWigBlockAsArrays(
   buffer: Uint8Array,
   req: CoordRequest,
 ): { starts: Int32Array; ends: Int32Array; scores: Float32Array } {
+  assertWholeRecords('bigwig', buffer.byteLength, BIGWIG_HEADER_BYTES)
   const dataView = getDataView(buffer)
   const blockStart = dataView.getInt32(4, true)
   const itemStep = dataView.getUint32(12, true)
   const itemSpan = dataView.getUint32(16, true)
   const blockType = dataView.getUint8(20)
   const itemCount = dataView.getUint16(22, true)
+  // before the allocations below, so a short block cannot size them
+  assertBigWigBlockFits(buffer.byteLength, blockType, itemCount)
 
   const starts = new Int32Array(itemCount)
   const ends = new Int32Array(itemCount)
@@ -319,7 +378,7 @@ function parseSummaryBlockAsArrays(
   maxScores: Float32Array
 } {
   const dataView = getDataView(b)
-  const maxItems = Math.floor(b.byteLength / 32)
+  const maxItems = summaryRecordCount(b)
   const starts = new Int32Array(maxItems)
   const ends = new Int32Array(maxItems)
   const scores = new Float32Array(maxItems)
@@ -327,7 +386,7 @@ function parseSummaryBlockAsArrays(
   const maxScores = new Float32Array(maxItems)
   let idx = 0
   let offset = 0
-  while (offset < b.byteLength) {
+  for (let i = 0; i < maxItems; i++) {
     const chromId = dataView.getUint32(offset, true)
     offset += 4
     const start = dataView.getUint32(offset, true)

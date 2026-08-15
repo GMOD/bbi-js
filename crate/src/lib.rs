@@ -150,7 +150,7 @@ pub fn decompress_and_parse_bigwig(
             .map_err(|e| JsError::new(&format!("decompression failed: {:?}", e)))?;
 
         let data = &temp_buf[..actual_size];
-        parse_bigwig_block_into(data, req_start, req_end, &mut starts, &mut ends, &mut scores);
+        parse_bigwig_block_into(data, req_start, req_end, &mut starts, &mut ends, &mut scores)?;
     }
 
     let count = starts.len() as u32;
@@ -165,6 +165,21 @@ pub fn decompress_and_parse_bigwig(
     Ok(result.into_boxed_slice())
 }
 
+/// A well-formed file never holds a partial record, so reaching one means a
+/// corrupt file or a short decompression. Erroring rather than yielding fewer
+/// records keeps this in step with the JS parsers in src/block-view.ts, which
+/// raise the same message: a silently short block serves a track that is
+/// missing data with nothing to say so.
+fn assert_whole_records(kind: &str, have: usize, need: usize) -> Result<(), JsError> {
+    if have < need {
+        return Err(JsError::new(&format!(
+            "truncated {} block: {} bytes, expected {}; file may be corrupt",
+            kind, have, need
+        )));
+    }
+    Ok(())
+}
+
 fn parse_bigwig_block_into(
     data: &[u8],
     req_start: i32,
@@ -172,16 +187,24 @@ fn parse_bigwig_block_into(
     starts: &mut Vec<i32>,
     ends: &mut Vec<i32>,
     scores: &mut Vec<f32>,
-) {
-    if data.len() < 24 {
-        return;
-    }
+) -> Result<(), JsError> {
+    assert_whole_records("bigwig", data.len(), 24)?;
 
     let block_start = read_i32_le(data, 4);
     let item_step = read_u32_le(data, 12) as i32;
     let item_span = read_u32_le(data, 16) as i32;
     let block_type = data[20];
     let item_count = read_u16_le(data, 22) as usize;
+
+    let record_bytes = match block_type {
+        1 => 12,
+        2 => 8,
+        3 => 4,
+        _ => 0,
+    };
+    if record_bytes > 0 {
+        assert_whole_records("bigwig", data.len(), 24 + item_count * record_bytes)?;
+    }
 
     let body = &data[24..];
 
@@ -227,6 +250,7 @@ fn parse_bigwig_block_into(
         }
         _ => {}
     }
+    Ok(())
 }
 
 /// Combined decompress + parse for summary blocks
@@ -262,6 +286,9 @@ pub fn decompress_and_parse_summary(
 
         let data = &temp_buf[..actual_size];
         // summary record: chromId, start, end, validCnt (u32), min, max, sum, sumSq (f32) — 32 bytes
+        if data.len() % 32 != 0 {
+            assert_whole_records("summary", data.len(), (data.len() / 32 + 1) * 32)?;
+        }
         for rec in data.chunks_exact(32) {
             let chrom_id = u32::from_le_bytes(rec[0..4].try_into().unwrap());
             let feat_start = u32::from_le_bytes(rec[4..8].try_into().unwrap()) as i32;
