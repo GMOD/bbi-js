@@ -205,11 +205,12 @@ function parseBigBedBlock(
     currOffset += 12
     // Scanning for the record terminator is unavoidable (it's how the next
     // record is found) but decoding the bytes between it is not, so `rest` is
-    // only materialized for records that survive the filter. Worth 25-40% of
-    // getFeatures on clinvarCnv.bb: the R-tree already prunes non-overlapping
-    // blocks, so the records this skips are the partly-out-of-range ones in a
-    // query's edge blocks, plus every re-parse in the multi-region path (where
-    // one block is parsed once per region tagging it).
+    // only materialized for records that survive the filter. The R-tree already
+    // prunes non-overlapping blocks, so the records this skips are the
+    // partly-out-of-range ones in a query's edge blocks, plus every re-parse in
+    // the multi-region path (where one block is parsed once per region tagging
+    // it) — roughly halving the parse step on a narrow window, and nothing on a
+    // whole-chromosome read. Measured in docs/optimizations.md.
     const nullPos = data.indexOf(0, currOffset)
     const restEnd = nullPos === -1 ? data.length : nullPos
     if (

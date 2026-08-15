@@ -65,6 +65,8 @@ and the region count. All four produce the same features.
 
 - [docs/api.md](docs/api.md) — constructor, options, every read method, the
   `Feature` type, BigBed and the helpers
+- [docs/optimizations.md](docs/optimizations.md) — where a query's time goes,
+  and the decisions that follow from it
 - [docs/concurrency.md](docs/concurrency.md) — how many range requests a query
   makes, and the measured effect of overlapping them
 - [docs/parser-selection.md](docs/parser-selection.md) — which of the four
