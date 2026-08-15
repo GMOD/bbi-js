@@ -6,7 +6,13 @@ import {
   decompressAndParseSummaryBlocks,
   unzipBatch,
 } from './unzip.ts'
-import { decoder, getDataView, getUint64, groupBlocks } from './util.ts'
+import {
+  decoder,
+  forEachWithReadahead,
+  getDataView,
+  getUint64,
+  groupBlocks,
+} from './util.ts'
 
 import type { BlockType, Feature, ProgressCallback } from './types.ts'
 import type {
@@ -19,6 +25,18 @@ import type { Block } from './util.ts'
 import type { GenericFilehandle } from 'generic-filehandle2'
 
 const CIR_TREE_MAGIC = 0x2468ace0
+
+// How many reads are in flight at once, for the two loops that issue several
+// independent ones: the R-tree nodes at a level, and the coalesced data-block
+// groups. Six, because that is what a browser allows per origin — more in flight
+// than the transport will run buys no latency and holds another group's
+// compressed bytes, decompression output and parsed arrays alive while it waits.
+//
+// It is deliberately not a constructor option. The bound multiplies with any
+// fan-out a caller puts above it (a multi-file track fetching ten files at once
+// has sixty reads outstanding), so the number that matters is not one this
+// module can see, and a knob is a support surface forever.
+const READ_CONCURRENCY = 6
 
 interface CoordRequest {
   chrId: number
@@ -600,47 +618,57 @@ export class BlockView {
         currentOffsets.map(o => ({ min: o, max: o + maxRTreeBlockSpan })),
       )
       const nextOffsets: number[] = []
-      for (const { min, max } of spans) {
-        const length = max - min
-        const offset = min
-        const resultBuffer = await this.rTreeNodeCache.get(
-          { length, offset },
-          opts?.signal,
-        )
-        for (const element of currentOffsets) {
-          if (min <= element && element <= max) {
-            const data = resultBuffer.subarray(element - offset)
-            const dv = getDataView(data)
-            const isLeaf = dv.getUint8(0)
-            const count = dv.getUint16(2, true)
-            if (isLeaf === 1 || isLeaf === 0) {
-              const entrySize = isLeaf === 1 ? 32 : 24
-              let nodeOffset = 4
-              for (let i = 0; i < count; i++) {
-                const startChrom = dv.getUint32(nodeOffset, true)
-                const startBase = dv.getUint32(nodeOffset + 4, true)
-                const endChrom = dv.getUint32(nodeOffset + 8, true)
-                const endBase = dv.getUint32(nodeOffset + 12, true)
-                if (
-                  blockIntersectsQuery(startChrom, startBase, endChrom, endBase)
-                ) {
-                  const childOrBlockOffset = getUint64(dv, nodeOffset + 16)
-                  if (isLeaf === 1) {
-                    const blockSize = getUint64(dv, nodeOffset + 24)
-                    blocks.push({
-                      offset: childOrBlockOffset,
-                      length: blockSize,
-                    })
-                  } else {
-                    nextOffsets.push(childOrBlockOffset)
+      // The spans at one level are independent reads, and `use` runs in span
+      // order, so the blocks collected and the offsets queued for the next level
+      // come out in exactly the order the serial loop produced them.
+      await forEachWithReadahead(
+        spans,
+        READ_CONCURRENCY,
+        ({ min, max }) =>
+          this.rTreeNodeCache.get(
+            { length: max - min, offset: min },
+            opts?.signal,
+          ),
+        (resultBuffer, { min, max }) => {
+          const offset = min
+          for (const element of currentOffsets) {
+            if (min <= element && element <= max) {
+              const dv = getDataView(resultBuffer.subarray(element - offset))
+              const isLeaf = dv.getUint8(0)
+              const count = dv.getUint16(2, true)
+              if (isLeaf === 1 || isLeaf === 0) {
+                const entrySize = isLeaf === 1 ? 32 : 24
+                let nodeOffset = 4
+                for (let i = 0; i < count; i++) {
+                  const startChrom = dv.getUint32(nodeOffset, true)
+                  const startBase = dv.getUint32(nodeOffset + 4, true)
+                  const endChrom = dv.getUint32(nodeOffset + 8, true)
+                  const endBase = dv.getUint32(nodeOffset + 12, true)
+                  if (
+                    blockIntersectsQuery(
+                      startChrom,
+                      startBase,
+                      endChrom,
+                      endBase,
+                    )
+                  ) {
+                    const childOrBlockOffset = getUint64(dv, nodeOffset + 16)
+                    if (isLeaf === 1) {
+                      blocks.push({
+                        offset: childOrBlockOffset,
+                        length: getUint64(dv, nodeOffset + 24),
+                      })
+                    } else {
+                      nextOffsets.push(childOrBlockOffset)
+                    }
                   }
+                  nodeOffset += entrySize
                 }
-                nodeOffset += entrySize
               }
             }
           }
-        }
-      }
+        },
+      )
       currentOffsets = nextOffsets
     }
 
@@ -888,6 +916,12 @@ export class BlockView {
   // one read, and hand the group's bytes to `visit` along with each block's offset
   // rebased to the start of that read. Reporting download progress here keeps
   // every reader's progress accounting identical.
+  //
+  // Groups are fetched with read-ahead but visited in group order, which is
+  // sorted by file offset (groupBlocks sorts) and so genomic order in a
+  // well-formed file — every reader below concatenates in visit order and none
+  // of them has to re-sort. Progress is reported as each read lands rather than
+  // as it is visited, so the fraction still only ever grows.
   private async _forEachBlockGroup(
     blocks: Block[],
     signal: AbortSignal | undefined,
@@ -900,20 +934,26 @@ export class BlockView {
   ): Promise<void> {
     const blockGroups = groupBlocks(blocks)
     const report = blockProgress(blockGroups, onProgress)
-    for (const blockGroup of blockGroups) {
-      const data = await this.bbi.read(blockGroup.length, blockGroup.offset, {
-        signal,
-      })
-      report(blockGroup.length)
-      await visit(
-        data,
-        blockGroup.blocks.map(block => ({
-          offset: block.offset - blockGroup.offset,
-          length: block.length,
-        })),
-        blockGroup.offset,
-      )
-    }
+    await forEachWithReadahead(
+      blockGroups,
+      READ_CONCURRENCY,
+      async blockGroup => {
+        const data = await this.bbi.read(blockGroup.length, blockGroup.offset, {
+          signal,
+        })
+        report(blockGroup.length)
+        return data
+      },
+      (data, blockGroup) =>
+        visit(
+          data,
+          blockGroup.blocks.map(block => ({
+            offset: block.offset - blockGroup.offset,
+            length: block.length,
+          })),
+          blockGroup.offset,
+        ),
+    )
   }
 
   // Decompress each block group (when compressed) and hand each block's decoded
