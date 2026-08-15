@@ -137,10 +137,33 @@ to overlap and is unchanged; the win is ~2.5× wherever a query touches many
 block groups, and it holds at every latency because the bytes were never the
 bound there.
 
-Any fan-out you put above this multiplies with it: fetching ten files at once
-leaves sixty range requests outstanding. Bound your own fan-out accordingly —
-and note that a caller already fanning out over files has overlapped much of
-this itself, so it gains less.
+#### How many requests a query makes
+
+Read-ahead **reschedules** reads; it never adds one. A query issues the same
+range requests it always did, and how many that is depends on the index, not on
+this: adjacent on-disk blocks coalesce into one read, so a whole-genome overview
+is a handful and a multi-region base-resolution query is tens.
+
+The six is not the ceiling on requests in flight either, because a multi-region
+query walks every region's index at once — that fan-out is the region count, and
+it predates read-ahead. Measured on `cDC.bw`, peak reads outstanding at the
+filehandle, identical before and after:
+
+| query                                      | peak in flight | requests |
+| ------------------------------------------ | -------------- | -------- |
+| 1 region, base resolution                  | 1              | 4        |
+| 24 regions, base resolution                | 24             | 44       |
+| 100 regions, base resolution               | 27             | 49       |
+| 10 files × 24 regions, 10 files at a time  | 240            | 470      |
+| 100 files × 24 regions, 10 files at a time | 240            | 4700     |
+
+So a caller's own fan-out is what sets the peak, and bounding it is what bounds
+the peak — note the last two rows, where ten times the files leaves the peak
+unchanged and only the total grows. Whatever you choose, the transport throttles
+the rest: a browser runs six per origin on HTTP/1.1 and queues the remainder.
+
+A caller already fanning out over files has also overlapped much of what
+read-ahead does, so it gains less from it than a single-file query does.
 
 ### Reading features
 
