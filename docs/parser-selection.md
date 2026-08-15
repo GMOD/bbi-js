@@ -19,6 +19,8 @@ never called.
 
 Source: [`parser-selection.dot`](./parser-selection.dot). Green is parsed in
 wasm, blue is inflated in wasm and parsed in JS, grey touches no wasm at all.
+The dashed edge is `searchExtraIndex`, which joins below the reader question
+because it is never a typed-array read.
 
 ## The four questions
 
@@ -47,6 +49,12 @@ The typed-array readers reject BigBed rather than mis-parsing it. Their parsers
 only understand the fixed-width layouts, and a `rest` string does not fit a
 fixed-width column — feeding BigBed bytes to the BigWig parser yields records
 that look plausible and are garbage, so `assertNotBigBed` throws instead.
+
+`BigBed.searchExtraIndex` is a fifth way in, reached from a name lookup rather
+than a coordinate query. It calls `readFeatures` directly, so it is always
+BigBed, always unzoomed, always objects — and it is the only caller that passes
+no `request`, which means its blocks are parsed whole, with the coord filter
+skipped, and filtered by name afterwards.
 
 ### 3. One region or several — only one can carry a coord filter
 
@@ -81,8 +89,8 @@ between two files that look identical through the API.
 | `decompress_and_parse_bigwig` / `..._summary`           | typed arrays, BigWig, 1 region, compressed   | inflate + parse + coord filter in one wasm call |
 | `inflate_raw_batch` → `parse*BlockAsArrays`             | typed arrays, BigWig, ≥2 regions, compressed | wasm inflate, JS array parse per region tag     |
 | `parse*BlockAsArrays`                                   | typed arrays, BigWig, uncompressed           | JS array parse, no wasm                         |
-| `inflate_raw_batch` → `parseBigWig/Summary/BigBedBlock` | objects, compressed                          | wasm inflate, JS object parse                   |
-| `parseBigWig/Summary/BigBedBlock`                       | objects, uncompressed                        | JS object parse, no wasm                        |
+| `inflate_raw_batch` → `parseBigWig/Summary/BigBedBlock` | objects or `searchExtraIndex`, compressed    | wasm inflate, JS object parse                   |
+| `parseBigWig/Summary/BigBedBlock`                       | objects or `searchExtraIndex`, uncompressed  | JS object parse, no wasm                        |
 
 `inflate_raw_batch` hands over every block of a group in one call rather than
 one call per block; see [wasm.md](./wasm.md) for why the batching and the fused
@@ -112,6 +120,19 @@ missing data with nothing to say so.
 The guard exists twice on purpose, in `src/block-view.ts` and
 `crate/src/lib.rs`. Neither can cover for the other: which one a given read
 reaches is exactly what the chart above decides.
+
+**Routing.** Agreement is also what makes a misroute invisible, so
+`test/parser-dispatch.test.ts` asserts the other half: which parser each call
+actually reaches, by counting calls through `src/unzip.ts`. Every wasm entry
+point crosses that seam, so a case can say "fused, and no raw inflate" or "no
+wasm at all" and mean it.
+
+The two tests are not redundant. Delete the one-region special case in
+`readWigDataAsArraysMulti` and every read still returns identical features, so
+`parser-parity.test.ts` stays green while the fused call silently stops firing —
+the dispatch test is what fails. Each case also asserts it produced features,
+since a query that overlaps no blocks reaches no parser and would otherwise
+satisfy every "no wasm" expectation by doing nothing.
 
 ## Regenerating the chart
 

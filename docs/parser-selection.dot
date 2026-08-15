@@ -27,6 +27,12 @@ digraph parser_selection {
     style = "filled,rounded"
     fillcolor = "#ffffff"
   ]
+  call_search [
+    label = "searchExtraIndex"
+    shape = box
+    style = "filled,rounded"
+    fillcolor = "#ffffff"
+  ]
 
   // ---- which block layout (BBI.getView) ----------------------------------
   d_file [label = "BigBed?" shape = diamond fillcolor = "#fff8c5"]
@@ -72,6 +78,10 @@ digraph parser_selection {
 
   d_reader_bed -> d_zip_obj [label = "  objects"]
   d_reader_wig -> d_zip_obj [label = "  objects"]
+  call_search -> d_zip_obj [
+    label = "  always BigBed, unzoomed, objects\n  — and the one caller with no\n  coord filter"
+    style = dashed
+  ]
 
   // ---- leaves ------------------------------------------------------------
   leaf_fused [
