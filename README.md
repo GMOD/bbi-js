@@ -118,8 +118,29 @@ A single query issues up to six byte-range reads at once — index nodes at a
 level, and the coalesced data-block groups — so its wall clock is the longest of
 its reads rather than their sum. Features still come back in file order.
 
+How much that is worth depends on whether a query is latency-bound or
+bandwidth-bound. `./scripts/network-bench.sh` measures it, serving a real file
+over HTTP with a round-trip delay, a bandwidth budget shared across in-flight
+responses, and a six-request cap (a browser's HTTP/1.1 per-origin limit).
+Against `v11.1.0`, on `cDC.bw`:
+
+| query                               | reads | 20ms/100Mbit    | 60ms/50Mbit      | 150ms/10Mbit      |
+| ----------------------------------- | ----- | --------------- | ---------------- | ----------------- |
+| whole-genome overview, summary zoom | 3     | 205 → 204ms     | 335 → 324ms      | 605 → 583ms       |
+| 24 regions × 2Mb, base resolution   | 44    | 941 → **374ms** | 1946 → **713ms** | 4060 → **1519ms** |
+| 24 regions × 2Mb, 10bp/px           | 44    | 954 → **342ms** | 1938 → **720ms** | 4013 → **1508ms** |
+| one locus × 1Mb, base resolution    | 4     | 124 → 121ms     | 287 → 273ms      | 626 → 631ms       |
+
+Same bytes and the same number of requests in every row — only their scheduling
+changed. A query that already coalesces to a handful of reads has no round trips
+to overlap and is unchanged; the win is ~2.5× wherever a query touches many
+block groups, and it holds at every latency because the bytes were never the
+bound there.
+
 Any fan-out you put above this multiplies with it: fetching ten files at once
-leaves sixty range requests outstanding. Bound your own fan-out accordingly.
+leaves sixty range requests outstanding. Bound your own fan-out accordingly —
+and note that a caller already fanning out over files has overlapped much of
+this itself, so it gains less.
 
 ### Reading features
 
