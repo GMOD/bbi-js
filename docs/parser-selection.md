@@ -15,9 +15,9 @@ never called.
 
 ## The chart
 
-![Parser selection decision tree](./parser-selection.svg)
+![Parser selection decision tree](img/parser-selection.svg)
 
-Source: [`parser-selection.dot`](./parser-selection.dot). Green is parsed in
+Source: [`parser-selection.dot`](img/parser-selection.dot). Green is parsed in
 wasm, blue is inflated in wasm and parsed in JS, grey touches no wasm at all.
 The dashed edge is `searchExtraIndex`, which joins below the reader question
 because it is never a typed-array read.
@@ -137,7 +137,7 @@ satisfy every "no wasm" expectation by doing nothing.
 ## Regenerating the chart
 
 ```bash
-dot -Tsvg docs/parser-selection.dot -o docs/parser-selection.svg
+dot -Tsvg docs/img/parser-selection.dot -o docs/img/parser-selection.svg
 ```
 
 Both the `.dot` and the rendered `.svg` are checked in, so reading the docs
