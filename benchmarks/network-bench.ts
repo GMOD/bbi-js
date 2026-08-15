@@ -18,16 +18,26 @@ import { RemoteFile } from 'generic-filehandle2'
 import { startLinkServer } from './link-server.ts'
 
 import type { LinkProfile } from './link-server.ts'
-import type { BigWig as BigWigType } from '../src/index.ts'
+import type {
+  BigBed as BigBedType,
+  BigWig as BigWigType,
+} from '../src/index.ts'
 
 const SRC = process.env.BBI_SRC ?? '../src/index.ts'
 const DATA = process.env.BBI_DATA ?? 'test/data/cDC.bw'
 const LABEL = process.env.BBI_LABEL ?? SRC
 const TRIALS = Number(process.env.BBI_TRIALS ?? 5)
 
-const { BigWig } = (await import(SRC)) as {
+// BigBed records are variable width and carry a string, so it has no
+// typed-array reader and no fused parse - it decompresses in wasm and builds
+// objects in JS. Read scheduling is shared, which is the point of measuring it.
+const IS_BIGBED = DATA.endsWith('.bb')
+
+const mod = (await import(SRC)) as {
   BigWig: new (args: { filehandle: RemoteFile }) => BigWigType
+  BigBed: new (args: { filehandle: RemoteFile }) => BigBedType
 }
+const Ctor = IS_BIGBED ? mod.BigBed : mod.BigWig
 
 const PROFILES: Record<string, LinkProfile> = {
   // a CDN edge in the same region, fast wired link
@@ -98,7 +108,7 @@ const median = (xs: number[]) => xs.toSorted((a, b) => a - b)[xs.length >> 1]!
 
 for (const [profileName, profile] of Object.entries(PROFILES)) {
   const server = await startLinkServer(DATA, profile)
-  const probe = new BigWig({ filehandle: new RemoteFile(server.url) })
+  const probe = new Ctor({ filehandle: new RemoteFile(server.url) })
   const refs = Object.values((await probe.getHeader()).refsByNumber) as Ref[]
 
   for (const scenario of SCENARIOS) {
@@ -109,21 +119,25 @@ for (const [profileName, profile] of Object.entries(PROFILES)) {
     let features = 0
 
     for (let trial = 0; trial < TRIALS; trial++) {
-      // a fresh BigWig each trial: its caches would make trial 2 free, and a
+      // a fresh instance each trial: its caches would make trial 2 free, and a
       // user navigating to a new locus gets a cold read either way. The header
       // is read outside the timed section for the same reason - it is one
       // request that every path pays identically.
-      const bw = new BigWig({ filehandle: new RemoteFile(server.url) })
-      await bw.getHeader()
+      const bbi = new Ctor({ filehandle: new RemoteFile(server.url) })
+      await bbi.getHeader()
       server.reset()
       const t0 = performance.now()
-      const res = await bw.getFeaturesAsArraysMulti(regions, {
-        basesPerSpan: scenario.basesPerSpan,
-      })
+      const opts = { basesPerSpan: scenario.basesPerSpan }
+      features = IS_BIGBED
+        ? (await bbi.getFeaturesMulti(regions, opts)).reduce(
+            (a, f) => a + f.length,
+            0,
+          )
+        : (await (bbi as BigWigType).getFeaturesAsArraysMulti(regions, opts))
+            .starts.length
       times.push(performance.now() - t0)
       requests = server.stats.requests
       bytes = server.stats.bytes
-      features = res.starts.length
     }
 
     console.log(

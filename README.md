@@ -137,6 +137,11 @@ to overlap and is unchanged; the win is ~2.5× wherever a query touches many
 block groups, and it holds at every latency because the bytes were never the
 bound there.
 
+BigBed gains more — ~4× on the same multi-region rows
+(`BBI_DATA=test/data/clinvarCnv.bb`) — because it has no zoom levels, so every
+query reads unzoomed blocks spread across the file rather than a compact run of
+summary records.
+
 #### How many requests a query makes
 
 Read-ahead **reschedules** reads; it never adds one. A query issues the same

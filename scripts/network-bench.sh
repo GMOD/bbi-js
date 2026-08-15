@@ -5,6 +5,9 @@
 #
 #   ./scripts/network-bench.sh                 # HEAD vs the last tag
 #   ./scripts/network-bench.sh v11.1.0 HEAD
+#   BBI_DATA=test/data/clinvarCnv.bb ./scripts/network-bench.sh
+#
+# BBI_DATA picks the file; a .bb runs the BigBed reader, anything else BigWig.
 #
 # Uses a detached git worktree rather than checking branches out in place, so it
 # is safe to run with the tree dirty and in a checkout someone else is using.
