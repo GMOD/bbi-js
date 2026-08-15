@@ -10,6 +10,7 @@ Parser for BigWig and BigBed file formats.
 - [API](#api)
   - [Constructor](#constructor)
   - [Options](#options)
+  - [Concurrency](#concurrency)
   - [Reading features](#reading-features)
   - [Estimating download size](#estimating-download-size)
   - [Zoom levels](#zoom-levels)
@@ -108,7 +109,17 @@ await bigwig.getFeatures('chr1', 0, 100_000, {
 It is called at least once per read, starting at `(0, total)` and ending at
 `(total, total)`. A query that overlaps no blocks — an unknown refName, an empty
 region — reports the single call `(0, 0)`, so guard against a zero total before
-dividing.
+dividing. The fraction only ever grows, but a read that lands out of order can
+make it jump by more than one block group at a time.
+
+### Concurrency
+
+A single query issues up to six byte-range reads at once — index nodes at a
+level, and the coalesced data-block groups — so its wall clock is the longest of
+its reads rather than their sum. Features still come back in file order.
+
+Any fan-out you put above this multiplies with it: fetching ten files at once
+leaves sixty range requests outstanding. Bound your own fan-out accordingly.
 
 ### Reading features
 
