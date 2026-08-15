@@ -13,8 +13,13 @@ toolchain. The generated bundle is checked into git, so if you aren't touching
 `crate/` you can skip it with `pnpm build:esm && pnpm build:es5`. See
 [docs/wasm.md](./docs/wasm.md).
 
-Use `npm version patch/minor/major` to release — it runs lint, tests, and build,
-then pushes the version tag which triggers the publish workflow.
+```sh
+pnpm version patch  # or minor/major
+```
+
+That runs lint, format, types, tests, build and `test:pack`, regenerates
+CHANGELOG.md with git-cliff, then pushes the tag, which triggers the publish
+workflow.
 
 ## Publishing
 
@@ -27,6 +32,6 @@ This repo is already configured. To set up a new package:
 npm >=11.10.0 and 2FA).
 
 Once npm publish succeeds, the `release` job creates the GitHub release for the
-tag. Its notes are that version's CHANGELOG.md section, extracted by
-`scripts/release-notes.sh` — run that with a version to preview what a release
-will say.
+tag, taking its notes from that version's CHANGELOG.md section — which
+`scripts/release-notes.sh` extracts, so run that with a version to preview what
+a release will say.
