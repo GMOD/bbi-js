@@ -1,3 +1,13 @@
+## [11.2.1](https://github.com/GMOD/bbi-js/compare/v11.2.0...v11.2.1) (2026-08-15)
+
+### Bug Fixes
+
+- Agree between the JS and wasm parsers on a truncated block ([d8a2d4c](https://github.com/GMOD/bbi-js/commit/d8a2d4cc58e357ce04e4e38339289e0bbea05aab))
+
+### Other Changes
+
+- Cover BigBed, which gains more than BigWig ([5a5f0b9](https://github.com/GMOD/bbi-js/commit/5a5f0b926f1b00049d3d0c8257824e93dd73d9a4))
+
 ## [11.2.0](https://github.com/GMOD/bbi-js/compare/v11.1.0...v11.2.0) (2026-08-15)
 
 ### Documentation
