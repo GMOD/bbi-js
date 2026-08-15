@@ -8,7 +8,7 @@ Pass exactly one of `path` (a local file, node only), `url` (a remote file), or
 `filehandle` (a `GenericFilehandle` from
 [generic-filehandle2](https://www.npmjs.com/package/generic-filehandle2)).
 
-Use `filehandle` when you need control over how bytes are fetched — auth
+Use `filehandle` when you need control over how the package fetches bytes — auth
 headers, a custom `fetch`, a `Blob` from a file input:
 
 ```typescript
@@ -39,8 +39,8 @@ Every read method takes the same optional `opts`:
 | `signal`       | `AbortSignal` to cancel the request                              |
 | `onProgress`   | `(bytesDownloaded, totalBytes) => void`, called as blocks arrive |
 
-`onProgress` reports a determinate fraction — the total is known up front,
-because block byte sizes come from the index — at block-group granularity:
+`onProgress` reports a determinate fraction — the index supplies every block's
+byte size, so the total is known up front — at block-group granularity:
 
 ```typescript
 await bigwig.getFeatures('chr1', 0, 100_000, {
@@ -48,7 +48,7 @@ await bigwig.getFeatures('chr1', 0, 100_000, {
 })
 ```
 
-It is called at least once per read, starting at `(0, total)` and ending at
+Every read fires it at least once, starting at `(0, total)` and ending at
 `(total, total)`. A query that overlaps no blocks — an unknown refName, an empty
 region — reports the single call `(0, 0)`, so guard against a zero total before
 dividing. The fraction only ever grows, but a read that lands out of order can
@@ -60,8 +60,7 @@ make it jump by more than one block group at a time.
 
 Returns `Promise<BigWigHeaderWithRefNames>` with the chromosome list
 (`refsByName`, `refsByNumber`), zoom levels, summary statistics, and — for
-BigBed files — the `autoSql` schema string. The result is cached after the first
-call.
+BigBed files — the `autoSql` schema string. The first call caches the result.
 
 ### `getFeatures(refName, start, end, opts?)`
 
@@ -80,7 +79,7 @@ Fetches features for multiple regions in one call, returning
 `Promise<Feature[][]>` aligned to input order (`result[i]` corresponds to
 `regions[i]`). Regions may be in any order and may overlap.
 
-Reads for adjacent on-disk blocks are coalesced across region boundaries, so a
+Reads for adjacent on-disk blocks coalesce across region boundaries, so a
 whole-genome overview needs far fewer range requests than calling `getFeatures`
 per region — useful for rate-limited remote files.
 
@@ -144,8 +143,8 @@ above plus `regionOffsets: number[]`, discriminated by `isSummary` the same way.
 ### `getRegionByteSize(refName, start, end, opts?)`
 
 Sums the compressed on-disk block lengths the index reports overlapping the
-region, reading only the R-tree index — no feature block is downloaded or
-decompressed. An upper bound on what a `getFeatures` call over the same region
+region, reading only the R-tree index — it downloads and decompresses no feature
+blocks at all. An upper bound on what a `getFeatures` call over the same region
 and zoom would transfer, for gating over-large downloads before they start.
 Returns 0 if the refName is not found.
 
@@ -158,7 +157,7 @@ if (bytes < 5_000_000) {
 
 ### `getRegionByteSizeMulti(regions, opts?)`
 
-Multi-region counterpart. Blocks shared across overlapping regions are counted
+Multi-region counterpart. A block that two overlapping regions share counts
 once, matching the single fetch `getFeaturesMulti` would make.
 
 ## Zoom levels
@@ -179,7 +178,8 @@ The `scale` option (pixels per basepair) picks the first level where
 ]
 ```
 
-If no zoom level matches (e.g. `scale: 1`), base-resolution data is returned.
+If no zoom level matches (e.g. `scale: 1`), the read falls back to
+base-resolution data.
 
 ## `Feature` type
 

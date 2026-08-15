@@ -72,7 +72,7 @@ Two structural points on top of the timing:
 - **It cannot express the fused calls.** `decompress_and_parse_bigwig` inflates
   and parses in one pass without materializing the decompressed bytes in JS. A
   stream API can only ever hand back bytes, so the parse would come home to JS
-  and the fusion — the reason those exports exist — would be lost.
+  and take the fusion — the reason those exports exist — with it.
 - **It has only been baseline since May 2023** (Safari 16.4, Firefox 113), so a
   library keeps a JS fallback regardless. The bundle saving that motivates the
   question does not actually arrive.
@@ -85,9 +85,9 @@ best case.
 Sibling libraries reach the opposite conclusion only where the shape differs.
 [`@gmod/bgzf-filehandle`](https://github.com/GMOD/bgzf-filehandle/blob/main/docs/optimizations.md)
 decompresses concatenated gzip members, so a whole buffer goes through **one**
-call and the per-call overhead is paid once — there the same API lands within
-about 2× of wasm rather than 4–11×. Same API, same codec underneath; the
-difference is entirely how many times it has to be called.
+call and pays the per-call overhead once — there the same API lands within about
+2× of wasm rather than 4–11×. Same API, same codec underneath; the difference is
+entirely how many times a caller has to invoke it.
 
 ## What runs in Rust
 
@@ -103,19 +103,18 @@ Not every read reaches them — [parser-selection.md](./parser-selection.md)
 charts which of the four parsers a given call gets. Three things are worth
 knowing about the shape of this:
 
-**Calls are batched.** Every block in a query is handed over in one call, packed
-into a single input buffer with a `Uint32Array` of offsets and lengths, and
-comes back in a single output buffer. The alternative — one call per block —
-would pay the JS↔wasm boundary and a fresh allocation hundreds of times per
-query.
+**Calls come batched.** A query hands over all of its blocks at once, packed
+into a single input buffer with a `Uint32Array` of offsets and lengths, and gets
+a single output buffer back. The alternative — one call per block — would pay
+the JS↔wasm boundary and a fresh allocation hundreds of times per query.
 
 **BigWig parsing happens in Rust too, not just decompression.**
 `decompress_and_parse_bigwig` inflates a block _and_ walks its fixed-width
 records, returning packed `starts`/`ends`/`scores` arrays. `getFeaturesAsArrays`
 hands those straight back, so a base-resolution BigWig read allocates no
 per-record JS object at all. BigBed records are variable-width and carry a
-`rest` string, so they are inflated in wasm and parsed in JS — which is also why
-the typed-array readers reject BigBed.
+`rest` string, so they inflate in wasm and parse in JS — which is also why the
+typed-array readers reject BigBed.
 
 **Blocks are zlib, but inflate is raw.** BBI blocks carry the 2-byte zlib
 header. `deflate_block` skips those two bytes and uses libdeflater's raw-deflate
@@ -164,9 +163,9 @@ judging a change to this library rather than the wasm-vs-JS question.
 pnpm build:wasm   # needs a Rust toolchain + wasm-bindgen
 ```
 
-The generated bundle is **checked into git**, so consumers and contributors who
-don't touch the Rust never need cargo. `pnpm build` runs `build:wasm` first, but
-if the Rust is unchanged the output is unchanged.
+Git tracks the generated bundle, so consumers and contributors who don't touch
+the Rust never need cargo. `pnpm build` runs `build:wasm` first, but Rust that
+hasn't changed produces output that hasn't either.
 
 ## Packaging notes
 
@@ -182,11 +181,11 @@ bundle happens to have no top-level await. Compiling is the sturdier option.
 **Don't co-locate a hand-written `.d.mts` next to the bundle.** tsc reads
 `.mjs` + `.d.mts` as a pre-built package and stops emitting the bundle to the
 output directory, which is how `@gmod/bbi@9.0.11` shipped with a missing wasm
-module. If richer types than tsc can infer are ever needed, add a `.ts` wrapper
+module. If you ever need richer types than tsc can infer, add a `.ts` wrapper
 that imports the bundle and re-exports it typed.
 
 Because `esm/` and `dist/` each carry a full copy, the ~62KB base64 bundle ships
-twice (three times counting `src/`, which is published for source maps). A
-bundle that reaches both entry points also instantiates the wasm twice, since
-init state lives at module scope. Going ESM-only would remove both, at the cost
-of a breaking major.
+twice (three times counting `src/`, which we publish for source maps). A bundle
+that reaches both entry points also instantiates the wasm twice, since init
+state lives at module scope. Going ESM-only would remove both, at the cost of a
+breaking major.

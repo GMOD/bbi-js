@@ -17,10 +17,10 @@ never called.
 
 ![Parser selection decision tree](img/parser-selection.svg)
 
-Source: [`parser-selection.dot`](img/parser-selection.dot). Green is parsed in
-wasm, blue is inflated in wasm and parsed in JS, grey touches no wasm at all.
-The dashed edge is `searchExtraIndex`, which joins below the reader question
-because it is never a typed-array read.
+Source: [`parser-selection.dot`](img/parser-selection.dot). Green parses in
+wasm, blue inflates in wasm and parses in JS, grey touches no wasm at all. The
+dashed edge is `searchExtraIndex`, which joins below the reader question because
+it is never a typed-array read.
 
 ## The four questions
 
@@ -39,7 +39,7 @@ downstream:
 `BigBed.getView` ignores `scale` entirely and always returns the unzoomed view —
 any zoom levels `bedToBigBed` wrote are never consulted.
 
-### 2. Objects or typed arrays — which reader was called
+### 2. Objects or typed arrays — which reader the caller used
 
 `getFeatures`/`getFeaturesMulti` build one `Feature` object per record.
 `getFeaturesAsArrays`/`getFeaturesAsArraysMulti` fill packed typed arrays and
@@ -53,29 +53,29 @@ that look plausible and are garbage, so `assertNotBigBed` throws instead.
 `BigBed.searchExtraIndex` is a fifth way in, reached from a name lookup rather
 than a coordinate query. It calls `readFeatures` directly, so it is always
 BigBed, always unzoomed, always objects — and it is the only caller that passes
-no `request`, which means its blocks are parsed whole, with the coord filter
-skipped, and filtered by name afterwards.
+no `request`, so it parses its blocks whole, skips the coord filter, and filters
+by name afterwards.
 
 ### 3. One region or several — only one can carry a coord filter
 
 The fused wasm entry points take a single `[reqStart, reqEnd)` and filter as
 they parse. A multi-region call has one filter per region and one shared set of
-blocks — a block surfaced by two overlapping regions is fetched once and parsed
-once per region tagging it — so there is no single range to hand wasm.
+blocks — two overlapping regions surface the same block, which the reader
+fetches once and parses once per region tagging it — so there is no single range
+to hand wasm.
 
-Two or more regions therefore inflate raw and parse in JS, per region tag.
-Exactly one region is special-cased back onto the single-region path rather than
-treated as the degenerate multi: it is the shape every single-locus consumer
-sends, and routing it through the multi machinery would cost it the fused parse,
-the per-block chunk allocations and the `packRegions` copy, with nothing to
-dedupe, coalesce or pack across.
+Two or more regions therefore inflate raw and parse in JS, per region tag. A
+lone region takes the single-region path rather than the degenerate multi one:
+it is the shape every single-locus consumer sends, and routing it through the
+multi machinery would cost it the fused parse, the per-block chunk allocations
+and the `packRegions` copy, with nothing to dedupe, coalesce or pack across.
 
 ### 4. Compressed or not — `uncompressBufSize`
 
 A BBI file records the size of its largest uncompressed block in the header, or
-`0` when blocks are stored uncompressed (`bedGraphToBigWig -unc` and friends).
-Zero means there is nothing to inflate: blocks are sliced out of the fetched
-group directly and no wasm is touched on any path, including the one that would
+`0` when the writer left blocks uncompressed (`bedGraphToBigWig -unc` and
+friends). Zero means there is nothing to inflate: blocks slice straight out of
+the fetched group and no path touches wasm, including the one that would
 otherwise fuse — the fused entry points _are_ the decompressor, so there is no
 version of them that skips it.
 
@@ -93,8 +93,8 @@ between two files that look identical through the API.
 | `parseBigWig/Summary/BigBedBlock`                       | objects or `searchExtraIndex`, uncompressed  | JS object parse, no wasm                        |
 
 `inflate_raw_batch` hands over every block of a group in one call rather than
-one call per block; see [wasm.md](./wasm.md) for why the batching and the fused
-parse are shaped that way.
+one call per block; [wasm.md](./wasm.md) explains why the batching and the fused
+parse have that shape.
 
 ## Why they have to agree
 
@@ -110,12 +110,12 @@ mean as a double where the arrays round it to f32.
 
 **Errors.** On a block shorter than its own header declares, the two used to
 disagree: wasm yielded the records that fit, JS threw a bare `DataView`
-`RangeError`. Both now raise the same `truncated <kind> block` error, checked
-once per block against the declared item count and before the output arrays are
-sized. A well-formed file never holds a partial record — a section declares its
-item count, a zoom block is a whole number of 32-byte records — so this cannot
-fire on valid data, and a silently short block would otherwise serve a track
-missing data with nothing to say so.
+`RangeError`. Both now raise the same `truncated <kind> block` error, checking
+each block against its declared item count before sizing the output arrays. A
+well-formed file never holds a partial record — a section declares its item
+count, a zoom block is a whole number of 32-byte records — so this cannot fire
+on valid data, and a silently short block would otherwise serve a track missing
+data with nothing to say so.
 
 The guard exists twice on purpose, in `src/block-view.ts` and
 `crate/src/lib.rs`. Neither can cover for the other: which one a given read
@@ -140,5 +140,5 @@ satisfy every "no wasm" expectation by doing nothing.
 dot -Tsvg docs/img/parser-selection.dot -o docs/img/parser-selection.svg
 ```
 
-Both the `.dot` and the rendered `.svg` are checked in, so reading the docs
-needs no graphviz.
+Git tracks both the `.dot` and the rendered `.svg`, so reading the docs needs no
+graphviz.

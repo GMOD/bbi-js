@@ -43,20 +43,20 @@ See the [example](./example/) folder for a complete working demo.
 
 ## Decompression
 
-Blocks are inflated by a Rust/WebAssembly
-[libdeflater](https://github.com/ebiggers/libdeflate) module, ~2.5–3× a pure-JS
-inflate and roughly 4–11× the browser's own
-[`DecompressionStream`](docs/wasm.md#why-not-the-platforms-decompressionstream),
-base64-inlined into the bundle and loaded lazily — nothing to install or
-configure. Records are then parsed by one of four parsers, two in JS and two
-fused into the wasm call, picked from the file's compression, the reader you
-called and the region count. All four produce the same features.
+A Rust/WebAssembly [libdeflater](https://github.com/ebiggers/libdeflate) module
+inflates the blocks, at ~2.5–3× a pure-JS inflate and roughly 4–11× the
+browser's own
+[`DecompressionStream`](docs/wasm.md#why-not-the-platforms-decompressionstream).
+It is base64-inlined into the bundle and loads lazily — nothing to install or
+configure. One of four parsers then reads the records, two in JS and two fused
+into the wasm call, chosen from the file's compression, the reader you called
+and the region count. All four produce the same features.
 
 ## Migrating to v10
 
-- `renameRefSeqs` was removed. Map chromosome names at the call site instead;
+- **`renameRefSeqs` is gone.** Map chromosome names at the call site instead;
   see [docs/api.md](docs/api.md#constructor).
-- `RequestOptions.headers` was removed. It only ever applied to header and index
+- **`RequestOptions.headers` is gone.** It only ever applied to header and index
   reads, never to feature blocks, and per-request headers do not fit the
   block-level caching. Set headers on the filehandle instead; see
   [docs/api.md](docs/api.md#constructor).
