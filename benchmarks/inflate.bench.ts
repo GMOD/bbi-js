@@ -1,8 +1,15 @@
 // Isolated decompression benchmark: the wasm/libdeflater path the library uses
-// vs pako, the pure-JS baseline, over the real compressed blocks of the test
-// fixtures. Both sides do exactly the same work — skip the 2-byte zlib header,
-// raw-inflate, no adler32 check — and the results are asserted byte-identical
-// before timing, so this measures deflate throughput and nothing else.
+// vs pako, the pure-JS baseline, and vs the platform's own `DecompressionStream`,
+// over the real compressed blocks of the test fixtures. Every arm does the same
+// work — skip the 2-byte zlib header, raw-inflate, no adler32 check — and the
+// results are asserted byte-identical before timing, so this measures deflate
+// throughput and nothing else.
+//
+// The `DecompressionStream` arm is one call PER BLOCK, because that is the only
+// shape available: a bbi file's blocks are separately-compressed zlib streams,
+// not members of one concatenated stream, so there is nothing to hand it in
+// bulk. Its per-call overhead therefore lands once per block, hundreds of times
+// per query, which is what the numbers in docs/wasm.md are showing.
 //
 // Run with `pnpm benchonly inflate`.
 import { LocalFile } from 'generic-filehandle2'
@@ -70,6 +77,27 @@ async function loadBlocks(path: string): Promise<Fixture> {
   }
 }
 
+async function decompressionStreamBatch({ data, blocks }: Fixture) {
+  const parts: Uint8Array[] = []
+  let total = 0
+  for (const block of blocks) {
+    const input = data.subarray(block.offset, block.offset + block.length)
+    const stream = new Blob([input as Uint8Array<ArrayBuffer>])
+      .stream()
+      .pipeThrough(new DecompressionStream('deflate'))
+    const out = new Uint8Array(await new Response(stream).arrayBuffer())
+    parts.push(out)
+    total += out.length
+  }
+  const joined = new Uint8Array(total)
+  let cursor = 0
+  for (const part of parts) {
+    joined.set(part, cursor)
+    cursor += part.length
+  }
+  return joined
+}
+
 function pakoBatch({ data, blocks, maxOutputSize }: Fixture) {
   const out = new Uint8Array(blocks.length * maxOutputSize)
   let cursor = 0
@@ -109,6 +137,12 @@ for (const path of FILES) {
       throw new Error(`${path}: wasm and pako disagree at byte ${i}`)
     }
   }
+  const dsOut = await decompressionStreamBatch(fixture)
+  if (dsOut.length !== wasmOut.length) {
+    throw new Error(
+      `${path}: DecompressionStream produced ${dsOut.length} bytes, wasm ${wasmOut.length}`,
+    )
+  }
 
   const name = path.split('/').pop()
   const kb = (compressedBytes / 1024).toFixed(0)
@@ -118,6 +152,9 @@ for (const path of FILES) {
     })
     bench('pako (pure js)', () => {
       pakoBatch(fixture)
+    })
+    bench('DecompressionStream (per block)', async () => {
+      await decompressionStreamBatch(fixture)
     })
   })
 }

@@ -8,6 +8,7 @@ config — so this document is for contributors and for anyone wondering what th
 wasm is doing there.
 
 - [Why](#why)
+- [Why not the platform's `DecompressionStream`?](#why-not-the-platforms-decompressionstream)
 - [What runs in Rust](#what-runs-in-rust)
 - [How it loads](#how-it-loads)
 - [Benchmarking](#benchmarking)
@@ -40,6 +41,53 @@ R-tree, and building results, and on the measurements we have those dominate: an
 older whole-genome `parseBigWig` comparison came out only ~5% apart end to end,
 which puts inflate at well under a tenth of that run. Don't quote 2.5–3× as a
 library-level speedup.
+
+## Why not the platform's `DecompressionStream`?
+
+The browser has had a built-in inflate since 2023, which looks like a way to
+delete this module and its ~65KB bundle. It measures **roughly 4–11× slower than
+the wasm path, and 1.4–3.3× slower than even pako**, so the module stays.
+
+Best of three runs, mean ms over the same blocks and the same byte-identical
+assertion as above (`pnpm benchonly inflate`):
+
+| Fixture                  | Blocks | wasm | pako | `DecompressionStream` |
+| ------------------------ | ------ | ---- | ---- | --------------------- |
+| `volvox.bw`              | 49     | 1.9  | 6.0  | 20.0                  |
+| `cow.bw`                 | 125    | 5.4  | 16.6 | 38.2                  |
+| `ENCFF826FLP.bw`         | 436    | 31   | 86   | 124                   |
+| `variable_step_large.bw` | 489    | 29   | 62   | 109                   |
+
+The reason is shape, not codec quality. A bbi file's blocks are individually
+zlib-compressed streams rather than members of one concatenated stream, so there
+is no way to hand the API a whole buffer — it is one call per block, hundreds
+per query. Dividing the column through gives **220–410 µs of overhead per
+call**, which swamps the inflating itself. The wasm path crosses its boundary
+**once for the whole block group** — that is what `inflate_raw_batch` is for —
+so it pays that cost a single time per query instead of once per block, and the
+gap widens with block count rather than with bytes.
+
+Two structural points on top of the timing:
+
+- **It cannot express the fused calls.** `decompress_and_parse_bigwig` inflates
+  and parses in one pass without materializing the decompressed bytes in JS. A
+  stream API can only ever hand back bytes, so the parse would come home to JS
+  and the fusion — the reason those exports exist — would be lost.
+- **It has only been baseline since May 2023** (Safari 16.4, Firefox 113), so a
+  library keeps a JS fallback regardless. The bundle saving that motivates the
+  question does not actually arrive.
+
+A caveat pointing the same way: these are Node numbers, where
+`DecompressionStream` is zlib with comparatively little plumbing. A browser adds
+the `Blob` → stream → `Response` path on top, so read the column as the API's
+best case.
+
+Sibling libraries reach the opposite conclusion only where the shape differs.
+[`@gmod/bgzf-filehandle`](https://github.com/GMOD/bgzf-filehandle/blob/main/docs/optimizations.md)
+decompresses concatenated gzip members, so a whole buffer goes through **one**
+call and the per-call overhead is paid once — there the same API lands within
+about 2× of wasm rather than 4–11×. Same API, same codec underneath; the
+difference is entirely how many times it has to be called.
 
 ## What runs in Rust
 
@@ -100,11 +148,11 @@ pnpm benchonly inflate
 ```
 
 The benchmark pulls every base-resolution block out of a fixture's R-tree, packs
-them the way `readBlocks` does, and times `unzipBatch` against pako over the
-same bytes. It gives pako a `chunkSize` hint so it is not charged for growing
-its output buffer, and **asserts both paths produce byte-identical output before
-timing** — a decompression benchmark that silently disagreed on the bytes would
-be meaningless.
+them the way `readBlocks` does, and times `unzipBatch` against pako and against
+`DecompressionStream` over the same bytes. It gives pako a `chunkSize` hint so
+it is not charged for growing its output buffer, and **asserts both paths
+produce byte-identical output before timing** — a decompression benchmark that
+silently disagreed on the bytes would be meaningless.
 
 `pnpm bench` is a different thing: it builds two git branches into
 `esm_branch1/` and `esm_branch2/` and compares them against each other, for

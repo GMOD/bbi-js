@@ -45,8 +45,10 @@ See the [example](./example/) folder for a complete working demo.
 
 Blocks are inflated by a Rust/WebAssembly
 [libdeflater](https://github.com/ebiggers/libdeflate) module, ~2.5–3× a pure-JS
-inflate, base64-inlined into the bundle and loaded lazily — nothing to install
-or configure. Records are then parsed by one of four parsers, two in JS and two
+inflate and roughly 4–11× the browser's own
+[`DecompressionStream`](docs/wasm.md#why-not-the-platforms-decompressionstream),
+base64-inlined into the bundle and loaded lazily — nothing to install or
+configure. Records are then parsed by one of four parsers, two in JS and two
 fused into the wasm call, picked from the file's compression, the reader you
 called and the region count. All four produce the same features.
 
