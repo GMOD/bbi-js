@@ -11,3 +11,5 @@ crate/build/
 esm_*/
 *.cpuprofile
 bench-results.json
+.claude/settings.local.json
+.claude/worktrees/
