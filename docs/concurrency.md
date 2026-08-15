@@ -5,7 +5,7 @@ level, and the coalesced data-block groups — so its wall clock is the longest 
 its reads rather than their sum. Features still come back in file order.
 
 How much that is worth depends on whether a query is latency-bound or
-bandwidth-bound. `./scripts/network-bench.sh` measures it, serving a real file
+bandwidth-bound. `scripts/network-bench.sh` measures it, serving a real file
 over HTTP with a round-trip delay, a bandwidth budget shared across in-flight
 responses, and a six-request cap (a browser's HTTP/1.1 per-origin limit).
 Against `v11.1.0`, on `cDC.bw`:
