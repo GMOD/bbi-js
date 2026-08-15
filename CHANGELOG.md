@@ -1,3 +1,18 @@
+## [11.2.0](https://github.com/GMOD/bbi-js/compare/v11.1.0...v11.2.0) (2026-08-15)
+
+### Documentation
+
+- Say that a query issues concurrent range requests ([33a94e5](https://github.com/GMOD/bbi-js/commit/33a94e52bb78350d370cbda058512ea93c7bf437))
+- Correct the fan-out claim with a measurement ([a6f2a49](https://github.com/GMOD/bbi-js/commit/a6f2a494752bcd6b0ae087ca154478fb99d06e1d))
+
+### Other Changes
+
+- Measure query wall clock over a simulated network link ([67d725c](https://github.com/GMOD/bbi-js/commit/67d725ccb2c82247cc646cc2e583a0a4800b8afd))
+
+### Performance Improvements
+
+- Fetch a query's independent reads with read-ahead, not one at a time ([6df14c3](https://github.com/GMOD/bbi-js/commit/6df14c3a628ca05dc2a1826c284821d64784781f))
+
 ## [11.1.0](https://github.com/GMOD/bbi-js/compare/v11.0.1...v11.1.0) (2026-08-13)
 
 ### Chores
