@@ -293,6 +293,23 @@ that column is half of a local query. A parsed-block cache would need a
 byte-bounded budget shared across files, as bam-js's does, rather than an entry
 count.
 
+**That budget now exists**, in `@gmod/shared-read-cache`'s `SharedBudget` —
+which this package already depends on for the header, index and R-tree node
+caches, so the prerequisite costs no new dependency. `@gmod/bam` and
+`@gmod/tabix` both pool their decompressed-chunk caches through one, and
+`@gmod/tabix`'s
+[ADR 0001](https://github.com/GMOD/tabix-js/blob/main/agent-docs/adr/0001-bound-the-chunk-cache-by-decompressed-bytes.md)
+and
+[ADR 0002](https://github.com/GMOD/tabix-js/blob/main/agent-docs/adr/0002-size-the-chunk-cache-above-one-query.md)
+are the two things to read before sizing one: bound by decompressed bytes rather
+than entries, and above one query's working set or not at all.
+
+So what is unsettled is no longer the mechanism, it is whether the repeated
+inflate is worth caching here — which is a measurement this repo has to make, on
+a pan rather than on a cold query. Note the caches listed above weigh
+**entries**, and a byte-weighed block cache cannot share a budget with them or
+with bam's: a `SharedBudget` totals its members, so mixing units bounds neither.
+
 **BigBed parses in JS.** BigBed records are variable-width and carry a string,
 so they inflate in wasm and parse in JS, and there is no typed-array reader for
 them. The parse column for `clinvarCnv.bb` is small only because the fixture is;
