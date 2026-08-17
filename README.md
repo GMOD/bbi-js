@@ -27,6 +27,20 @@ const header = await remote.getHeader()
 const features = await remote.getFeatures('chr1', 0, 100_000)
 ```
 
+A bigwig query reads a few R-tree nodes and then a scatter of small data blocks,
+which is the read pattern a byte-range cache is for. Passing
+[`@gmod/range-cache-filehandle`](https://github.com/GMOD/range-cache-filehandle)
+as the filehandle coalesces those into one request per contiguous run, and a
+later overlapping query is served from memory:
+
+```typescript
+import { RemoteFileWithRangeCache } from '@gmod/range-cache-filehandle'
+
+const cached = new BigWig({
+  filehandle: new RemoteFileWithRangeCache('https://example.com/file.bw'),
+})
+```
+
 ### Browser (CDN)
 
 ```html
