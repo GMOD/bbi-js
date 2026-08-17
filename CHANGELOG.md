@@ -1,3 +1,38 @@
+## [11.2.2](https://github.com/GMOD/bbi-js/compare/v11.2.1...v11.2.2) (2026-08-17)
+
+### Chores
+
+- Keep agent worktrees out of the toolchain's way ([0d68bb8](https://github.com/GMOD/bbi-js/commit/0d68bb8cbd834081a8a2e7e6332eee31164c63c3))
+- Build each ref in a worktree ([03bb773](https://github.com/GMOD/bbi-js/commit/03bb773eb1595cf023408e2dc02ff6c23095bc13))
+
+### Documentation
+
+- Chart which of the four parsers a read reaches ([7982a0a](https://github.com/GMOD/bbi-js/commit/7982a0a0a14338fd7d48539b7a7c6dcadb4998ee))
+- The parser-selection diagram was unreadable on a dark theme ([fe73e97](https://github.com/GMOD/bbi-js/commit/fe73e97aef47bdce9a12a8693eb8bd42411ff8ca))
+- Trim the README, moving the API and concurrency into docs/ ([55fe03d](https://github.com/GMOD/bbi-js/commit/55fe03d16354cb2fea5adcd40c78b37d054fc6b2))
+- Scripts/network-bench.sh, not ./scripts ([896e2c9](https://github.com/GMOD/bbi-js/commit/896e2c9634c246b4dba338b17978658790b9299d))
+- Trim a sentence that restated its own paragraph ([123717a](https://github.com/GMOD/bbi-js/commit/123717ab2dfa0bd94273caf9f1977a6301781654))
+- README title, citation and section order match the sibling repos ([2d58619](https://github.com/GMOD/bbi-js/commit/2d58619a14e150440000118e3d6aa3bd712d8fd4))
+- Fix stale SYNC paths in parser-selection.dot ([911d768](https://github.com/GMOD/bbi-js/commit/911d76831000b9a0d0a9895554968caf2dee4651))
+- Answer "why not DecompressionStream" with a measured bench arm ([a450046](https://github.com/GMOD/bbi-js/commit/a4500467be0207e01cc7d09ffa299f5b02935408))
+- Put the prose in the active voice ([95b00c8](https://github.com/GMOD/bbi-js/commit/95b00c8dece1098ece1e60c043b0b9f9fdaf5125))
+- Record where a query's time goes, and what follows from it ([2b262bb](https://github.com/GMOD/bbi-js/commit/2b262bba96a641daffe0cb532397e52a0c2a5e97))
+- Correct the release command in CONTRIBUTING, and its voice ([f0f03b7](https://github.com/GMOD/bbi-js/commit/f0f03b723dbf77a9aa61df93b5b412e25ab72379))
+- The budget a block cache would need is already a dependency here ([6747790](https://github.com/GMOD/bbi-js/commit/6747790c66e766ee842f42df58616c43e576c2ab))
+- Suggest @gmod/range-cache-filehandle for remote files ([17ed6c1](https://github.com/GMOD/bbi-js/commit/17ed6c1b68129b757f8804b4e65a8daebca56081))
+
+### Other Changes
+
+- Move graphviz parser-selection diagram into docs/img/ ([dbec690](https://github.com/GMOD/bbi-js/commit/dbec69056df2a8b41c660d58c64b882813cf4579))
+
+### Performance Improvements
+
+- Drop two wasm exports nothing calls, for 3.5 KB off the bundle ([212146e](https://github.com/GMOD/bbi-js/commit/212146e041dd5f880d7c020ea74c9525fe7fbd70))
+
+### Tests
+
+- Assert which parser each call reaches, and chart the fifth entry ([384aefb](https://github.com/GMOD/bbi-js/commit/384aefb4a42a953aab02140aafdc3118fa073825))
+
 ## [11.2.1](https://github.com/GMOD/bbi-js/compare/v11.2.0...v11.2.1) (2026-08-15)
 
 ### Bug Fixes
