@@ -5,5 +5,5 @@ import { __wbg_set_wasm } from "./inflate_wasm_bg.js";
 __wbg_set_wasm(wasm);
 
 export {
-    decompress_and_parse_bigwig, decompress_and_parse_summary, inflate_raw, inflate_raw_batch, inflate_raw_unknown_size
+    decompress_and_parse_bigwig, decompress_and_parse_summary, inflate_raw_batch
 } from "./inflate_wasm_bg.js";

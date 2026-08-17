@@ -71,32 +71,6 @@ export function decompress_and_parse_summary(inputs, input_offsets, input_length
 }
 
 /**
- * @param {Uint8Array} input
- * @param {number} output_size
- * @returns {Uint8Array}
- */
-export function inflate_raw(input, output_size) {
-    try {
-        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        const ptr0 = passArray8ToWasm0(input, wasm.__wbindgen_export);
-        const len0 = WASM_VECTOR_LEN;
-        wasm.inflate_raw(retptr, ptr0, len0, output_size);
-        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
-        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-        var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
-        if (r3) {
-            throw takeObject(r2);
-        }
-        var v2 = getArrayU8FromWasm0(r0, r1).slice();
-        wasm.__wbindgen_export2(r0, r1 * 1, 1);
-        return v2;
-    } finally {
-        wasm.__wbindgen_add_to_stack_pointer(16);
-    }
-}
-
-/**
  * @param {Uint8Array} inputs
  * @param {Uint32Array} input_offsets
  * @param {Uint32Array} input_lengths
@@ -123,31 +97,6 @@ export function inflate_raw_batch(inputs, input_offsets, input_lengths, max_bloc
         var v4 = getArrayU8FromWasm0(r0, r1).slice();
         wasm.__wbindgen_export2(r0, r1 * 1, 1);
         return v4;
-    } finally {
-        wasm.__wbindgen_add_to_stack_pointer(16);
-    }
-}
-
-/**
- * @param {Uint8Array} input
- * @returns {Uint8Array}
- */
-export function inflate_raw_unknown_size(input) {
-    try {
-        const retptr = wasm.__wbindgen_add_to_stack_pointer(-16);
-        const ptr0 = passArray8ToWasm0(input, wasm.__wbindgen_export);
-        const len0 = WASM_VECTOR_LEN;
-        wasm.inflate_raw_unknown_size(retptr, ptr0, len0);
-        var r0 = getDataViewMemory0().getInt32(retptr + 4 * 0, true);
-        var r1 = getDataViewMemory0().getInt32(retptr + 4 * 1, true);
-        var r2 = getDataViewMemory0().getInt32(retptr + 4 * 2, true);
-        var r3 = getDataViewMemory0().getInt32(retptr + 4 * 3, true);
-        if (r3) {
-            throw takeObject(r2);
-        }
-        var v2 = getArrayU8FromWasm0(r0, r1).slice();
-        wasm.__wbindgen_export2(r0, r1 * 1, 1);
-        return v2;
     } finally {
         wasm.__wbindgen_add_to_stack_pointer(16);
     }

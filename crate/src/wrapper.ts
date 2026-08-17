@@ -3,9 +3,7 @@ import * as bg from '../../src/wasm/inflate_wasm_bg.js'
 import {
   decompress_and_parse_bigwig,
   decompress_and_parse_summary,
-  inflate_raw,
   inflate_raw_batch,
-  inflate_raw_unknown_size,
 } from '../../src/wasm/inflate_wasm.js'
 
 let wasm: WebAssembly.Exports | null = null
@@ -47,21 +45,6 @@ export interface WasmSummaryArrays {
   scores: Float32Array
   minScores: Float32Array
   maxScores: Float32Array
-}
-
-export async function inflateRaw(
-  input: Uint8Array,
-  outputSize: number,
-): Promise<Uint8Array> {
-  await init()
-  return inflate_raw(input, outputSize)
-}
-
-export async function inflateRawUnknownSize(
-  input: Uint8Array,
-): Promise<Uint8Array> {
-  await init()
-  return inflate_raw_unknown_size(input)
 }
 
 export async function inflateRawBatch(
