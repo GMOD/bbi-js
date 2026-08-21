@@ -163,9 +163,24 @@ judging a change to this library rather than the wasm-vs-JS question.
 pnpm build:wasm   # needs a Rust toolchain + wasm-bindgen
 ```
 
+Three things, not one, and the last is the one that bites:
+
+- `rustup target add wasm32-unknown-unknown`, or cargo stops at
+  `can't find crate for 'core'`
+- `wasm-bindgen-cli` at the version in `Cargo.lock` — CI pins it from there
+- a clang that can emit wasm. `libdeflate-sys` builds its C through cc-rs, and
+  **Apple's clang has no WebAssembly backend**, so on macOS the build gets past
+  cargo and then fails in the C step with
+  `unable to create target: 'No available targets are compatible with triple "wasm32-unknown-unknown"'`.
+  Install one that can (Homebrew's `llvm`) and point cc-rs at it with
+  `CC=$(brew --prefix llvm)/bin/clang`.
+
 Git tracks the generated bundle, so consumers and contributors who don't touch
-the Rust never need cargo. `pnpm build` runs `build:wasm` first, but Rust that
-hasn't changed produces output that hasn't either.
+the Rust never need any of it. What they do need to know is that `pnpm build`
+runs `build:wasm` first and **fails there** without the above — it does not skip
+the step because the Rust is unchanged. Build the JS alone with
+`pnpm build:esm && pnpm build:es5`, which is also what `preversion` effectively
+needs on a machine without the wasm toolchain.
 
 ## Packaging notes
 
