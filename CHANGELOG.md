@@ -1,3 +1,13 @@
+## [11.2.3](https://github.com/GMOD/bbi-js/compare/v11.2.2...v11.2.3) (2026-08-21)
+
+### Bug Fixes
+
+- Take the shared-read-cache release that fixes abort, eviction and weighing ([9523033](https://github.com/GMOD/bbi-js/commit/95230334ea64d8384bf8ed6cb752405bbf7418e2))
+
+### Documentation
+
+- Backfill CHANGELOG.md for v5.0.0 through v10.0.1 ([9a22175](https://github.com/GMOD/bbi-js/commit/9a22175afda8605f32c81d71581c6e80e1c71a55))
+
 ## [11.2.2](https://github.com/GMOD/bbi-js/compare/v11.2.1...v11.2.2) (2026-08-17)
 
 ### Chores
