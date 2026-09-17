@@ -69,10 +69,10 @@ block count rather than with bytes.
 
 Two structural points on top of the timing:
 
-- **It cannot express the fused calls.** `decompress_and_parse_bigwig` inflates
-  and parses in one pass without materializing the decompressed bytes in JS. A
-  stream API can only ever hand back bytes, so the parse would come home to JS
-  and take the fusion — the reason those exports exist — with it.
+- **It has no way to provide the fused calls.** `decompress_and_parse_bigwig`
+  inflates and parses in one pass without materializing the decompressed bytes
+  in JS. A stream API can only ever hand back bytes, so the parse would come
+  home to JS and take the fusion — the reason those exports exist — with it.
 - **It has only been baseline since May 2023** (Safari 16.4, Firefox 113), so a
   library keeps a JS fallback regardless. The bundle saving that motivates the
   question does not actually arrive.
@@ -82,7 +82,8 @@ A caveat pointing the same way: these are Node numbers, where
 the `Blob` → stream → `Response` path on top, so read the column as the API's
 best case.
 
-Sibling libraries reach the opposite conclusion only where the shape differs.
+The same comparison favors the platform API instead, for a sibling library whose
+block shape differs.
 [`@gmod/bgzf-filehandle`](https://github.com/GMOD/bgzf-filehandle/blob/main/docs/optimizations.md)
 decompresses concatenated gzip members, so a whole buffer goes through **one**
 call and pays the per-call overhead once — there the same API lands within about

@@ -120,7 +120,7 @@ already coalesces to a handful of reads gains nothing, are in
 ### Many regions in one pass
 
 `getFeaturesMulti` walks every region's index concurrently, dedupes the blocks
-by file offset, and coalesces the union — so a block two regions both want is
+by file offset, and coalesces the union — so a block needed by two regions is
 fetched once and parsed once per region, and blocks from _different_ regions
 merge into one read when they are adjacent on disk. Twenty adjacent 100kb
 windows on `cDC.bw` chr1, the shape a genome browser renders:
@@ -145,7 +145,7 @@ the fetch would fetch it once.
 ## Decompression
 
 Every data block on disk is individually zlib-compressed, so inflate is
-unavoidable work on every read, and the table at the top says it is half of a
+unavoidable work on every read, and the table at the top shows it is half of a
 local query. It runs in a Rust/WebAssembly libdeflater module, ~2.5-3× faster
 than a pure-JS inflate and 4-11× faster than the platform's own
 `DecompressionStream` — [wasm.md](wasm.md) has the fixtures, the numbers, and
@@ -187,7 +187,7 @@ only understand fixed-width layouts, and a variable-width record with a trailing
 `rest` string fed to the BigWig parser yields records that look plausible and
 are garbage.
 
-### The fused wasm call saves memory, not speed
+### The fused wasm call lowers memory use, not wall-clock time
 
 `decompress_and_parse_bigwig` inflates a block _and_ walks its records _and_
 applies the coordinate filter, in one call, returning packed arrays. Against
@@ -260,8 +260,8 @@ about the process rather than the file.
   and the index but never a decompressed data block, so a repeat query re-reads
   and re-inflates. jbrowse's `RemoteFileWithRangeCache` fetches in aligned
   blocks, joins contiguous runs and dedups in flight; it composes with the
-  coalescing above rather than fighting it, since that layer dedups bytes while
-  this one decides which bytes to ask for.
+  coalescing above instead of conflicting with it, since that layer dedups bytes
+  while this one decides which bytes to ask for.
 - **Ask for arrays when you can.** The table above is 1.7-1.9× and 5× the memory
   for a caller that does not need one object per record.
   `getFeaturesAsArraysMulti` packs every region into one backing buffer per

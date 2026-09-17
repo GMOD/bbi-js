@@ -60,9 +60,9 @@ by name afterwards.
 
 The fused wasm entry points take a single `[reqStart, reqEnd)` and filter as
 they parse. A multi-region call has one filter per region and one shared set of
-blocks — two overlapping regions surface the same block, which the reader
-fetches once and parses once per region tagging it — so there is no single range
-to hand wasm.
+blocks — two overlapping regions share the same block, which the reader fetches
+once and parses once per region tagging it — so there is no single range to hand
+wasm.
 
 Two or more regions therefore inflate raw and parse in JS, per region tag. A
 lone region takes the single-region path rather than the degenerate multi one:
@@ -115,17 +115,17 @@ each block against its declared item count before sizing the output arrays. A
 well-formed file never holds a partial record — a section declares its item
 count, a zoom block is a whole number of 32-byte records — so this cannot fire
 on valid data, and a silently short block would otherwise serve a track missing
-data with nothing to say so.
+data with no error to explain it.
 
 The guard exists twice on purpose, in `src/block-view.ts` and
 `crate/src/lib.rs`. Neither can cover for the other: which one a given read
-reaches is exactly what the chart above decides.
+reaches is exactly what the chart above shows.
 
-**Routing.** Agreement is also what makes a misroute invisible, so
+**Routing.** Agreement is also why a misroute stays invisible, so
 `test/parser-dispatch.test.ts` asserts the other half: which parser each call
 actually reaches, by counting calls through `src/unzip.ts`. Every wasm entry
-point crosses that seam, so a case can say "fused, and no raw inflate" or "no
-wasm at all" and mean it.
+point crosses that seam, so a test can assert "fused, and no raw inflate" or "no
+wasm at all" and have the counts back it up.
 
 The two tests are not redundant. Delete the one-region special case in
 `readWigDataAsArraysMulti` and every read still returns identical features, so
