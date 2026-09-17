@@ -3,9 +3,9 @@
 Block decompression, and BigWig record parsing on top of it, run in a
 Rust/WebAssembly module built on
 [libdeflater](https://github.com/ebiggers/libdeflate) rather than a JS inflate.
-Nothing about this is visible in the API — it needs no setup and no bundler
-config — so this document is for contributors and for anyone wondering what the
-wasm is doing there.
+The decompression choice never appears in the API — it needs no setup and no
+bundler config — so this document is for contributors and for anyone wondering
+what the wasm is doing there.
 
 - [Why](#why)
 - [Why not the platform's `DecompressionStream`?](#why-not-the-platforms-decompressionstream)
@@ -63,9 +63,9 @@ zlib-compressed streams rather than members of one concatenated stream, so there
 is no way to hand the API a whole buffer — it is one call per block, hundreds
 per query. Dividing the column through gives **220–410 µs of overhead per
 call**, which swamps the inflating itself. The wasm path crosses its boundary
-**once for the whole block group** — that is what `inflate_raw_batch` is for —
-so it pays that cost a single time per query instead of once per block, and the
-gap widens with block count rather than with bytes.
+**once for the whole block group**, through `inflate_raw_batch`, so it pays that
+cost a single time per query instead of once per block, and the gap widens with
+block count rather than with bytes.
 
 Two structural points on top of the timing:
 
@@ -124,7 +124,7 @@ against this path has to do the same to be measuring the same work — see
 
 The crate builds with `panic = "abort"`, so an out-of-bounds slice would trap
 and leave the wasm instance unusable for every later call. Block slicing
-therefore returns `Result` and surfaces a catchable JS error instead of indexing
+therefore returns `Result` and raises a catchable JS error instead of indexing
 directly.
 
 ## How it loads

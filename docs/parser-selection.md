@@ -3,9 +3,9 @@
 Four parsers read the same records — JS objects, JS typed arrays, and the fused
 wasm pair — and which one runs depends on things a caller never sees: whether
 the file is compressed, whether it asked for objects or arrays, whether it named
-one region or several. Nothing about this is in the API, so this document is for
-contributors, and for anyone reading a stack trace that names a function they
-never called.
+one region or several. The choice never appears in the API, so this document is
+for contributors, and for anyone reading a stack trace that names a function
+they never called.
 
 - [The chart](#the-chart)
 - [The four questions](#the-four-questions)
@@ -129,10 +129,10 @@ wasm at all" and mean it.
 
 The two tests are not redundant. Delete the one-region special case in
 `readWigDataAsArraysMulti` and every read still returns identical features, so
-`parser-parity.test.ts` stays green while the fused call silently stops firing —
-the dispatch test is what fails. Each case also asserts it produced features,
-since a query that overlaps no blocks reaches no parser and would otherwise
-satisfy every "no wasm" expectation by doing nothing.
+`parser-parity.test.ts` stays green while the fused call silently stops firing;
+only the dispatch test fails. Each case also asserts it produced features, since
+a query that overlaps no blocks reaches no parser and would otherwise satisfy
+every "no wasm" expectation by doing nothing.
 
 ## Regenerating the chart
 

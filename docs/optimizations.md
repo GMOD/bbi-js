@@ -105,12 +105,12 @@ are still handed back in input order, so nothing downstream has to re-sort, and
 a rejection is settled into its slot and rethrown in order rather than
 propagated eagerly (which would leave the other in-flight rejections unhandled).
 
-Six because that is the HTTP/1.1 per-origin cap a browser enforces: more in
-flight than the transport will run buys no latency while holding another group's
-compressed bytes, decompression output and parsed arrays alive. It is
-deliberately not a constructor option — the bound multiplies with whatever
-fan-out the caller puts above it, so the number that matters is not one this
-module can see.
+Six because that is the HTTP/1.1 per-origin cap a browser enforces: requests
+beyond what the transport will run in parallel add no latency benefit, while
+holding another group's compressed bytes, decompression output and parsed arrays
+alive. It is deliberately not a constructor option — the bound multiplies with
+whatever fan-out the caller puts above it, so the number that matters is not one
+this module can see.
 
 Worth ~2.5× on a multi-region BigWig query and ~4× on BigBed, at every latency
 tested, with byte-identical traffic. The measurements, and why a query that
@@ -138,9 +138,9 @@ were being downloaded and inflated by both of the windows that touch them.
 `getRegionByteSize` sums the on-disk block lengths the R-tree reports for a
 range, reading only index nodes. It is the `index` column of the table at the
 top — tenths of a millisecond — against a download that may be megabytes, which
-is what makes it usable as a gate before issuing the query at all. The
-multi-region form dedupes by offset, so a block shared by overlapping regions is
-counted once, as the fetch would fetch it once.
+makes it usable as a gate before issuing the query at all. The multi-region form
+dedupes by offset, so a block shared by overlapping regions is counted once, as
+the fetch would fetch it once.
 
 ## Decompression
 
@@ -187,7 +187,7 @@ only understand fixed-width layouts, and a variable-width record with a trailing
 `rest` string fed to the BigWig parser yields records that look plausible and
 are garbage.
 
-### The fused wasm call buys memory, not speed
+### The fused wasm call saves memory, not speed
 
 `decompress_and_parse_bigwig` inflates a block _and_ walks its records _and_
 applies the coordinate filter, in one call, returning packed arrays. Against
@@ -195,18 +195,18 @@ routing the same single-region query through the multi path — wasm inflate, JS
 array parse — it measures at parity on wall clock across `cDC.bw`,
 `ENCFF826FLP.bw` and `variable_step_large.bw`, run alternately three times each.
 
-That is worth stating plainly, because the fused entry points look like the
-speed optimization and are not. What they buy is that the decompressed bytes are
-never materialized in the JS heap at all, and that records outside the query
-window are never allocated — the JS array path allocates `itemCount` slots per
-block and `subarray`s them down afterwards. The table above is the parse
-optimization; this one is the allocation behind it.
+The fused entry points look like the speed optimization, and they are not: what
+they save is memory. The decompressed bytes are never materialized in the JS
+heap at all, and records outside the query window are never allocated — the JS
+array path allocates `itemCount` slots per block and `subarray`s them down
+afterwards. The table above is the parse optimization; this one is the
+allocation behind it.
 
 It also explains the routing in [parser-selection.md](parser-selection.md): a
 multi-region call has one filter per region and one shared block set, so there
 is no single range to hand wasm, and it takes the JS array parse instead. On
-these fixtures that costs it nothing in wall clock, which is what makes the
-multi path worth having.
+these fixtures that costs it nothing in wall clock, which makes the multi path
+worth having.
 
 ### BigBed decodes `rest` only for records that survive the filter
 
@@ -304,11 +304,11 @@ and
 are the two things to read before sizing one: bound by decompressed bytes rather
 than entries, and above one query's working set or not at all.
 
-So what is unsettled is no longer the mechanism, it is whether the repeated
-inflate is worth caching here — which is a measurement this repo has to make, on
-a pan rather than on a cold query. Note the caches listed above weigh
-**entries**, and a byte-weighed block cache cannot share a budget with them or
-with bam's: a `SharedBudget` totals its members, so mixing units bounds neither.
+The mechanism is no longer unsettled. Whether the repeated inflate is worth
+caching here is a measurement this repo has to make, on a pan rather than on a
+cold query. Note the caches listed above weigh **entries**, and a byte-weighed
+block cache cannot share a budget with them or with bam's: a `SharedBudget`
+totals its members, so mixing units bounds neither.
 
 **BigBed parses in JS.** BigBed records are variable-width and carry a string,
 so they inflate in wasm and parse in JS, and there is no typed-array reader for

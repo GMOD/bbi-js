@@ -48,8 +48,8 @@ filehandle, identical before and after:
 | 10 files × 24 regions, 10 files at a time  | 240            | 470      |
 | 100 files × 24 regions, 10 files at a time | 240            | 4700     |
 
-So a caller's own fan-out is what sets the peak, and bounding it is what bounds
-the peak — note the last two rows, where ten times the files leaves the peak
+A caller's own fan-out sets the peak, and bounding that fan-out bounds the peak
+in turn — see the last two rows, where ten times the files leaves the peak
 unchanged and only the total grows. Whatever you choose, the transport throttles
 the rest: a browser runs six per origin on HTTP/1.1 and queues the remainder.
 
