@@ -31,6 +31,10 @@ export interface Feature {
   uniqueId?: string
   /** Extra-index column that matched during a `searchExtraIndex` call (BigBed only). */
   field?: number
+  /** Header id of the record's chromosome, for BigBed blocks read without a region. */
+  chromId?: number
+  /** Chromosome name of a `searchExtraIndex` hit (BigBed only). */
+  refName?: string
 }
 
 /** Summary statistics stored in the BigWig file header. */

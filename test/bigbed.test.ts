@@ -78,6 +78,26 @@ test('searchExtraIndex returns all records for a name spanning many blocks', asy
   expect(res.length).toBe(28)
   expect(new Set(res.map(f => f.uniqueId)).size).toBe(res.length)
 })
+// a hit is only somewhere to go if it names its chromosome
+test('searchExtraIndex hits carry the chromosome they lie on', async () => {
+  const t = new BigBed({
+    path: 'test/data/chr22_with_name_and_geneName_index.bb',
+  })
+  const res = await t.searchExtraIndex('SYCE3')
+  expect(res.length).toBeGreaterThan(0)
+  for (const f of res) {
+    expect(f.refName).toBe('chr22')
+  }
+})
+
+test('features read by region carry no chromosome fields', async () => {
+  const t = new BigBed({ path: 'test/data/chr22_with_name_index.bb' })
+  const [f] = await t.getFeatures('chr22', 0, 50_000_000)
+  expect(f).toBeDefined()
+  expect(f).not.toHaveProperty('chromId')
+  expect(f).not.toHaveProperty('refName')
+})
+
 test('2057 contigs', async () => {
   const ti = new BigBed({ path: 'test/data/2057.bb' })
   const header = await ti.getHeader()

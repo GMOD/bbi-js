@@ -299,14 +299,15 @@ export class BigBed extends BBI {
    *
    * @param name - value to look up in the extra index
    * @param opts - optional `RequestOptions` (e.g. `opts.signal` for abort)
-   * @returns `Promise<Feature[]>` — matching features with an added `field`
-   *   property indicating which extra-index column was matched
+   * @returns `Promise<Feature[]>` — matching features with `refName`, the
+   *   chromosome they lie on, and `field`, the extra-index column that matched
    */
   public async searchExtraIndex(name: string, opts: RequestOptions = {}) {
     const blocks = await this.searchExtraIndexBlocks(name, opts)
     if (blocks.length === 0) {
       return []
     }
+    const { refsByNumber } = await this.getHeader(opts)
     const view = await this.getUnzoomedView(opts)
     // Many index entries for the same name point at the same data block (several
     // records packed into one block), so dedupe by offset+field to read and parse
@@ -326,7 +327,12 @@ export class BigBed extends BBI {
     const results = await Promise.all(
       [...blocksByField].map(async ([field, byOffset]) => {
         const features = await view.readFeatures([...byOffset.values()], opts)
-        return features.map(f => ({ ...f, field }))
+        return features.map(f => ({
+          ...f,
+          field,
+          refName:
+            f.chromId === undefined ? undefined : refsByNumber[f.chromId]?.name,
+        }))
       }),
     )
     // field offset is adjusted by -3 to account for chrom, chromStart, chromEnd columns

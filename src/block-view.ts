@@ -213,18 +213,26 @@ function parseBigBedBlock(
     // whole-chromosome read. Measured in docs/optimizations.md.
     const nullPos = data.indexOf(0, currOffset)
     const restEnd = nullPos === -1 ? data.length : nullPos
-    if (
-      !request ||
-      (chromId === request.chrId &&
-        coordFilter(start, end, request.start, request.end))
+    // blockOffset is the block's byte offset in the file (unique per block) and
+    // recordStart is the record's offset within the block, so the pair is
+    // globally unique across the file
+    if (!request) {
+      // read without a region, so the record carries the chromosome itself
+      items.push({
+        chromId,
+        start,
+        end,
+        rest: decoder.decode(data.subarray(currOffset, restEnd)),
+        uniqueId: `bb-${blockOffset}-${recordStart}`,
+      })
+    } else if (
+      chromId === request.chrId &&
+      coordFilter(start, end, request.start, request.end)
     ) {
       items.push({
         start,
         end,
         rest: decoder.decode(data.subarray(currOffset, restEnd)),
-        // blockOffset is the block's byte offset in the file (unique per block)
-        // and recordStart is the record's offset within the block, so the pair
-        // is globally unique across the file
         uniqueId: `bb-${blockOffset}-${recordStart}`,
       })
     }
