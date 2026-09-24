@@ -1,3 +1,21 @@
+## [11.3.0](https://github.com/GMOD/bbi-js/compare/v11.2.3...v11.3.0) (2026-09-24)
+
+### Documentation
+
+- Say what building the wasm actually needs off Linux ([d0870f4](https://github.com/GMOD/bbi-js/commit/d0870f4bba107a9f8e61cb9f3162b20fbd783a05))
+- Say what the read pattern actually is before recommending the range cache ([2ff822f](https://github.com/GMOD/bbi-js/commit/2ff822f9c8984c4ac0af1885d1d906d2f0f93099))
+- Fix anti-AI-writing tropes in prose ([983bae0](https://github.com/GMOD/bbi-js/commit/983bae0f66bc97251c87147ba697938ba2528cba))
+- Fix agency and figures of speech, clarify a heading ([bc54a25](https://github.com/GMOD/bbi-js/commit/bc54a25f2d25e576e8f6d9911f6559532b9b9d94))
+
+### Other Changes
+
+- Bump libdeflate ([4494715](https://github.com/GMOD/bbi-js/commit/44947150735fda0d6ea81a1758235b42cd70ad3d))
+- SearchExtraIndex hits name their chromosome ([163f7be](https://github.com/GMOD/bbi-js/commit/163f7be601b2ef414258e3a6d1890d6bcbafc42d))
+
+### Tests
+
+- Assert the read pattern the README describes ([64b94d5](https://github.com/GMOD/bbi-js/commit/64b94d5ffd1dd78cc99329588d1830c9881e9f59))
+
 ## [11.2.3](https://github.com/GMOD/bbi-js/compare/v11.2.2...v11.2.3) (2026-08-21)
 
 ### Bug Fixes
