@@ -1,3 +1,10 @@
+## [11.3.1](https://github.com/GMOD/bbi-js/compare/v11.3.0...v11.3.1) (2026-10-09)
+
+### Chores
+
+- Bump @gmod/shared-read-cache to 2.0.0 ([ee25873](https://github.com/GMOD/bbi-js/commit/ee25873f00125901d8593c2eee8cc966b07decb6))
+- Regenerate the bundle under wasm-bindgen 0.2.127 ([c9a5c9b](https://github.com/GMOD/bbi-js/commit/c9a5c9b04b7ed4ae9820112c5658b318a07a6a43))
+
 ## [11.3.0](https://github.com/GMOD/bbi-js/compare/v11.2.3...v11.3.0) (2026-09-24)
 
 ### Documentation
