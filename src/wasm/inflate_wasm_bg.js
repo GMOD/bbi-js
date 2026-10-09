@@ -101,7 +101,7 @@ export function inflate_raw_batch(inputs, input_offsets, input_lengths, max_bloc
         wasm.__wbindgen_add_to_stack_pointer(16);
     }
 }
-export function __wbg_Error_92b29b0548f8b746(arg0, arg1) {
+export function __wbg_Error_408e67f47ca7b58b(arg0, arg1) {
     const ret = Error(getStringFromWasm0(arg0, arg1));
     return addHeapObject(ret);
 }
