@@ -1,3 +1,9 @@
+## [11.3.2](https://github.com/GMOD/bbi-js/compare/v11.3.1...v11.3.2) (2026-10-11)
+
+### Tests
+
+- Fail when docs/api.md misses a public member or export ([7705856](https://github.com/GMOD/bbi-js/commit/770585648835e7aa6305382d17fd515195f73474))
+
 ## [11.3.1](https://github.com/GMOD/bbi-js/compare/v11.3.0...v11.3.1) (2026-10-09)
 
 ### Chores
