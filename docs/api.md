@@ -30,7 +30,8 @@ const feats = await bigwig.getFeatures(toFileName('chr1'), 0, 100_000)
 
 ## Options
 
-Every read method takes the same optional `opts`:
+The feature readers, the byte-size methods and `parseBigWig` take an optional
+`opts` of type `RequestOptions2`:
 
 | Option         | Description                                                      |
 | -------------- | ---------------------------------------------------------------- |
@@ -38,6 +39,9 @@ Every read method takes the same optional `opts`:
 | `basesPerSpan` | Inverse of `scale` (basepairs per pixel); use one or the other   |
 | `signal`       | `AbortSignal` to cancel the request                              |
 | `onProgress`   | `(bytesDownloaded, totalBytes) => void`, called as blocks arrive |
+
+`getHeader` and `searchExtraIndex` take `RequestOptions`, which has only
+`signal`. `onProgress` has the type `ProgressCallback`.
 
 `onProgress` reports a determinate fraction — the index supplies every block's
 byte size, so the total is known up front — at block-group granularity:
@@ -61,6 +65,36 @@ make it jump by more than one block group at a time.
 Returns `Promise<BigWigHeaderWithRefNames>` with the chromosome list
 (`refsByName`, `refsByNumber`), zoom levels, summary statistics, and — for
 BigBed files — the `autoSql` schema string. The first call caches the result.
+
+`BigWigHeaderWithRefNames` adds the two chromosome maps to `BigWigHeader`, the
+fields parsed from the file's fixed header:
+
+| Field                  | Description                                                |
+| ---------------------- | ---------------------------------------------------------- |
+| `refsByName`           | Chromosome name to header id                               |
+| `refsByNumber`         | Header id to `RefInfo`                                     |
+| `fileType`             | `'bigwig'` or `'bigbed'`, from the magic number            |
+| `autoSql`              | autoSql schema string; empty when the file has none        |
+| `totalSummary`         | `Statistics` over the whole file                           |
+| `zoomLevels`           | `ZoomLevel[]` in file order                                |
+| `numZoomLevels`        | Length of `zoomLevels`                                     |
+| `magic`                | File signature, read as a signed 32-bit integer            |
+| `version`              | Format version                                             |
+| `fieldCount`           | Number of BED columns (BigBed); 0 for BigWig               |
+| `definedFieldCount`    | How many of those columns are standard BED columns         |
+| `uncompressBufSize`    | Largest decompressed block size; 0 for uncompressed blocks |
+| `chromosomeTreeOffset` | Byte offset of the chromosome B+ tree                      |
+| `unzoomedDataOffset`   | Byte offset of the base-resolution data                    |
+| `unzoomedIndexOffset`  | Byte offset of the base-resolution R-tree index            |
+| `totalSummaryOffset`   | Byte offset of `totalSummary`                              |
+| `asOffset`             | Byte offset of the autoSql string; 0 when there is none    |
+| `extHeaderOffset`      | Byte offset of the extension header; 0 when there is none  |
+
+A `RefInfo` has the chromosome's `name`, its header `id`, and its `length` in
+bases. A `ZoomLevel` has its `reductionLevel` (bases per summary record) and the
+byte offsets of its data (`dataOffset`) and R-tree index (`indexOffset`).
+`Statistics` holds `basesCovered`, `scoreMin`, `scoreMax`, `scoreSum` and
+`scoreSumSquares`.
 
 ### `getFeatures(refName, start, end, opts?)`
 
@@ -138,6 +172,19 @@ const secondRegionStarts = multi.starts.subarray(
 Returns `BigWigFeatureArraysMulti | SummaryFeatureArraysMulti` — the shapes
 above plus `regionOffsets: number[]`, discriminated by `isSummary` the same way.
 
+The typed-array results have the fields below. `SummaryFeatureArrays` and
+`SummaryFeatureArraysMulti` are the summary types.
+
+| Field           | Type           | Description                                    |
+| --------------- | -------------- | ---------------------------------------------- |
+| `starts`        | `Int32Array`   | 0-based start of each feature                  |
+| `ends`          | `Int32Array`   | Half-open end of each feature                  |
+| `scores`        | `Float32Array` | Score; the mean over the interval on zoom data |
+| `minScores`     | `Float32Array` | Minimum per interval; summary types only       |
+| `maxScores`     | `Float32Array` | Maximum per interval; summary types only       |
+| `isSummary`     | `boolean`      | `true` on the summary types                    |
+| `regionOffsets` | `number[]`     | Region boundaries; the multi-region types only |
+
 ## Estimating download size
 
 ### `getRegionByteSize(refName, start, end, opts?)`
@@ -194,6 +241,8 @@ and zoom level:
 | `rest`     | BigBed                      | Raw tab-delimited BED columns 4+, including the BED score                                                                 |
 | `uniqueId` | BigBed                      | Block byte offset paired with the record's offset inside that block, so it is unique file-wide; deduplicates exact copies |
 | `field`    | BigBed (`searchExtraIndex`) | Which extra-index column matched                                                                                          |
+| `refName`  | BigBed (`searchExtraIndex`) | Name of the chromosome the hit lies on                                                                                    |
+| `chromId`  | BigBed (`searchExtraIndex`) | Header id of that chromosome                                                                                              |
 | `minScore` | zoom data                   | Minimum score across the summary interval                                                                                 |
 | `maxScore` | zoom data                   | Maximum score across the summary interval                                                                                 |
 | `summary`  | zoom data                   | `true` when the feature comes from a zoom level                                                                           |
@@ -316,3 +365,30 @@ feature.toJSON()
 `ArrayFeatureView.get(i, key)` reads one field of feature `i`. Valid keys for
 either `get`: `start`, `end`, `score`, `refName`, `source`, `summary`,
 `minScore`, `maxScore`.
+
+`ArrayFeatureView` members:
+
+| Member                                                         | Description                                                 |
+| -------------------------------------------------------------- | ----------------------------------------------------------- |
+| `starts`, `ends`, `scores`                                     | The wrapped typed arrays                                    |
+| `minScores`, `maxScores`                                       | The wrapped summary arrays; `undefined` for base resolution |
+| `isSummary`                                                    | Copied from the wrapped result                              |
+| `source`, `refName`                                            | The constructor arguments                                   |
+| `length`                                                       | Number of features                                          |
+| `start(i)`, `end(i)`, `score(i)`, `minScore(i)`, `maxScore(i)` | One field of feature `i`                                    |
+| `id(i)`                                                        | The string `source:refName:start-end` for feature `i`       |
+| `get(i, key)`                                                  | One field of feature `i`, by key                            |
+
+`BigWigFeature` members:
+
+| Member     | Description                                                         |
+| ---------- | ------------------------------------------------------------------- |
+| `get(key)` | `get(i, key)` on the view, for the bound index                      |
+| `id()`     | `id(i)` on the view, for the bound index                            |
+| `toJSON()` | Plain object with the `get` keys plus `uniqueId`, the `id()` string |
+
+## Other exports
+
+`BlockType` is `'bigwig' | 'bigbed' | 'summary'`, the on-disk block layout an
+index points at. The readers use it internally, and no public method takes or
+returns it.
