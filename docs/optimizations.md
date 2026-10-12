@@ -320,11 +320,6 @@ at every scale, so whatever `bedToBigBed` wrote is never consulted — which is
 also why BigBed gains more than BigWig from concurrent reads: every query reads
 unzoomed blocks spread across the file.
 
-**`searchExtraIndex` descends one child per node.** A name occurring more than
-`blockSize` times would be split across sibling leaves and the extras missed. It
-does not happen for the transcript and gene-name indexes `bedToBigBed` builds,
-but full correctness needs multi-child descent (cf. UCSC `bptFileFindMulti`).
-
 ## Further reading
 
 - [concurrency.md](concurrency.md) — how many range requests a query makes, and

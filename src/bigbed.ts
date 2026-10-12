@@ -7,7 +7,6 @@ import type { RequestOptions } from './types.ts'
 import type { GenericFilehandle } from 'generic-filehandle2'
 
 interface Loc {
-  key: string
   offset: number
   length: number
   /** which extra-index column this entry came from */
@@ -37,142 +36,73 @@ function getTabField(str: string, fieldIndex: number) {
   return end === -1 ? str.slice(start) : str.slice(start, end)
 }
 
-// bedToBigBed writes B+ tree keys sorted by memcmp (raw byte order), so the
-// binary search must compare the same way. localeCompare applies locale
-// collation instead — it reorders underscores, mixed case, etc. relative to
-// byte order, sending the search down the wrong branch and missing valid keys
-// (e.g. GENCODE names like "Metazoa_SRP"). Code-unit comparison matches memcmp
-// for the ASCII/BMP names these indexes contain.
-function byteCompare(a: string, b: string) {
-  if (a < b) {
-    return -1
-  } else if (a > b) {
-    return 1
-  } else {
-    return 0
-  }
+interface BPlusTree {
+  bbi: GenericFilehandle
+  nodeSize: number
+  keySize: number
+  name: string
+  field: number
+  opts: RequestOptions
 }
 
-// Recursively traverses a B+ tree to find every entry matching `name` in a
-// BigBed extraIndex. A name can appear many times (one entry per record, e.g.
-// every transcript of a gene), and those entries can point at different data
-// blocks, so a single match is not enough — we collect the whole contiguous run
-// of equal keys in the matching leaf.
-//
-// This descends into a single child at each internal node, which finds all
-// copies as long as they fit within one leaf (< blockSize of them). A name with
-// more than blockSize occurrences would be split across sibling leaves and the
-// extras would be missed; that case doesn't occur for the transcript/gene-name
-// indexes bedToBigBed builds, but full correctness would need multi-child
-// descent (cf. UCSC bptFileFindMulti).
-async function readBPlusTreeNode(
-  bbi: GenericFilehandle,
+// bedToBigBed sorts B+ tree keys by memcmp, so comparisons must use byte order.
+// localeCompare reorders underscores and mixed case (e.g. GENCODE's
+// "Metazoa_SRP") and misses valid keys. Code-unit order matches memcmp for the
+// ASCII/BMP names these indexes hold.
+function byteCompare(a: string, b: string) {
+  return a < b ? -1 : a > b ? 1 : 0
+}
+
+// Finds every entry for `tree.name` in a BigBed extraIndex. A name repeats once
+// per record (e.g. every transcript of a gene), and a run of equal keys can
+// cross from one leaf into the next, so an internal node descends into every
+// child whose key range can hold the name, as UCSC's bptFileFindMultiple does:
+// from the last child starting before it through the last starting at it.
+async function findInBPlusTree(
+  tree: BPlusTree,
   nodeOffset: number,
-  blockSize: number,
-  keySize: number,
-  valSize: number,
-  name: string,
-  field: number,
-  opts: RequestOptions,
 ): Promise<Loc[]> {
-  const len = 4 + blockSize * (keySize + valSize)
-  const buffer = await bbi.read(len, nodeOffset, opts)
+  const { bbi, nodeSize, keySize, name, field, opts } = tree
+  const buffer = await bbi.read(nodeSize, nodeOffset, opts)
   const dataView = getDataView(buffer)
-  const nodeType = dataView.getInt8(0)
-  const cnt = dataView.getInt16(2, true)
+  const isLeaf = dataView.getUint8(0)
+  const count = dataView.getUint16(2, true)
   let offset = 4
 
-  // Non-leaf node (nodeType === 0): contains keys and child node pointers for navigation
-  if (nodeType === 0) {
-    const leafkeys = []
-    for (let i = 0; i < cnt; i++) {
+  if (isLeaf) {
+    const locs: Loc[] = []
+    for (let i = 0; i < count; i++) {
       const key = parseKey(buffer, offset, keySize)
       offset += keySize
-      const dataOffset = getUint64(dataView, offset)
-      offset += 8
-      leafkeys.push({
-        key,
-        offset: dataOffset,
-      })
-    }
-
-    let left = 0
-    let right = leafkeys.length - 1
-    let targetIndex = -1
-
-    while (left <= right) {
-      const mid = Math.floor((left + right) / 2)
-      if (byteCompare(name, leafkeys[mid]!.key) >= 0) {
-        targetIndex = mid
-        left = mid + 1
-      } else {
-        right = mid - 1
+      if (key === name) {
+        locs.push({
+          offset: getUint64(dataView, offset),
+          length: dataView.getUint32(offset + 8, true),
+          field,
+        })
       }
+      offset += 16
     }
-
-    const childOffset = leafkeys[Math.max(targetIndex, 0)]!.offset
-    return readBPlusTreeNode(
-      bbi,
-      childOffset,
-      blockSize,
-      keySize,
-      valSize,
-      name,
-      field,
-      opts,
-    )
-  } else if (nodeType === 1) {
-    // Leaf node (nodeType === 1): contains actual key-value data
-    const keys = []
-    for (let i = 0; i < cnt; i++) {
-      const key = parseKey(buffer, offset, keySize)
-      offset += keySize
-      const dataOffset = getUint64(dataView, offset)
-      offset += 8
-      const length = dataView.getUint32(offset, true)
-      offset += 4
-      offset += 4 // skip reserved
-      keys.push({
-        key,
-        offset: dataOffset,
-        length,
-      })
-    }
-
-    // Binary search to land anywhere in the run of entries matching name
-    let left = 0
-    let right = keys.length - 1
-    let hit = -1
-
-    while (left <= right) {
-      const mid = Math.floor((left + right) / 2)
-      const cmp = byteCompare(name, keys[mid]!.key)
-
-      if (cmp === 0) {
-        hit = mid
-        break
-      } else if (cmp < 0) {
-        right = mid - 1
-      } else {
-        left = mid + 1
-      }
-    }
-
-    if (hit === -1) {
-      return []
-    }
-    // expand around the hit to cover all equal keys (duplicates are contiguous)
-    let lo = hit
-    while (lo > 0 && keys[lo - 1]!.key === name) {
-      lo--
-    }
-    let hi = hit
-    while (hi < keys.length - 1 && keys[hi + 1]!.key === name) {
-      hi++
-    }
-    return keys.slice(lo, hi + 1).map(k => ({ ...k, field }))
+    return locs
   }
-  return []
+
+  const children: number[] = []
+  for (let i = 0; i < count; i++) {
+    const cmp = byteCompare(parseKey(buffer, offset, keySize), name)
+    offset += keySize
+    if (cmp > 0) {
+      break
+    }
+    if (cmp < 0) {
+      children.length = 0
+    }
+    children.push(getUint64(dataView, offset))
+    offset += 8
+  }
+  const results = await Promise.all(
+    children.map(child => findInBPlusTree(tree, child)),
+  )
+  return results.flat()
 }
 
 /**
@@ -236,10 +166,10 @@ export class BigBed extends BBI {
 
     for (let i = 0; i < count; i += 1) {
       const dataView = getDataView(buffer, i * blocklen)
-      const type = dataView.getInt16(0, true)
-      const fieldcount = dataView.getInt16(2, true)
+      const type = dataView.getUint16(0, true)
+      const fieldcount = dataView.getUint16(2, true)
       const dataOffset = getUint64(dataView, 4)
-      const field = dataView.getInt16(16, true)
+      const field = dataView.getUint16(16, true)
       indices.push({
         type,
         fieldcount,
@@ -250,46 +180,31 @@ export class BigBed extends BBI {
     return indices
   }
 
-  /*
-   * perform a search in the bigbed extraIndex to find which blocks in the
-   * bigbed data to look for the actual feature data
-   *
-   * @param name - the name to search for
-   *
-   * @param opts - a SearchOptions argument with optional signal
-   *
-   * @return a Promise for an array of bigbed block Loc entries
-   */
   private async searchExtraIndexBlocks(
     name: string,
     opts: RequestOptions = {},
   ): Promise<Loc[]> {
     const indices = await this.readIndices(opts)
-    if (indices.length === 0) {
-      return []
-    }
-    const locs = indices.map(async index => {
-      const { offset: offset2, field } = index
-      const b = await this.bbi.read(32, offset2, opts)
-
-      const dataView = getDataView(b)
-      const blockSize = dataView.getInt32(4, true)
-      const keySize = dataView.getInt32(8, true)
-      const valSize = dataView.getInt32(12, true)
-
-      return readBPlusTreeNode(
-        this.bbi,
-        offset2 + 32,
-        blockSize,
-        keySize,
-        valSize,
-        name,
-        field,
-        opts,
-      )
-    })
-    const results = await Promise.all(locs)
-    return results.flat()
+    const locs = await Promise.all(
+      indices.map(async ({ offset, field }) => {
+        const dataView = getDataView(await this.bbi.read(32, offset, opts))
+        const blockSize = dataView.getUint32(4, true)
+        const keySize = dataView.getUint32(8, true)
+        const valSize = dataView.getUint32(12, true)
+        return findInBPlusTree(
+          {
+            bbi: this.bbi,
+            nodeSize: 4 + blockSize * (keySize + Math.max(valSize, 8)),
+            keySize,
+            name,
+            field,
+            opts,
+          },
+          offset + 32,
+        )
+      }),
+    )
+    return locs.flat()
   }
 
   /**

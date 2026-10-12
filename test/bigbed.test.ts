@@ -78,6 +78,22 @@ test('searchExtraIndex returns all records for a name spanning many blocks', asy
   expect(res.length).toBe(28)
   expect(new Set(res.map(f => f.uniqueId)).size).toBe(res.length)
 })
+// Built with `bedToBigBed -blockSize=4 -itemsPerSlot=1 -extraIndex=name` from
+// 32 one-record-per-block BED lines named A-Z, with D six times. Four keys per
+// leaf puts D's run across three leaves; a search that descends one child per
+// node found only the copy in the last of them.
+test('searchExtraIndex follows a run of equal keys across leaves', async () => {
+  const t = new BigBed({ path: 'test/data/extra_index_leaf_straddle.bb' })
+  const d = await t.searchExtraIndex('D')
+  expect(d.map(f => f.start)).toEqual([3000, 4000, 5000, 6000, 7000, 8000])
+  for (const name of 'ABCEFGHIJKLMNOQRSTUVWXYZ') {
+    expect(await t.searchExtraIndex(name)).toHaveLength(1)
+  }
+  expect(await t.searchExtraIndex('P')).toHaveLength(2)
+  expect(await t.searchExtraIndex('0')).toEqual([])
+  expect(await t.searchExtraIndex('ZZ')).toEqual([])
+})
+
 // a hit is only somewhere to go if it names its chromosome
 test('searchExtraIndex hits carry the chromosome they lie on', async () => {
   const t = new BigBed({
