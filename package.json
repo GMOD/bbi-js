@@ -31,7 +31,7 @@
   "scripts": {
     "test": "vitest",
     "test:pack": "./scripts/test-pack.sh",
-    "check:wasm": "./scripts/check-wasm.sh",
+    "check:wasm": "./scripts/wasm-stamp.sh check",
     "clean": "rimraf dist esm",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -41,13 +41,13 @@
     "build:esm": "tsc --outDir esm",
     "build:es5": "tsc --module commonjs --moduleResolution bundler --outDir dist",
     "postbuild:es5": "echo '{\"type\": \"commonjs\"}' > dist/package.json",
-    "preversion": "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test --run && pnpm build && pnpm check:wasm && pnpm test:pack",
+    "preversion": "pnpm check:wasm && pnpm lint && pnpm format:check && pnpm typecheck && pnpm test --run && pnpm build && pnpm test:pack",
     "version": "git-cliff --tag v$npm_package_version --unreleased --prepend CHANGELOG.md && git add CHANGELOG.md",
     "postversion": "git push --follow-tags",
     "build": "pnpm build:wasm && pnpm build:esm && pnpm build:es5",
     "benchonly": "vitest bench",
     "bench": "./scripts/build-both-branches.sh \"$BRANCH1\" \"$BRANCH2\" && vitest bench",
-    "build:wasm": "pnpm --filter inflate-wasm-build build"
+    "build:wasm": "pnpm --filter inflate-wasm-build build && ./scripts/wasm-stamp.sh write"
   },
   "keywords": [
     "bionode",

@@ -14,7 +14,9 @@ if [ "$INSTALLED" != "$REQUIRED" ]; then
   fi
 fi
 
-cargo build --release --target wasm32-unknown-unknown
+# keeps this machine's ~/.cargo path out of the panic locations the wasm embeds
+RUSTFLAGS="--remap-path-prefix=${CARGO_HOME:-$HOME/.cargo}=/cargo" \
+  cargo build --release --target wasm32-unknown-unknown
 wasm-bindgen --target bundler --out-dir pkg target/wasm32-unknown-unknown/release/inflate_wasm.wasm
 rm -f pkg/inflate_wasm_bg.wasm.d.ts
 

@@ -187,13 +187,18 @@ the step because the Rust is unchanged. Build the JS alone with
 
 - CI's test and publish jobs both rebuild the bundle from `crate/`, so tests and
   the npm package always use wasm built from the source at that commit.
-- `pnpm check:wasm` runs after the build in CI and in `preversion`, and fails
-  when the rebuilt bundle differs from the committed one. A change to `crate/`
-  therefore can't land without its regenerated `src/wasm`.
-- The check relies on reproducible builds, which is why
-  `crate/rust-toolchain.toml` pins rustc and `Cargo.lock` pins wasm-bindgen. A
-  new stable Rust can change the emitted wasm, so bump the pin in its own
-  commit, with the bundle it produces.
+- `build:wasm` writes `crate/wasm-inputs.sha256`: a hash of every file in
+  `crate/`, and a hash of the bundle it built. `pnpm check:wasm` runs first in
+  CI and in `preversion`, and fails when either hash no longer matches, so a
+  change to `crate/` can't land without its regenerated, committed bundle.
+- The check compares inputs, not output bytes, because the bytes depend on the
+  machine: libdeflate's C compiles with the system clang, and clang-20 and
+  clang-21 emit different wasm. The npm bundle, built on CI's runner, therefore
+  differs in bytes from the committed one built from the same source.
+- `crate/rust-toolchain.toml` still pins rustc and `Cargo.lock` pins
+  wasm-bindgen, so a rebuild on one machine is repeatable. `build-wasm.sh`
+  remaps `~/.cargo` to `/cargo`, so the panic locations in the wasm carry no
+  build machine paths.
 
 ## Packaging notes
 

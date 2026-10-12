@@ -26,10 +26,10 @@ jobs:
           node-version: 24.x
           cache: pnpm
       - run: pnpm install --frozen-lockfile
-      - run: pnpm build
-      # the committed bundle must match a fresh build of crate/, so a Rust
-      # change can't land without its regenerated bundle
+      # before the build, which rewrites the bundle: fails when crate/ changed
+      # without a regenerated, committed bundle
       - run: pnpm check:wasm
+      - run: pnpm build
       - run: pnpm lint
       # eslint doesn't enforce formatting, so without this the tree drifts out
       # of prettier's shape silently and the next person to touch a file gets
