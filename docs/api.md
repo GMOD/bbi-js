@@ -111,7 +111,8 @@ const features = await bigwig.getFeatures('chr1', 0, 100_000)
 
 Fetches features for multiple regions in one call, returning
 `Promise<Feature[][]>` aligned to input order (`result[i]` corresponds to
-`regions[i]`). Regions may be in any order and may overlap.
+`regions[i]`). Each `Region` is `{ refName, start, end }`, 0-based half-open.
+Regions may be in any order and may overlap.
 
 Reads for adjacent on-disk blocks coalesce across region boundaries, so a
 whole-genome overview needs far fewer range requests than calling `getFeatures`

@@ -37,6 +37,13 @@ export interface Feature {
   refName?: string
 }
 
+/** A query region for the multi-region readers: 0-based, half-open. */
+export interface Region {
+  refName: string
+  start: number
+  end: number
+}
+
 /** Summary statistics stored in the BigWig file header. */
 export interface Statistics {
   scoreSum: number

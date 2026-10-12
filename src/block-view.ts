@@ -14,13 +14,16 @@ import {
   groupBlocks,
 } from './util.ts'
 
-import type { BlockType, Feature, ProgressCallback } from './types.ts'
 import type {
   BigWigFeatureArrays,
   BigWigFeatureArraysMulti,
+  BlockType,
+  Feature,
+  ProgressCallback,
+  Region,
   SummaryFeatureArrays,
   SummaryFeatureArraysMulti,
-} from './unzip.ts'
+} from './types.ts'
 import type { Block } from './util.ts'
 import type { GenericFilehandle } from 'generic-filehandle2'
 
@@ -127,15 +130,9 @@ function assertWholeRecords(kind: string, have: number, need: number) {
 }
 
 function summaryRecordCount(b: Uint8Array) {
-  if (b.byteLength % SUMMARY_RECORD_BYTES !== 0) {
-    assertWholeRecords(
-      'summary',
-      b.byteLength,
-      (Math.floor(b.byteLength / SUMMARY_RECORD_BYTES) + 1) *
-        SUMMARY_RECORD_BYTES,
-    )
-  }
-  return b.byteLength / SUMMARY_RECORD_BYTES
+  const count = Math.ceil(b.byteLength / SUMMARY_RECORD_BYTES)
+  assertWholeRecords('summary', b.byteLength, count * SUMMARY_RECORD_BYTES)
+  return count
 }
 
 // Callers read itemCount off their own DataView and pass it, so this adds no
@@ -218,28 +215,24 @@ function parseBigBedBlock(
     // whole-chromosome read. Measured in docs/optimizations.md.
     const nullPos = data.indexOf(0, currOffset)
     const restEnd = nullPos === -1 ? data.length : nullPos
-    // blockOffset is the block's byte offset in the file (unique per block) and
-    // recordStart is the record's offset within the block, so the pair is
-    // globally unique across the file
-    if (!request) {
-      // read without a region, so the record carries the chromosome itself
-      items.push({
-        chromId,
-        start,
-        end,
-        rest: decoder.decode(data.subarray(currOffset, restEnd)),
-        uniqueId: `bb-${blockOffset}-${recordStart}`,
-      })
-    } else if (
-      chromId === request.chrId &&
-      coordFilter(start, end, request.start, request.end)
+    if (
+      !request ||
+      (chromId === request.chrId &&
+        coordFilter(start, end, request.start, request.end))
     ) {
-      items.push({
+      // the block's file offset plus the record's offset within it is unique
+      // across the file
+      const feature: Feature = {
         start,
         end,
         rest: decoder.decode(data.subarray(currOffset, restEnd)),
         uniqueId: `bb-${blockOffset}-${recordStart}`,
-      })
+      }
+      // a read without a region has no other way to say which chromosome
+      if (!request) {
+        feature.chromId = chromId
+      }
+      items.push(feature)
     }
     currOffset = restEnd + 1
   }
@@ -439,128 +432,61 @@ function parseSummaryBlockAsArrays(
   return { starts, ends, scores, minScores, maxScores }
 }
 
-// Concatenate one field across parsed per-block-group chunks into a single typed
-// array. Returns the lone chunk's array directly when possible to avoid a copy.
-function concatField<T extends Int32Array | Float32Array, C>(
-  chunks: C[],
-  get: (chunk: C) => T,
-  totalCount: number,
-  Ctor: new (length: number) => T,
-): T {
-  if (chunks.length === 1) {
-    return get(chunks[0]!)
-  }
-  const out = new Ctor(totalCount)
-  let offset = 0
-  for (const chunk of chunks) {
-    const field = get(chunk)
-    out.set(field, offset)
-    offset += field.length
-  }
-  return out
-}
-
 interface BigWigChunk {
   starts: Int32Array
   ends: Int32Array
   scores: Float32Array
 }
-type SummaryChunk = BigWigChunk & {
+interface SummaryChunk extends BigWigChunk {
   minScores: Float32Array
   maxScores: Float32Array
 }
 
-function countFeatures(chunks: BigWigChunk[]) {
-  let total = 0
-  for (const chunk of chunks) {
-    total += chunk.starts.length
-  }
-  return total
-}
+type ColumnCtor = Int32ArrayConstructor | Float32ArrayConstructor
 
-// Also produces the empty result (all zero-length arrays) when given no chunks.
-function concatBigWigChunks(chunks: BigWigChunk[]): BigWigFeatureArrays {
-  const totalCount = countFeatures(chunks)
-  return {
-    starts: concatField(chunks, c => c.starts, totalCount, Int32Array),
-    ends: concatField(chunks, c => c.ends, totalCount, Int32Array),
-    scores: concatField(chunks, c => c.scores, totalCount, Float32Array),
-    isSummary: false,
-  }
-}
+const BIGWIG_COLUMNS = {
+  starts: Int32Array,
+  ends: Int32Array,
+  scores: Float32Array,
+} satisfies Record<keyof BigWigChunk, ColumnCtor>
 
-function concatSummaryChunks(chunks: SummaryChunk[]): SummaryFeatureArrays {
-  const totalCount = countFeatures(chunks)
-  const { starts, ends, scores } = concatBigWigChunks(chunks)
-  return {
-    starts,
-    ends,
-    scores,
-    minScores: concatField(chunks, c => c.minScores, totalCount, Float32Array),
-    maxScores: concatField(chunks, c => c.maxScores, totalCount, Float32Array),
-    isSummary: true,
-  }
-}
+const SUMMARY_COLUMNS = {
+  ...BIGWIG_COLUMNS,
+  minScores: Float32Array,
+  maxScores: Float32Array,
+} satisfies Record<keyof SummaryChunk, ColumnCtor>
 
-// Pack the start/end/score arrays shared by every region into one backing
-// buffer each, recording each region's slice boundary in regionOffsets. A
-// single allocation per array instead of one object-with-arrays per region.
-// Regions are laid out in input order; regionOffsets has length regionCount + 1.
-function packRegions(chunksByRegion: BigWigChunk[][]) {
-  let totalCount = 0
-  for (const chunks of chunksByRegion) {
-    for (const chunk of chunks) {
-      totalCount += chunk.starts.length
-    }
-  }
-  const starts = new Int32Array(totalCount)
-  const ends = new Int32Array(totalCount)
-  const scores = new Float32Array(totalCount)
+// Concatenate each column across every region's chunks into one array per
+// column, in input order, recording where each region's slice ends:
+// regionOffsets has length chunksByRegion.length + 1. A lone chunk comes back
+// uncopied; no chunks at all give zero-length arrays.
+function packChunks<T extends BigWigChunk>(
+  columns: Record<keyof T, ColumnCtor>,
+  chunksByRegion: T[][],
+) {
   const regionOffsets = [0]
-  let offset = 0
+  let total = 0
   for (const chunks of chunksByRegion) {
     for (const chunk of chunks) {
-      starts.set(chunk.starts, offset)
-      ends.set(chunk.ends, offset)
-      scores.set(chunk.scores, offset)
+      total += chunk.starts.length
+    }
+    regionOffsets.push(total)
+  }
+  const all = chunksByRegion.flat()
+  if (all.length === 1) {
+    return { packed: all[0]!, regionOffsets }
+  }
+  const packed = {} as T
+  for (const key of Object.keys(columns) as (keyof T)[]) {
+    const out = new columns[key](total)
+    let offset = 0
+    for (const chunk of all) {
+      out.set(chunk[key] as Int32Array | Float32Array, offset)
       offset += chunk.starts.length
     }
-    regionOffsets.push(offset)
+    packed[key] = out as T[keyof T]
   }
-  return { starts, ends, scores, regionOffsets, totalCount }
-}
-
-function concatBigWigChunksMulti(
-  chunksByRegion: BigWigChunk[][],
-): BigWigFeatureArraysMulti {
-  const { starts, ends, scores, regionOffsets } = packRegions(chunksByRegion)
-  return { starts, ends, scores, regionOffsets, isSummary: false }
-}
-
-function concatSummaryChunksMulti(
-  chunksByRegion: SummaryChunk[][],
-): SummaryFeatureArraysMulti {
-  const { starts, ends, scores, regionOffsets, totalCount } =
-    packRegions(chunksByRegion)
-  const minScores = new Float32Array(totalCount)
-  const maxScores = new Float32Array(totalCount)
-  let offset = 0
-  for (const chunks of chunksByRegion) {
-    for (const chunk of chunks) {
-      minScores.set(chunk.minScores, offset)
-      maxScores.set(chunk.maxScores, offset)
-      offset += chunk.starts.length
-    }
-  }
-  return {
-    starts,
-    ends,
-    scores,
-    minScores,
-    maxScores,
-    regionOffsets,
-    isSummary: true,
-  }
+  return { packed, regionOffsets }
 }
 
 function parseBlock(
@@ -706,10 +632,9 @@ export class BlockView {
             opts?.signal,
           ),
         (resultBuffer, { min, max }) => {
-          const offset = min
           for (const element of currentOffsets) {
-            if (min <= element && element <= max) {
-              const dv = getDataView(resultBuffer.subarray(element - offset))
+            if (min <= element && element < max) {
+              const dv = getDataView(resultBuffer.subarray(element - min))
               const isLeaf = dv.getUint8(0)
               const count = dv.getUint16(2, true)
               if (isLeaf === 1 || isLeaf === 0) {
@@ -783,7 +708,7 @@ export class BlockView {
   // Multi-region counterpart of getBlockSizeForRange, over the same deduped
   // block union readWigDataMulti fetches
   public async getBlockSizeForRangeMulti(
-    regions: { refName: string; start: number; end: number }[],
+    regions: Region[],
     opts: Options = {},
   ): Promise<number> {
     const { blockByOffset } = await this._collectBlocksMulti(regions, opts)
@@ -796,7 +721,7 @@ export class BlockView {
   // caller groups the deduped union so physically adjacent blocks from
   // different regions coalesce into a single read.
   private async _collectBlocksMulti(
-    regions: { refName: string; start: number; end: number }[],
+    regions: Region[],
     opts: Options,
   ): Promise<CollectedBlocksMulti> {
     // Walk the regions' index nodes concurrently - the R-tree node cache dedupes
@@ -856,7 +781,7 @@ export class BlockView {
   }
 
   public async readWigDataMulti(
-    regions: { refName: string; start: number; end: number }[],
+    regions: Region[],
     opts: Options = {},
   ): Promise<Feature[][]> {
     const results: Feature[][] = regions.map(() => [])
@@ -915,11 +840,11 @@ export class BlockView {
   // treating as the degenerate multi: it is the shape every single-locus
   // consumer sends (a genome browser showing one contig calls this with a
   // one-element array), and routing it through the multi machinery costs it the
-  // fused parse, the per-block chunk allocations, and the packRegions copy for
+  // fused parse, the per-block chunk allocations, and the packChunks copy for
   // no benefit — there is nothing to dedupe, coalesce or pack across. The
   // single-region reader already returns exactly this shape minus the offsets.
   public async readWigDataAsArraysMulti(
-    regions: { refName: string; start: number; end: number }[],
+    regions: Region[],
     opts: Options = {},
   ): Promise<BigWigFeatureArraysMulti | SummaryFeatureArraysMulti> {
     this.assertNotBigBed('getFeaturesAsArraysMulti')
@@ -935,7 +860,8 @@ export class BlockView {
     }
     const collected = await this._collectBlocksMulti(regions, opts)
     if (this.blockType === 'summary') {
-      return concatSummaryChunksMulti(
+      const { packed, regionOffsets } = packChunks(
+        SUMMARY_COLUMNS,
         await this._readBlocksAsArraysMulti(
           collected,
           regions.length,
@@ -943,8 +869,10 @@ export class BlockView {
           opts,
         ),
       )
+      return { ...packed, regionOffsets, isSummary: true }
     }
-    return concatBigWigChunksMulti(
+    const { packed, regionOffsets } = packChunks(
+      BIGWIG_COLUMNS,
       await this._readBlocksAsArraysMulti(
         collected,
         regions.length,
@@ -952,6 +880,7 @@ export class BlockView {
         opts,
       ),
     )
+    return { ...packed, regionOffsets, isSummary: false }
   }
 
   // Parse every block into a typed-array chunk for each region that tagged it.
@@ -1062,7 +991,7 @@ export class BlockView {
   }
 
   public async readFeatures(
-    blocks: { offset: number; length: number }[],
+    blocks: Block[],
     opts: Options = {},
   ): Promise<Feature[]> {
     const { blockType } = this
@@ -1141,7 +1070,7 @@ export class BlockView {
       blockData => parseBigWigBlockAsArrays(blockData, request),
       opts.onProgress,
     )
-    return concatBigWigChunks(chunks)
+    return { ...packChunks(BIGWIG_COLUMNS, [chunks]).packed, isSummary: false }
   }
 
   private async _readSummaryFeaturesAsArrays(
@@ -1164,6 +1093,6 @@ export class BlockView {
       blockData => parseSummaryBlockAsArrays(blockData, request),
       opts.onProgress,
     )
-    return concatSummaryChunks(chunks)
+    return { ...packChunks(SUMMARY_COLUMNS, [chunks]).packed, isSummary: true }
   }
 }

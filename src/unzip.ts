@@ -4,12 +4,14 @@ import {
   inflateRawBatch,
 } from './wasm/inflate-wasm-inlined.js'
 
+import type { Block } from './util.ts'
+
 export interface UnzipBatchResult {
   data: Uint8Array
   offsets: number[]
 }
 
-function blocksToTypedArrays(blocks: { offset: number; length: number }[]) {
+function blocksToTypedArrays(blocks: Block[]) {
   const inputOffsets = new Uint32Array(blocks.length)
   const inputLengths = new Uint32Array(blocks.length)
   for (let i = 0; i < blocks.length; i++) {
@@ -22,7 +24,7 @@ function blocksToTypedArrays(blocks: { offset: number; length: number }[]) {
 
 export async function unzipBatch(
   data: Uint8Array,
-  blocks: { offset: number; length: number }[],
+  blocks: Block[],
   maxOutputSize: number,
 ): Promise<UnzipBatchResult> {
   const { inputOffsets, inputLengths } = blocksToTypedArrays(blocks)
@@ -31,7 +33,7 @@ export async function unzipBatch(
 
 export async function decompressAndParseBigWigBlocks(
   data: Uint8Array,
-  blocks: { offset: number; length: number }[],
+  blocks: Block[],
   maxOutputSize: number,
   reqStart: number,
   reqEnd: number,
@@ -49,7 +51,7 @@ export async function decompressAndParseBigWigBlocks(
 
 export async function decompressAndParseSummaryBlocks(
   data: Uint8Array,
-  blocks: { offset: number; length: number }[],
+  blocks: Block[],
   maxOutputSize: number,
   reqChrId: number,
   reqStart: number,
@@ -66,10 +68,3 @@ export async function decompressAndParseSummaryBlocks(
     reqEnd,
   )
 }
-
-export type {
-  BigWigFeatureArrays,
-  BigWigFeatureArraysMulti,
-  SummaryFeatureArrays,
-  SummaryFeatureArraysMulti,
-} from './types.ts'

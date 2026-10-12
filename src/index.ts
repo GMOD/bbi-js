@@ -11,6 +11,7 @@ export type {
   Feature,
   ProgressCallback,
   RefInfo,
+  Region,
   RequestOptions2,
   RequestOptions,
   Statistics,

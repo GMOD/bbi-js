@@ -12,6 +12,7 @@ import type {
   BlockType,
   Feature,
   RefInfo,
+  Region,
   RequestOptions2,
   RequestOptions,
   Statistics,
@@ -209,7 +210,7 @@ export abstract class BBI {
   // integer chromosome IDs instead of strings for more efficient spatial indexing
   private async _readChromosomeTree(
     header: BigWigHeader,
-    opts?: { signal?: AbortSignal },
+    opts?: RequestOptions,
   ) {
     const refsByNumber: RefInfo[] = []
     const refsByName = {} as Record<string, number>
@@ -371,7 +372,7 @@ export abstract class BBI {
    * @returns `Promise<number>` — total compressed bytes across the regions
    */
   public async getRegionByteSizeMulti(
-    regions: { refName: string; start: number; end: number }[],
+    regions: Region[],
     opts?: RequestOptions2,
   ): Promise<number> {
     const view = await this._getView(opts)
@@ -389,7 +390,7 @@ export abstract class BBI {
    *   same order (`result[i]` corresponds to `regions[i]`)
    */
   public async getFeaturesMulti(
-    regions: { refName: string; start: number; end: number }[],
+    regions: Region[],
     opts?: RequestOptions2,
   ): Promise<Feature[][]> {
     const view = await this._getView(opts)
@@ -438,7 +439,7 @@ export abstract class BBI {
    *   region `i` with `regionOffsets[i]..regionOffsets[i + 1]`
    */
   public async getFeaturesAsArraysMulti(
-    regions: { refName: string; start: number; end: number }[],
+    regions: Region[],
     opts?: RequestOptions2,
   ): Promise<BigWigFeatureArraysMulti | SummaryFeatureArraysMulti> {
     const view = await this._getView(opts)
