@@ -63,6 +63,14 @@ interface Options {
   onProgress?: ProgressCallback
 }
 
+function totalLength(blocks: { length: number }[]) {
+  let total = 0
+  for (const block of blocks) {
+    total += block.length
+  }
+  return total
+}
+
 // Track block-download progress for a fetch loop. Total bytes are known up front
 // (block byte sizes come from the R-tree index), so this reports a determinate
 // fraction: call the returned fn with each fetched group's byte length.
@@ -70,10 +78,7 @@ function blockProgress(
   groups: { length: number }[],
   onProgress: ProgressCallback | undefined,
 ) {
-  let total = 0
-  for (const group of groups) {
-    total += group.length
-  }
+  const total = totalLength(groups)
   let downloaded = 0
   onProgress?.(0, total)
   return (length: number) => {
@@ -762,10 +767,9 @@ export class BlockView {
     })
   }
 
-  // Sum of the compressed on-disk block lengths the R-tree reports overlapping
-  // [start, end) on `chrName`, WITHOUT reading or decompressing any block — only
-  // the small R-tree index nodes are fetched. A cheap upper bound on the bytes a
-  // readWigData fetch of this range would transfer. Zero when the ref is absent.
+  // Bytes a readWigData of this range would read for its data blocks, from the
+  // R-tree index alone: the coalesced groups _forEachBlockGroup fetches, so the
+  // gaps a group spans count too. Equals the total onProgress reports.
   public async getBlockSizeForRange(
     chrName: string,
     start: number,
@@ -773,28 +777,17 @@ export class BlockView {
     opts?: Options,
   ): Promise<number> {
     const collected = await this._collectBlocks(chrName, start, end, opts)
-    let total = 0
-    if (collected) {
-      for (const block of collected.blocks) {
-        total += block.length
-      }
-    }
-    return total
+    return totalLength(groupBlocks(collected?.blocks ?? []))
   }
 
-  // Multi-region counterpart of getBlockSizeForRange. Dedupes blocks by file
-  // offset (reusing _collectBlocksMulti) so a block shared by overlapping
-  // regions — which readWigDataMulti fetches once — is counted once.
+  // Multi-region counterpart of getBlockSizeForRange, over the same deduped
+  // block union readWigDataMulti fetches
   public async getBlockSizeForRangeMulti(
     regions: { refName: string; start: number; end: number }[],
     opts: Options = {},
   ): Promise<number> {
     const { blockByOffset } = await this._collectBlocksMulti(regions, opts)
-    let total = 0
-    for (const block of blockByOffset.values()) {
-      total += block.length
-    }
-    return total
+    return totalLength(groupBlocks([...blockByOffset.values()]))
   }
 
   // Collect the R-tree blocks for every region and dedupe them by file offset:

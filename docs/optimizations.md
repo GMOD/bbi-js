@@ -135,12 +135,12 @@ were being downloaded and inflated by both of the windows that touch them.
 
 ### Forecasting a query costs no data blocks
 
-`getRegionByteSize` sums the on-disk block lengths the R-tree reports for a
-range, reading only index nodes. It is the `index` column of the table at the
-top — tenths of a millisecond — against a download that may be megabytes, which
-makes it usable as a gate before issuing the query at all. The multi-region form
-dedupes by offset, so a block shared by overlapping regions is counted once, as
-the fetch would fetch it once.
+`getRegionByteSize` totals the coalesced block reads a query would make, reading
+only index nodes. It is the `index` column of the table at the top — tenths of a
+millisecond — against a download that may be megabytes, which makes it usable as
+a gate before issuing the query at all. The multi-region form dedupes by offset,
+so a block shared by overlapping regions is counted once, as the fetch would
+fetch it once.
 
 ## Decompression
 

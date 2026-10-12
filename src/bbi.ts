@@ -339,11 +339,10 @@ export abstract class BBI {
   }
 
   /**
-   * Cheap compressed-download-size estimate for a region: the sum of the
-   * on-disk block lengths the index reports overlapping it, read from the R-tree
-   * index alone without downloading or decompressing any feature/data block. An
-   * upper bound on the bytes a `getFeatures` call over the same region and zoom
-   * (`opts`) would transfer — for gating over-large downloads before they start.
+   * Compressed bytes a `getFeatures` call over the same region and zoom
+   * (`opts`) would read for its data blocks, the same total its `onProgress`
+   * reports. Reads only the R-tree index, downloading and decompressing no data
+   * block, so it can gate an over-large download before it starts.
    *
    * @param refName - chromosome name as it appears in the file
    * @param start - 0-based half-open start coordinate

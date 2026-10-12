@@ -189,11 +189,10 @@ The typed-array results have the fields below. `SummaryFeatureArrays` and
 
 ### `getRegionByteSize(refName, start, end, opts?)`
 
-Sums the compressed on-disk block lengths the index reports overlapping the
-region, reading only the R-tree index — it downloads and decompresses no feature
-blocks at all. An upper bound on what a `getFeatures` call over the same region
-and zoom would transfer, for gating over-large downloads before they start.
-Returns 0 if the refName is not found.
+Returns the compressed bytes a `getFeatures` call over the same region and zoom
+would read for its data blocks, the same total its `onProgress` reports. It
+reads only the R-tree index and downloads no feature blocks, so it can gate an
+over-large download before it starts. Returns 0 if the refName is not found.
 
 ```typescript
 const bytes = await bigwig.getRegionByteSize('chr1', 0, 100_000)

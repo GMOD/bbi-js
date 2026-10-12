@@ -232,6 +232,24 @@ test('getRegionByteSize reads only the index, not the feature blocks', async () 
   expect(probeBytes).toBeLessThan(fetchBytes)
 })
 
+// Each record is its own tiny block, so skipping B leaves a gap the read
+// coalescing spans: the fetch reads it, and the estimate has to count it
+test('getRegionByteSizeMulti counts the gaps a coalesced read spans', async () => {
+  const ti = new BigBed({ path: 'test/data/extra_index_leaf_straddle.bb' })
+  const regions = [
+    { refName: 'chr1', start: 0, end: 500 },
+    { refName: 'chr1', start: 2000, end: 2500 },
+  ]
+  let fetched = 0
+  await ti.getFeaturesMulti(regions, {
+    onProgress: (_downloaded, total) => {
+      fetched = total
+    },
+  })
+  expect(fetched).toBe(61)
+  expect(await ti.getRegionByteSizeMulti(regions)).toBe(fetched)
+})
+
 test('getRegionByteSize is zero for an absent ref', async () => {
   const ti = new BigBed({ path: 'test/data/hg18.bb' })
   expect(await ti.getRegionByteSize('nonexistent', 0, 100000)).toBe(0)
