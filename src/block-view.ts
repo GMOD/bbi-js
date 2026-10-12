@@ -633,7 +633,10 @@ export class BlockView {
     end: number,
     opts?: Options,
   ): Promise<{ blocks: Block[]; chrId: number } | undefined> {
-    const chrId = this.refsByName[chrName]
+    // hasOwn, so a name like "constructor" misses rather than finding a method
+    const chrId = Object.hasOwn(this.refsByName, chrName)
+      ? this.refsByName[chrName]
+      : undefined
     // [start, end) with start >= end covers no bases, so no block can contribute
     // a feature - bail before spending any reads on the index
     if (chrId === undefined || start >= end) {

@@ -64,4 +64,17 @@ describe('what a query reads', () => {
     expect(filehandle.reads.length).toBeLessThan(first)
     expect(filehandle.reads).toHaveLength(1)
   })
+
+  it('reads nothing for a refName that is an Object.prototype key', async () => {
+    const filehandle = new CountingFile('test/data/volvox.bw')
+    const bw = new BigWig({ filehandle })
+    await bw.getHeader()
+    filehandle.reads = []
+
+    for (const refName of ['constructor', 'toString', 'hasOwnProperty']) {
+      expect(await bw.getFeatures(refName, 0, 100)).toEqual([])
+      expect(await bw.getRegionByteSize(refName, 0, 100)).toBe(0)
+    }
+    expect(filehandle.reads).toHaveLength(0)
+  })
 })
