@@ -68,7 +68,7 @@ Two or more regions therefore inflate raw and parse in JS, per region tag. A
 lone region takes the single-region path rather than the degenerate multi one:
 it is the shape every single-locus consumer sends, and routing it through the
 multi machinery would cost it the fused parse, the per-block chunk allocations
-and the `packRegions` copy, with nothing to dedupe, coalesce or pack across.
+and the `packChunks` copy, with nothing to dedupe, coalesce or pack across.
 
 ### 4. Compressed or not — `uncompressBufSize`
 

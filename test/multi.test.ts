@@ -260,6 +260,21 @@ test('getFeaturesAsArraysMulti with one unknown region', async () => {
   expect(res.starts.length).toBe(0)
 })
 
+// Only one block yields data, and it holds records outside the query, so the
+// parser's chunk is a short view over a block-sized buffer. A caller who
+// transfers `.buffer` must get just the result, not the rest of the block.
+test('getFeaturesAsArraysMulti packs into exact-size buffers', async () => {
+  const bw = new BigWig({ path: 'test/data/volvox.bw' })
+  const res = await bw.getFeaturesAsArraysMulti([
+    { refName: 'ctgA', start: 49355, end: 49388 },
+    { refName: 'nonexistent', start: 0, end: 100 },
+  ])
+  expect(res.starts.length).toBeGreaterThan(0)
+  for (const field of [res.starts, res.ends, res.scores]) {
+    expect(field.buffer.byteLength).toBe(field.byteLength)
+  }
+})
+
 test('getFeaturesAsArraysMulti handles unknown refName and empty input', async () => {
   const bw = new BigWig({ path: 'test/data/cDC.bw' })
   const scale = 1 / 1000

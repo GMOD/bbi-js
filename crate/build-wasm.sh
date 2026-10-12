@@ -27,7 +27,8 @@ rm -f pkg/inflate_wasm_bg.wasm.d.ts
 # path is unaffected because wasm-bindgen already emits `.slice()` there.
 #
 # Copy before decoding. Patched here rather than by hand, because the command
-# above regenerates pkg/ and an edit there is lost on the next build. Idempotent, and fails loudly if the upstream shape changes.
+# above regenerates pkg/ and an edit there is lost on the next build.
+# Idempotent, and fails loudly if the upstream shape changes.
 # Rationale in full: bgzf-filehandle agent-docs/adr/0002.
 glue=pkg/inflate_wasm_bg.js
 decode='return cachedTextDecoder.decode(getUint8ArrayMemory0().subarray(ptr, ptr + len));'

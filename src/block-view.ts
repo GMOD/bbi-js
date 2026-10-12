@@ -458,8 +458,9 @@ const SUMMARY_COLUMNS = {
 
 // Concatenate each column across every region's chunks into one array per
 // column, in input order, recording where each region's slice ends:
-// regionOffsets has length chunksByRegion.length + 1. A lone chunk comes back
-// uncopied; no chunks at all give zero-length arrays.
+// regionOffsets has length chunksByRegion.length + 1. A single region's lone
+// chunk comes back uncopied, so its arrays may view a larger block-sized buffer;
+// a multi-region result always gets exact-size buffers.
 function packChunks<T extends BigWigChunk>(
   columns: Record<keyof T, ColumnCtor>,
   chunksByRegion: T[][],
@@ -473,7 +474,7 @@ function packChunks<T extends BigWigChunk>(
     regionOffsets.push(total)
   }
   const all = chunksByRegion.flat()
-  if (all.length === 1) {
+  if (chunksByRegion.length === 1 && all.length === 1) {
     return { packed: all[0]!, regionOffsets }
   }
   const packed = {} as T
