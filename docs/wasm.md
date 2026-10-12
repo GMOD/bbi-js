@@ -166,8 +166,9 @@ pnpm build:wasm   # needs a Rust toolchain + wasm-bindgen
 
 Three things, not one, and the last is the one that bites:
 
-- `rustup target add wasm32-unknown-unknown`, or cargo stops at
-  `can't find crate for 'core'`
+- rustup. `crate/rust-toolchain.toml` pins the Rust release and the
+  `wasm32-unknown-unknown` target, and rustup installs both on the first build.
+  Without the target, cargo stops at `can't find crate for 'core'`
 - `wasm-bindgen-cli` at the version in `Cargo.lock` — CI pins it from there
 - a clang that can emit wasm. `libdeflate-sys` builds its C through cc-rs, and
   **Apple's clang has no WebAssembly backend**, so on macOS the build gets past
@@ -180,8 +181,19 @@ Git tracks the generated bundle, so consumers and contributors who don't touch
 the Rust never need any of it. What they do need to know is that `pnpm build`
 runs `build:wasm` first and **fails there** without the above — it does not skip
 the step because the Rust is unchanged. Build the JS alone with
-`pnpm build:esm && pnpm build:es5`, which is also what `preversion` effectively
-needs on a machine without the wasm toolchain.
+`pnpm build:esm && pnpm build:es5`.
+
+### Keeping the bundle current
+
+- CI's test and publish jobs both rebuild the bundle from `crate/`, so tests and
+  the npm package always use wasm built from the source at that commit.
+- `pnpm check:wasm` runs after the build in CI and in `preversion`, and fails
+  when the rebuilt bundle differs from the committed one. A change to `crate/`
+  therefore can't land without its regenerated `src/wasm`.
+- The check relies on reproducible builds, which is why
+  `crate/rust-toolchain.toml` pins rustc and `Cargo.lock` pins wasm-bindgen. A
+  new stable Rust can change the emitted wasm, so bump the pin in its own
+  commit, with the bundle it produces.
 
 ## Packaging notes
 

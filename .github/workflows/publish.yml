@@ -10,12 +10,9 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
-        with:
-          # required when the action is pinned by sha — the @stable ref form
-          # would otherwise supply it from the branch name
-          toolchain: stable
-          targets: wasm32-unknown-unknown
+      # installs the channel and wasm target crate/rust-toolchain.toml pins
+      - run: rustup toolchain install
+        working-directory: crate
       - uses: cargo-bins/cargo-binstall@e00d2c94cc0067b77737821097a62d91c0301baa # v1.21.1
       - name: Install wasm-bindgen-cli matching Cargo.lock
         run: |
@@ -30,6 +27,9 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
+      # the committed bundle must match a fresh build of crate/, so a Rust
+      # change can't land without its regenerated bundle
+      - run: pnpm check:wasm
       - run: pnpm lint
       # eslint doesn't enforce formatting, so without this the tree drifts out
       # of prettier's shape silently and the next person to touch a file gets
@@ -52,12 +52,9 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
-        with:
-          # required when the action is pinned by sha — the @stable ref form
-          # would otherwise supply it from the branch name
-          toolchain: stable
-          targets: wasm32-unknown-unknown
+      # installs the channel and wasm target crate/rust-toolchain.toml pins
+      - run: rustup toolchain install
+        working-directory: crate
       - uses: cargo-bins/cargo-binstall@e00d2c94cc0067b77737821097a62d91c0301baa # v1.21.1
       - name: Install wasm-bindgen-cli matching Cargo.lock
         run: |
