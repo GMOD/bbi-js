@@ -372,48 +372,28 @@ async function inflateRawBatch(inputs, inputOffsets, inputLengths, maxOutputSize
     const data = packed.subarray(dataStart);
     return { data, offsets };
 }
-function unpackBigWigFeatures(packed) {
-    const view = new DataView(packed.buffer, packed.byteOffset, packed.byteLength);
-    const count = view.getUint32(0, true);
-    if (count === 0) {
-        return {
-            starts: new Int32Array(0),
-            ends: new Int32Array(0),
-            scores: new Float32Array(0),
-        };
-    }
-    const startsOffset = 4;
-    const endsOffset = startsOffset + count * 4;
-    const scoresOffset = endsOffset + count * 4;
+// The fused parsers pack [count: u32] then one count-long 4-byte column per
+// field, in the order the unpackers below read them
+function readColumns(packed) {
+    const count = new DataView(packed.buffer, packed.byteOffset, packed.byteLength).getUint32(0, true);
+    const columnOffset = (i) => packed.byteOffset + 4 + i * count * 4;
     return {
-        starts: new Int32Array(packed.buffer, packed.byteOffset + startsOffset, count),
-        ends: new Int32Array(packed.buffer, packed.byteOffset + endsOffset, count),
-        scores: new Float32Array(packed.buffer, packed.byteOffset + scoresOffset, count),
+        int32: (i) => new Int32Array(packed.buffer, columnOffset(i), count),
+        float32: (i) => new Float32Array(packed.buffer, columnOffset(i), count),
     };
 }
+function unpackBigWigFeatures(packed) {
+    const { int32, float32 } = readColumns(packed);
+    return { starts: int32(0), ends: int32(1), scores: float32(2) };
+}
 function unpackSummaryFeatures(packed) {
-    const view = new DataView(packed.buffer, packed.byteOffset, packed.byteLength);
-    const count = view.getUint32(0, true);
-    if (count === 0) {
-        return {
-            starts: new Int32Array(0),
-            ends: new Int32Array(0),
-            scores: new Float32Array(0),
-            minScores: new Float32Array(0),
-            maxScores: new Float32Array(0),
-        };
-    }
-    const startsOffset = 4;
-    const endsOffset = startsOffset + count * 4;
-    const scoresOffset = endsOffset + count * 4;
-    const minScoresOffset = scoresOffset + count * 4;
-    const maxScoresOffset = minScoresOffset + count * 4;
+    const { int32, float32 } = readColumns(packed);
     return {
-        starts: new Int32Array(packed.buffer, packed.byteOffset + startsOffset, count),
-        ends: new Int32Array(packed.buffer, packed.byteOffset + endsOffset, count),
-        scores: new Float32Array(packed.buffer, packed.byteOffset + scoresOffset, count),
-        minScores: new Float32Array(packed.buffer, packed.byteOffset + minScoresOffset, count),
-        maxScores: new Float32Array(packed.buffer, packed.byteOffset + maxScoresOffset, count),
+        starts: int32(0),
+        ends: int32(1),
+        scores: float32(2),
+        minScores: float32(3),
+        maxScores: float32(4),
     };
 }
 async function decompressAndParseBigWig(inputs, inputOffsets, inputLengths, maxBlockSize, reqStart, reqEnd) {
