@@ -1,10 +1,10 @@
-import wasmData from '../../src/wasm/inflate_wasm_bg.wasm'
-import * as bg from '../../src/wasm/inflate_wasm_bg.js'
+import wasmData from '../pkg/inflate_wasm_bg.wasm'
+import * as bg from '../pkg/inflate_wasm_bg.js'
 import {
   decompress_and_parse_bigwig,
   decompress_and_parse_summary,
   inflate_raw_batch,
-} from '../../src/wasm/inflate_wasm.js'
+} from '../pkg/inflate_wasm.js'
 
 let wasm: WebAssembly.Exports | null = null
 let initPromise: Promise<WebAssembly.Exports> | null = null

@@ -21,6 +21,15 @@ cd "$PKG_DIR"
 TARBALL="$(npm pack --silent --pack-destination "$SCRATCH")"
 FIXTURE="$PKG_DIR/test/data/volvox.bw"
 
+# Only the inlined bundle belongs in wasm/. wasm-bindgen's glue and .wasm are
+# webpack inputs; under src/wasm, tsc would publish them three times.
+STRAY="$(tar -tzf "$SCRATCH/$TARBALL" | grep '/wasm/' | grep -v '/wasm/inflate-wasm-inlined\.' || true)"
+if [ -n "$STRAY" ]; then
+  echo "unexpected files in the tarball's wasm/ dirs:" >&2
+  echo "$STRAY" >&2
+  exit 1
+fi
+
 cd "$SCRATCH"
 cat >package.json <<'JSON'
 {

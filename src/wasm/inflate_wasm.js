@@ -1,9 +1,0 @@
-/* @ts-self-types="./inflate_wasm.d.ts" */
-import * as wasm from "./inflate_wasm_bg.wasm";
-import { __wbg_set_wasm } from "./inflate_wasm_bg.js";
-
-__wbg_set_wasm(wasm);
-
-export {
-    decompress_and_parse_bigwig, decompress_and_parse_summary, inflate_raw_batch
-} from "./inflate_wasm_bg.js";

@@ -30,12 +30,10 @@ test('node TextDecoder is lenient where browsers are not', () => {
 
 test('the generated glue copies before decoding strings', async () => {
   const { readFile } = await import('node:fs/promises')
-  for (const f of ['inflate_wasm_bg.js', 'inflate-wasm-inlined.js']) {
-    const src = await readFile(
-      new URL(`../src/wasm/${f}`, import.meta.url),
-      'utf8',
-    )
-    expect(src).toContain('subarray(ptr, ptr + len).slice()')
-    expect(src).not.toMatch(/subarray\(ptr, ptr \+ len\)\);/)
-  }
+  const src = await readFile(
+    new URL('../src/wasm/inflate-wasm-inlined.js', import.meta.url),
+    'utf8',
+  )
+  expect(src).toContain('subarray(ptr, ptr + len).slice()')
+  expect(src).not.toMatch(/subarray\(ptr, ptr \+ len\)\);/)
 })
