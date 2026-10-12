@@ -1,6 +1,6 @@
 # Pinned because rustc's output is part of the committed bundle: a new stable
-# release can change the emitted wasm, and CI's check:wasm would then fail with
-# no source change. Bump deliberately, together with a regenerated bundle.
+# release can change the emitted wasm with no source change. This file is in
+# crate/, so bumping it fails check:wasm until the bundle is regenerated.
 [toolchain]
 channel = "1.99.0"
 targets = ["wasm32-unknown-unknown"]
