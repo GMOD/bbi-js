@@ -27,12 +27,11 @@ const header = await remote.getHeader()
 const features = await remote.getFeatures('chr1', 0, 100_000)
 ```
 
-A bigwig query reads a few R-tree index nodes and then the data blocks they
-point at. Panning twenty half-overlapping windows across the test file issues 23
-of these small reads, and all 23 fall inside four 256 KiB chunks. With
+A query makes many small reads, often near the previous query's, and over HTTP
+each read costs a request.
 [`@gmod/range-cache-filehandle`](https://github.com/GMOD/range-cache-filehandle)
-as the filehandle, the cache fetches those four chunks once each and answers a
-repeat query from memory:
+fetches the file in 256 KiB chunks, merges adjacent reads into one request, and
+answers repeat reads from memory:
 
 ```typescript
 import { RemoteFileWithRangeCache } from '@gmod/range-cache-filehandle'
@@ -41,6 +40,9 @@ const cached = new BigWig({
   filehandle: new RemoteFileWithRangeCache('https://example.com/file.bw'),
 })
 ```
+
+Its `CachedFilehandle` wraps a local file or `Blob` the same way, but matters
+less there, since local reads are cheap and the OS caches them.
 
 ### Browser (CDN)
 
