@@ -25,9 +25,10 @@ many block groups runs ~2.5× faster, at every latency, because bandwidth never
 limited it.
 
 BigBed gains more, ~4× on the same multi-region rows
-(`BBI_DATA=test/data/clinvarCnv.bb`). BigBed has no zoom levels, so every query
-reads unzoomed blocks spread across the file rather than a compact run of
-summary records.
+(`BBI_DATA=test/data/clinvarCnv.bb`). A BigBed file has zoom levels too
+(`clinvarCnv.bb` has five), but `BigBed.getView` ignores them and returns the
+unzoomed view at every scale. Every BigBed query therefore reads unzoomed blocks
+spread across the file rather than a compact run of summary records.
 
 ## How many requests a query makes
 

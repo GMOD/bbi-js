@@ -41,11 +41,12 @@ buffer rather than looping on a truncated file.
 ### The chromosome B+ tree reads a whole node at a time
 
 A node stores its item count inside the node, so reading the 4-byte node header
-first would cost a second round trip per node. `maxNodeSize` bounds the size of
-any node from `blockSize`, `keySize` and `valSize` in the tree header. An
-internal item (key + 8-byte child offset) is never wider than a leaf item, so
-one read of that size covers any node. Reading the header first doubled the
-request count on remote files.
+first would cost a second round trip per node. `maxNodeSize` is
+`4 + blockSize * (keySize + max(valSize, 8))`, from the tree header. An item is
+a key plus either a leaf value of `valSize` bytes or an internal item's 8-byte
+child offset, and the formula takes the wider of the two, so one read of that
+size covers any node. Reading the header first doubled the request count on
+remote files.
 
 The walk then reads sibling children with `Promise.all`, so a level costs one
 round trip rather than one per node.
@@ -268,10 +269,12 @@ decisions about the calling process rather than the file.
 
 - **Put a caching, coalescing filehandle underneath.** bbi-js caches the header
   and the index but never a decompressed data block, so a repeat query re-reads
-  and re-inflates. jbrowse's `RemoteFileWithRangeCache` fetches in aligned
-  blocks, joins contiguous runs and dedups in flight. It works alongside the
-  block merging above rather than conflicting with it, because the filehandle
-  dedups bytes while bbi-js decides which bytes to ask for.
+  and re-inflates. `RemoteFileWithRangeCache` from
+  [`@gmod/range-cache-filehandle`](https://github.com/GMOD/range-cache-filehandle),
+  the filehandle in the README's example, fetches in aligned blocks, joins
+  contiguous runs and dedups in flight. It works alongside the block merging
+  above rather than conflicting with it, because the filehandle dedups bytes
+  while bbi-js decides which bytes to ask for.
 - **Ask for arrays when you can.** For a caller that does not need one object
   per record, the table above shows 1.7-1.9× the speed with 5× less memory.
   `getFeaturesAsArraysMulti` packs every region into one backing buffer per

@@ -35,11 +35,12 @@ Ranges are across three runs on one machine; treat them as an order of
 magnitude, not a spec.
 
 **This multiplier measures the decompression step in isolation, not a whole
-query, and the two are far apart.** A query also spends time fetching bytes,
-walking the R-tree, and building results, and on the measurements we have, those
-steps dominate. An older whole-genome `parseBigWig` comparison came out only ~5%
-apart end to end, which puts inflate at well under a tenth of that run. Don't
-quote 2.5–3× as a library-level speedup.
+query.** A query also spends time fetching bytes, walking the R-tree, and
+building results. When a query reads a whole chromosome from a local file with a
+warm page cache, inflate takes about half the time and building records the
+other half; behind a network, fetching dominates
+([optimizations.md](optimizations.md)). Don't quote 2.5–3× as a library-level
+speedup.
 
 ## Why not the platform's `DecompressionStream`?
 
@@ -206,8 +207,8 @@ alone with `pnpm build:esm && pnpm build:es5`.
 
 ## Packaging notes
 
-Two decisions here are easy to "fix" and thereby break. Both differ from the
-convention in the shared GMOD notes, deliberately.
+Two decisions here, both following the convention in the shared GMOD notes, are
+easy to "fix" and thereby break.
 
 **The inlined bundle is `.js`, not `.mjs`.** With `allowJs: true`, tsc compiles
 it per target: real ESM into `esm/`, real CommonJS into `dist/`. With a `.mjs`
