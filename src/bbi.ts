@@ -223,10 +223,10 @@ export abstract class BBI {
     const blockSize = treeHeader.getUint32(4, true)
     const keySize = treeHeader.getUint32(8, true)
     const valSize = treeHeader.getUint32(12, true)
-    // Every node holds at most blockSize items, and an internal item (key +
-    // 8-byte child offset) is never wider than a leaf item, so this bounds any
-    // node. Reading it in one request avoids a second round trip per node just to
-    // learn the item count - which doubled the request count on remote files.
+    // A node holds at most blockSize items, each a key plus a leaf value or an
+    // 8-byte child offset, so this bounds any node. One read per node avoids a
+    // second round trip to learn the item count, which doubled the request
+    // count on remote files.
     const maxNodeSize = 4 + blockSize * (keySize + Math.max(valSize, 8))
 
     // Recursively traverses the B+ tree to populate chromosome name-to-ID mappings
