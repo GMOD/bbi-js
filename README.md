@@ -28,12 +28,12 @@ const features = await remote.getFeatures('chr1', 0, 100_000)
 ```
 
 A bigwig query reads a few R-tree index nodes and then the data blocks they
-point at. Those reads are small and clustered: panning twenty half-overlapping
-windows across the test file issues 23 of them, and all 23 land inside four 256
-KiB chunks. Passing
+point at. Those reads are small and clustered. Panning twenty half-overlapping
+windows across the test file issues 23 of them, and all 23 fall inside four 256
+KiB chunks. With
 [`@gmod/range-cache-filehandle`](https://github.com/GMOD/range-cache-filehandle)
-as the filehandle collapses them to those four fetches, and serves a repeat
-query from memory:
+as the filehandle, the cache fetches those four chunks once each and answers a
+repeat query from memory:
 
 ```typescript
 import { RemoteFileWithRangeCache } from '@gmod/range-cache-filehandle'
@@ -63,10 +63,12 @@ A Rust/WebAssembly [libdeflater](https://github.com/ebiggers/libdeflate) module
 inflates the blocks, at ~2.5–3× a pure-JS inflate and roughly 4–11× the
 browser's own
 [`DecompressionStream`](docs/wasm.md#why-not-the-platforms-decompressionstream).
-It is base64-inlined into the bundle and loads lazily — nothing to install or
-configure. One of four parsers then reads the records, two in JS and two fused
-into the wasm call, chosen from the file's compression, the reader you called
-and the region count. All four produce the same features.
+The build inlines the module into the bundle as base64, and the module loads on
+first use, so there is nothing extra to install or configure. bbi-js then picks
+one of four parsers to read the records, based on the file's compression, the
+reader you called and the region count. Two of the parsers run in JS, and two
+run inside the wasm call that inflates the blocks. All four produce the same
+features.
 
 ## Migrating to v10
 

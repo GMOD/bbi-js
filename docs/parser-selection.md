@@ -1,11 +1,11 @@
 # Which parser runs
 
-Four parsers read the same records — JS objects, JS typed arrays, and the fused
-wasm pair — and which one runs depends on things a caller never sees: whether
-the file is compressed, whether it asked for objects or arrays, whether it named
-one region or several. The choice never appears in the API, so this document is
-for contributors, and for anyone reading a stack trace that names a function
-they never called.
+Four parsers read the same records: a JS object parser, a JS typed-array parser,
+and a pair of fused wasm parsers. Which one runs depends on whether the file is
+compressed, whether the caller asked for objects or arrays, and whether it named
+one region or several. The API does not show the choice, so this page is for
+contributors, and for anyone reading a stack trace that names a function they
+never called.
 
 - [The chart](#the-chart)
 - [The four questions](#the-four-questions)
@@ -17,10 +17,10 @@ they never called.
 
 ![Parser selection decision tree](img/parser-selection.svg)
 
-Source: [`parser-selection.dot`](img/parser-selection.dot). Green parses in
-wasm, blue inflates in wasm and parses in JS, grey touches no wasm at all. The
-dashed edge is `searchExtraIndex`, which joins below the reader question because
-it is never a typed-array read.
+Source: [`parser-selection.dot`](img/parser-selection.dot). Green marks a leaf
+that parses in wasm, blue one that inflates in wasm and parses in JS, and grey
+one that uses no wasm at all. The dashed edge is `searchExtraIndex`, which joins
+below the reader question because it is never a typed-array read.
 
 ## The four questions
 
@@ -36,8 +36,8 @@ downstream:
 | `summary`   | 32-byte fixed records                  | BigWig, coarsest zoom with `reductionLevel ≤ 2/scale` |
 | `bigwig`    | 24-byte header + fixed-width records   | BigWig, no zoom level matched                         |
 
-`BigBed.getView` ignores `scale` entirely and always returns the unzoomed view —
-any zoom levels `bedToBigBed` wrote are never consulted.
+`BigBed.getView` ignores `scale` entirely and always returns the unzoomed view,
+so bbi-js never reads the zoom levels `bedToBigBed` wrote.
 
 ### 2. Objects or typed arrays — which reader the caller used
 
@@ -46,41 +46,42 @@ any zoom levels `bedToBigBed` wrote are never consulted.
 allocate no per-record object.
 
 The typed-array readers reject BigBed rather than mis-parsing it. Their parsers
-only understand the fixed-width layouts, and a `rest` string does not fit a
-fixed-width column — feeding BigBed bytes to the BigWig parser yields records
-that look plausible and are garbage, so `assertNotBigBed` throws instead.
+handle only the fixed-width layouts, and a `rest` string does not fit a
+fixed-width column. The BigWig parser, given BigBed bytes, returns records that
+look plausible and are garbage, so `assertNotBigBed` throws instead.
 
-`BigBed.searchExtraIndex` is a fifth way in, reached from a name lookup rather
-than a coordinate query. It calls `readFeatures` directly, so it is always
-BigBed, always unzoomed, always objects — and it is the only caller that passes
-no `request`, so it parses its blocks whole, skips the coord filter, and filters
-by name afterwards.
+`BigBed.searchExtraIndex` is a fifth entry point, which starts from a name
+lookup rather than a coordinate query. It calls `readFeatures` directly, so it
+always reads BigBed, unzoomed, as objects. It is also the only caller that
+passes no `request`, so it parses its blocks whole, skips the coord filter, and
+filters by name afterwards.
 
-### 3. One region or several — only one can carry a coord filter
+### 3. One region or several — the fused call takes one coord filter
 
 The fused wasm entry points take a single `[reqStart, reqEnd)` and filter as
 they parse. A multi-region call has one filter per region and one shared set of
-blocks — two overlapping regions share the same block, which the reader fetches
-once and parses once per region tagging it — so there is no single range to hand
-wasm.
+blocks, so there is no single range to pass to wasm. When two overlapping
+regions share a block, the reader fetches it once and parses it once for each
+region that tags it.
 
-Two or more regions therefore inflate raw and parse in JS, per region tag. A
-lone region takes the single-region path rather than the degenerate multi one:
-it is the shape every single-locus consumer sends, and routing it through the
-multi machinery would cost it the fused parse, the per-block chunk allocations
-and the `packChunks` copy, with nothing to dedupe, coalesce or pack across.
+A call with two or more regions therefore inflates raw and parses in JS, once
+per region tag. A call with one region takes the single-region path rather than
+a multi-region path with one entry. Every single-locus consumer sends that
+request, and the multi-region path would cost it the fused parse, the per-block
+chunk allocations and the `packChunks` copy, with nothing to dedupe, merge or
+pack across.
 
 ### 4. Compressed or not — `uncompressBufSize`
 
 A BBI file records the size of its largest uncompressed block in the header, or
 `0` when the writer left blocks uncompressed (`bedGraphToBigWig -unc` and
-friends). Zero means there is nothing to inflate: blocks slice straight out of
-the fetched group and no path touches wasm, including the one that would
-otherwise fuse — the fused entry points _are_ the decompressor, so there is no
-version of them that skips it.
+similar tools). When the value is zero, the reader slices blocks straight out of
+the fetched group and no path calls into wasm, including the one that would
+otherwise use a fused call. The fused entry points _are_ the decompressor, so no
+version of them skips decompression.
 
-This is the one branch that can silently change which language parses your data
-between two files that look identical through the API.
+The `uncompressBufSize` branch is the only one that can change which language
+parses your data between two files that look identical through the API.
 
 ## The leaves
 
@@ -92,9 +93,9 @@ between two files that look identical through the API.
 | `inflate_raw_batch` → `parseBigWig/Summary/BigBedBlock` | objects or `searchExtraIndex`, compressed    | wasm inflate, JS object parse                   |
 | `parseBigWig/Summary/BigBedBlock`                       | objects or `searchExtraIndex`, uncompressed  | JS object parse, no wasm                        |
 
-`inflate_raw_batch` hands over every block of a group in one call rather than
-one call per block; [wasm.md](./wasm.md) explains why the batching and the fused
-parse have that shape.
+The reader passes every block of a group to `inflate_raw_batch` in one call
+rather than one call per block; [wasm.md](./wasm.md) explains why the batching
+and the fused parse are designed that way.
 
 ## Why they have to agree
 
@@ -103,36 +104,37 @@ for the same bytes — including when the bytes are wrong.
 
 **Records.** `test/parser-parity.test.ts` sweeps the object and array parsers
 against each other over every test file and three zoom levels, including windows
-whose edges land exactly on a record's own boundaries. Without those edge
-windows an off-by-one coord filter agrees with a correct one on every file here.
-Scores compare through `Math.fround`, since the object parsers keep the summary
+whose edges fall exactly on a record's boundaries. Without those edge windows an
+off-by-one coord filter agrees with a correct one on every file here. The test
+compares scores through `Math.fround`, since the object parsers keep the summary
 mean as a double where the arrays round it to f32.
 
-**Errors.** On a block shorter than its own header declares, the two used to
-disagree: wasm yielded the records that fit, JS threw a bare `DataView`
-`RangeError`. Both now raise the same `truncated <kind> block` error, checking
-each block against its declared item count before sizing the output arrays. A
-well-formed file never holds a partial record — a section declares its item
-count, a zoom block is a whole number of 32-byte records — so this cannot fire
-on valid data, and a silently short block would otherwise serve a track missing
-data with no error to explain it.
+**Errors.** On a block shorter than its header declares, the wasm and JS parsers
+raise the same `truncated <kind> block` error. Each checks the block against its
+declared item count before sizing the output arrays. Without the check, wasm
+would return the records that fit, and JS would throw a bare `DataView`
+`RangeError`. A well-formed file never contains a partial record, because a
+section declares its item count and a zoom block is a whole number of 32-byte
+records, so the check cannot fire on valid data. An unchecked short block would
+leave a track missing data with no error to explain it.
 
-The guard exists twice on purpose, in `src/block-view.ts` and
-`crate/src/lib.rs`. Neither can cover for the other: which one a given read
-reaches is exactly what the chart above shows.
+The guard is deliberately in two places, `src/block-view.ts` and
+`crate/src/lib.rs`, because each read passes through only one of them, and the
+chart above shows which.
 
-**Routing.** Agreement is also why a misroute stays invisible, so
-`test/parser-dispatch.test.ts` asserts the other half: which parser each call
-actually reaches, by counting calls through `src/unzip.ts`. Every wasm entry
-point crosses that seam, so a test can assert "fused, and no raw inflate" or "no
-wasm at all" and have the counts back it up.
+**Routing.** Because the parsers agree, a call routed to the wrong parser still
+returns correct features, so `test/parser-dispatch.test.ts` checks which parser
+each call reaches by counting calls through `src/unzip.ts`. Every wasm entry
+point goes through that module, so a test can assert "fused, and no raw inflate"
+or "no wasm at all" and check it against the counts.
 
-The two tests are not redundant. Delete the one-region special case in
-`readWigDataAsArraysMulti` and every read still returns identical features, so
-`parser-parity.test.ts` stays green while the fused call silently stops firing;
-only the dispatch test fails. Each case also asserts it produced features, since
-a query that overlaps no blocks reaches no parser and would otherwise satisfy
-every "no wasm" expectation by doing nothing.
+`parser-parity.test.ts` and `parser-dispatch.test.ts` catch different bugs. If
+you delete the one-region special case in `readWigDataAsArraysMulti`, every read
+still returns identical features, so `parser-parity.test.ts` passes while the
+fused call stops running, and only the dispatch test fails. Each dispatch case
+also asserts that it produced features, because a query that overlaps no blocks
+reaches no parser and would otherwise pass every "no wasm" expectation without
+parsing anything.
 
 ## Regenerating the chart
 

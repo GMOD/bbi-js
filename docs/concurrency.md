@@ -1,14 +1,15 @@
 # Concurrency
 
-A single query issues up to six byte-range reads at once — index nodes at a
-level, and the coalesced data-block groups — so its wall clock is the longest of
-its reads rather than their sum. Features still come back in file order.
+A single query issues up to six byte-range reads at once, either for the index
+nodes at one level of the R-tree or for the groups of adjacent data blocks it
+reads as one. Its wall-clock time is therefore the longest of those reads rather
+than their sum. The reader still returns features in file order.
 
-How much that is worth depends on whether a query is latency-bound or
-bandwidth-bound. `scripts/network-bench.sh` measures it, serving a real file
+The gain from overlapping reads depends on whether a query is latency-bound or
+bandwidth-bound. `scripts/network-bench.sh` measures it by serving a real file
 over HTTP with a round-trip delay, a bandwidth budget shared across in-flight
-responses, and a six-request cap (a browser's HTTP/1.1 per-origin limit).
-Against `v11.1.0`, on `cDC.bw`:
+responses, and a six-request cap (a browser's HTTP/1.1 per-origin limit). The
+table compares against `v11.1.0`, on `cDC.bw`:
 
 | query                               | reads | 20ms/100Mbit    | 60ms/50Mbit      | 150ms/10Mbit      |
 | ----------------------------------- | ----- | --------------- | ---------------- | ----------------- |
@@ -17,28 +18,30 @@ Against `v11.1.0`, on `cDC.bw`:
 | 24 regions × 2Mb, 10bp/px           | 44    | 954 → **342ms** | 1938 → **720ms** | 4013 → **1508ms** |
 | one locus × 1Mb, base resolution    | 4     | 124 → 121ms     | 287 → 273ms      | 626 → 631ms       |
 
-Same bytes and the same number of requests in every row — only their scheduling
-changed. A query that already coalesces to a handful of reads has no round trips
-to overlap and is unchanged; the win is ~2.5× wherever a query touches many
-block groups, and it holds at every latency because the bytes were never the
-bound there.
+Every row reads the same bytes in the same number of requests, and only the
+scheduling differs. A query whose blocks already merge into a handful of reads
+has no round trips to overlap, so its time is unchanged. A query that touches
+many block groups runs ~2.5× faster, at every latency, because bandwidth never
+limited it.
 
-BigBed gains more — ~4× on the same multi-region rows
-(`BBI_DATA=test/data/clinvarCnv.bb`) — because it has no zoom levels, so every
-query reads unzoomed blocks spread across the file rather than a compact run of
+BigBed gains more, ~4× on the same multi-region rows
+(`BBI_DATA=test/data/clinvarCnv.bb`). BigBed has no zoom levels, so every query
+reads unzoomed blocks spread across the file rather than a compact run of
 summary records.
 
 ## How many requests a query makes
 
-Read-ahead **reschedules** reads; it never adds one. A query issues the same
-range requests it always did, and how many that is depends on the index, not on
-this: adjacent on-disk blocks coalesce into one read, so a whole-genome overview
-is a handful and a multi-region base-resolution query is tens.
+Read-ahead **reschedules** reads and adds none, so a query issues the same range
+requests as it did without read-ahead. The number of requests depends on the
+index, because the reader merges adjacent on-disk blocks into one read. A
+whole-genome overview therefore makes a handful, and a multi-region
+base-resolution query makes tens.
 
-The six is not the ceiling on requests in flight either, because a multi-region
-query walks every region's index at once — that fan-out is the region count, and
-it predates read-ahead. Measured on `cDC.bw`, peak reads outstanding at the
-filehandle, identical before and after:
+Six is not the ceiling on requests in flight either. A multi-region query walks
+every region's index at once, so its fan-out is the region count, and that
+behavior predates read-ahead. The table lists the peak number of reads
+outstanding at the filehandle on `cDC.bw`, which is the same before and after
+read-ahead:
 
 | query                                      | peak in flight | requests |
 | ------------------------------------------ | -------------- | -------- |
@@ -48,10 +51,11 @@ filehandle, identical before and after:
 | 10 files × 24 regions, 10 files at a time  | 240            | 470      |
 | 100 files × 24 regions, 10 files at a time | 240            | 4700     |
 
-A caller's own fan-out sets the peak, and bounding that fan-out bounds the peak
-in turn — see the last two rows, where ten times the files leaves the peak
-unchanged and only the total grows. Whatever you choose, the transport throttles
-the rest: a browser runs six per origin on HTTP/1.1 and queues the remainder.
+The caller's fan-out sets the peak, so a caller that bounds its fan-out bounds
+the peak. In the last two rows, ten times as many files leaves the peak
+unchanged and grows only the total. Whatever limit you choose, a browser on
+HTTP/1.1 runs six requests per origin and queues the rest.
 
-A caller already fanning out over files has also overlapped much of what
-read-ahead does, so it gains less from it than a single-file query does.
+A caller that already fans out over files overlaps many of the round trips that
+read-ahead would overlap, so it gains less from read-ahead than a single-file
+query does.

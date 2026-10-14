@@ -1,11 +1,10 @@
 # Decompression (WebAssembly)
 
-Block decompression, and BigWig record parsing on top of it, run in a
-Rust/WebAssembly module built on
-[libdeflater](https://github.com/ebiggers/libdeflate) rather than a JS inflate.
-The decompression choice never appears in the API — it needs no setup and no
-bundler config — so this document is for contributors and for anyone wondering
-what the wasm is doing there.
+A Rust/WebAssembly module built on
+[libdeflater](https://github.com/ebiggers/libdeflate) decompresses the blocks
+and parses BigWig records from them. The API does not expose the module, and it
+needs no setup or bundler config, so this page is for contributors and for
+anyone wondering why the package contains wasm.
 
 - [Why](#why)
 - [Why not the platform's `DecompressionStream`?](#why-not-the-platforms-decompressionstream)
@@ -17,9 +16,9 @@ what the wasm is doing there.
 
 ## Why
 
-Every data block on disk is individually zlib-compressed, so decompression is
-unavoidable work on every read, and a wide query inflates hundreds of blocks
-before a single feature exists.
+Every data block on disk is individually zlib-compressed, so every read has to
+decompress, and a wide query inflates hundreds of blocks before it can return a
+single feature.
 
 `benchmarks/inflate.bench.ts` times the wasm path against
 [pako](https://github.com/nodeca/pako), the pure-JS baseline, over the real
@@ -35,21 +34,22 @@ blocks of four fixtures. libdeflater is consistently **~2.5–3× faster**:
 Ranges are across three runs on one machine; treat them as an order of
 magnitude, not a spec.
 
-**This multiplier is the decompression step in isolation, not a whole query, and
-the two are far apart.** A query also spends time fetching bytes, walking the
-R-tree, and building results, and on the measurements we have those dominate: an
-older whole-genome `parseBigWig` comparison came out only ~5% apart end to end,
-which puts inflate at well under a tenth of that run. Don't quote 2.5–3× as a
-library-level speedup.
+**This multiplier measures the decompression step in isolation, not a whole
+query, and the two are far apart.** A query also spends time fetching bytes,
+walking the R-tree, and building results, and on the measurements we have, those
+steps dominate. An older whole-genome `parseBigWig` comparison came out only ~5%
+apart end to end, which puts inflate at well under a tenth of that run. Don't
+quote 2.5–3× as a library-level speedup.
 
 ## Why not the platform's `DecompressionStream`?
 
 The browser has had a built-in inflate since 2023, which looks like a way to
-delete this module and its ~65KB bundle. It measures **roughly 4–11× slower than
-the wasm path, and 1.4–3.3× slower than even pako**, so the module stays.
+delete this module and its ~65KB bundle. `DecompressionStream` measures
+**roughly 4–11× slower than the wasm path, and 1.4–3.3× slower than even pako**,
+so the module stays.
 
-Best of three runs, mean ms over the same blocks and the same byte-identical
-assertion as above (`pnpm benchonly inflate`):
+The table gives the best of three runs, as mean ms, over the same blocks and
+with the same byte-identical assertion as above (`pnpm benchonly inflate`):
 
 | Fixture                  | Blocks | wasm | pako | `DecompressionStream` |
 | ------------------------ | ------ | ---- | ---- | --------------------- |
@@ -58,41 +58,44 @@ assertion as above (`pnpm benchonly inflate`):
 | `ENCFF826FLP.bw`         | 436    | 31   | 86   | 124                   |
 | `variable_step_large.bw` | 489    | 29   | 62   | 109                   |
 
-The reason is shape, not codec quality. A bbi file's blocks are individually
-zlib-compressed streams rather than members of one concatenated stream, so there
-is no way to hand the API a whole buffer — it is one call per block, hundreds
-per query. Dividing the column through gives **220–410 µs of overhead per
-call**, which swamps the inflating itself. The wasm path crosses its boundary
-**once for the whole block group**, through `inflate_raw_batch`, so it pays that
-cost a single time per query instead of once per block, and the gap widens with
-block count rather than with bytes.
+The file format causes the gap, not codec quality. A bbi file's blocks are
+individually zlib-compressed streams rather than members of one concatenated
+stream, so a caller cannot pass the API a whole buffer and has to make one call
+per block, hundreds per query. The `DecompressionStream` column divided by the
+block count is **220–410 µs of overhead per call**, far more than the inflating
+itself takes. The wasm path calls into wasm **once for the whole block group**,
+through `inflate_raw_batch`, so it pays that cost a single time per query
+instead of once per block, and the gap widens with block count rather than with
+bytes.
 
-Two structural points on top of the timing:
+Two structural points apply on top of the timing:
 
-- **It has no way to provide the fused calls.** `decompress_and_parse_bigwig`
-  inflates and parses in one pass without materializing the decompressed bytes
-  in JS. A stream API can only ever hand back bytes, so the parse would come
-  home to JS and take the fusion — the reason those exports exist — with it.
-- **It has only been baseline since May 2023** (Safari 16.4, Firefox 113), so a
-  library keeps a JS fallback regardless. The bundle saving that motivates the
-  question does not actually arrive.
+- **`DecompressionStream` cannot provide the fused calls.**
+  `decompress_and_parse_bigwig` inflates and parses in one pass without copying
+  the decompressed bytes into JS. A stream API can only return bytes, so the
+  parse would have to move back to JS, which removes the reason the fused
+  exports exist.
+- **`DecompressionStream` has only been baseline since May 2023** (Safari 16.4,
+  Firefox 113), so a library keeps a JS fallback regardless, and the bundle
+  saving that motivates the question never happens.
 
-A caveat pointing the same way: these are Node numbers, where
-`DecompressionStream` is zlib with comparatively little plumbing. A browser adds
-the `Blob` → stream → `Response` path on top, so read the column as the API's
-best case.
+The table shows Node numbers, where `DecompressionStream` is zlib with
+comparatively little code around it. A browser adds the `Blob` → stream →
+`Response` path on top, so read the column as the API's best case.
 
-The same comparison favors the platform API instead, for a sibling library whose
-block shape differs.
+The `DecompressionStream` comparison comes out much closer for a sibling library
+with a different block structure.
 [`@gmod/bgzf-filehandle`](https://github.com/GMOD/bgzf-filehandle/blob/main/docs/optimizations.md)
 decompresses concatenated gzip members, so a whole buffer goes through **one**
-call and pays the per-call overhead once — there the same API lands within about
-2× of wasm rather than 4–11×. Same API, same codec underneath; the difference is
-entirely how many times a caller has to invoke it.
+call and pays the per-call overhead once. There the same API comes within about
+2× of wasm rather than 4–11×. The API and the codec underneath are the same in
+both libraries; the difference is entirely how many times a caller has to invoke
+the API.
 
 ## What runs in Rust
 
-Three entry points, all in [`crate/src/lib.rs`](../crate/src/lib.rs):
+The crate has three entry points, all in
+[`crate/src/lib.rs`](../crate/src/lib.rs):
 
 | Export                         | Used for                           |
 | ------------------------------ | ---------------------------------- |
@@ -100,28 +103,27 @@ Three entry points, all in [`crate/src/lib.rs`](../crate/src/lib.rs):
 | `decompress_and_parse_bigwig`  | BigWig base-resolution blocks      |
 | `decompress_and_parse_summary` | BigWig zoom/summary blocks         |
 
-Not every read reaches them — [parser-selection.md](./parser-selection.md)
-charts which of the four parsers a given call gets. Three things are worth
-knowing about the shape of this:
+Some reads call none of them; [parser-selection.md](./parser-selection.md)
+charts which of the four parsers a given call gets.
 
-**Calls come batched.** A query hands over all of its blocks at once, packed
+**Calls are batched.** The reader passes all of a query's blocks at once, packed
 into a single input buffer with a `Uint32Array` of offsets and lengths, and gets
-a single output buffer back. The alternative — one call per block — would pay
-the JS↔wasm boundary and a fresh allocation hundreds of times per query.
+a single output buffer back. One call per block would pay for a JS↔wasm call and
+a fresh allocation hundreds of times per query.
 
-**BigWig parsing happens in Rust too, not just decompression.**
+**Rust parses BigWig records as well as decompressing them.**
 `decompress_and_parse_bigwig` inflates a block _and_ walks its fixed-width
 records, returning packed `starts`/`ends`/`scores` arrays. `getFeaturesAsArrays`
-hands those straight back, so a base-resolution BigWig read allocates no
-per-record JS object at all. BigBed records are variable-width and carry a
-`rest` string, so they inflate in wasm and parse in JS — which is also why the
-typed-array readers reject BigBed.
+returns those arrays as they are, so a base-resolution BigWig read allocates no
+per-record JS object at all. BigBed records are variable-width and contain a
+`rest` string, so bbi-js inflates them in wasm and parses them in JS. The same
+layout is why the typed-array readers reject BigBed.
 
-**Blocks are zlib, but inflate is raw.** BBI blocks carry the 2-byte zlib
-header. `deflate_block` skips those two bytes and uses libdeflater's raw-deflate
-path, which also skips the trailing adler32 verification. Anything comparing
-against this path has to do the same to be measuring the same work — see
-`pakoBatch` in the benchmark.
+**Blocks are zlib streams, but the inflate is raw.** Each BBI block starts with
+the 2-byte zlib header. `deflate_block` skips those two bytes and uses
+libdeflater's raw-deflate path, which also skips the trailing adler32
+verification. A benchmark comparing against this path has to skip both too to
+measure the same work, as `pakoBatch` in the benchmark does.
 
 The crate builds with `panic = "abort"`, so an out-of-bounds slice would trap
 and leave the wasm instance unusable for every later call. Block slicing
@@ -130,16 +132,16 @@ directly.
 
 ## How it loads
 
-The `.wasm` is **base64-inlined** into the JS bundle
-(`src/wasm/inflate-wasm-inlined.js`, generated by webpack). There is no separate
-asset to fetch, copy, or teach a bundler about: node, browsers, and bundlers all
-work from a plain `npm install`.
+webpack **inlines the `.wasm` as base64** into the JS bundle
+(`src/wasm/inflate-wasm-inlined.js`), so node, browsers and bundlers all work
+from a plain `npm install`, with no separate asset to fetch, copy or configure a
+bundler for.
 
-It is **instantiated lazily** on first use and cached (`crate/src/wrapper.ts`).
-Every read method is already `async`, so this costs no extra API surface — no
-`init()` for callers to remember. The tradeoff is that the module holds instance
-state at module scope, which is one reason to care about not shipping two copies
-of it (see below).
+`crate/src/wrapper.ts` **instantiates the module lazily** on first use and
+caches the instance. Every read method is already `async`, so lazy loading adds
+nothing to the API, and callers have no `init()` to remember. In exchange, the
+module holds instance state at module scope, which is one reason to avoid
+shipping two copies of it (see below).
 
 ## Benchmarking
 
@@ -149,14 +151,15 @@ pnpm benchonly inflate
 
 The benchmark pulls every base-resolution block out of a fixture's R-tree, packs
 them the way `readBlocks` does, and times `unzipBatch` against pako and against
-`DecompressionStream` over the same bytes. It gives pako a `chunkSize` hint so
-it is not charged for growing its output buffer, and **asserts both paths
-produce byte-identical output before timing** — a decompression benchmark that
-silently disagreed on the bytes would be meaningless.
+`DecompressionStream` over the same bytes. The benchmark gives pako a
+`chunkSize` hint so that pako's time excludes growing its output buffer, and
+**asserts that both paths produce byte-identical output before timing**, because
+a decompression benchmark whose paths decode different bytes measures nothing
+useful.
 
-`pnpm bench` is a different thing: it builds two git branches into
-`esm_branch1/` and `esm_branch2/` and compares them against each other, for
-judging a change to this library rather than the wasm-vs-JS question.
+`pnpm bench` builds two git branches into `esm_branch1/` and `esm_branch2/` and
+compares them against each other, to judge a change to this library rather than
+wasm against JS.
 
 ## Building
 
@@ -164,12 +167,13 @@ judging a change to this library rather than the wasm-vs-JS question.
 pnpm build:wasm   # needs a Rust toolchain + wasm-bindgen
 ```
 
-Three things, not one, and the last is the one that bites:
+The build needs three tools, and the third is the usual cause of a failed build:
 
 - rustup. `crate/rust-toolchain.toml` pins the Rust release and the
   `wasm32-unknown-unknown` target, and rustup installs both on the first build.
   Without the target, cargo stops at `can't find crate for 'core'`
-- `wasm-bindgen-cli` at the version in `Cargo.lock` — CI pins it from there
+- `wasm-bindgen-cli` at the version in `Cargo.lock`, which CI also reads to pin
+  it
 - a clang that can emit wasm. `libdeflate-sys` builds its C through cc-rs, and
   **Apple's clang has no WebAssembly backend**, so on macOS the build gets past
   cargo and then fails in the C step with
@@ -178,10 +182,9 @@ Three things, not one, and the last is the one that bites:
   `CC=$(brew --prefix llvm)/bin/clang`.
 
 Git tracks the generated bundle, so consumers and contributors who don't touch
-the Rust never need any of it. What they do need to know is that `pnpm build`
-runs `build:wasm` first and **fails there** without the above — it does not skip
-the step because the Rust is unchanged. Build the JS alone with
-`pnpm build:esm && pnpm build:es5`.
+the Rust need none of these tools. `pnpm build` still runs `build:wasm` first,
+even when the Rust is unchanged, and **fails there** without them. Build the JS
+alone with `pnpm build:esm && pnpm build:es5`.
 
 ### Keeping the bundle current
 
@@ -192,12 +195,13 @@ the step because the Rust is unchanged. Build the JS alone with
   CI and in `preversion`, and fails when either hash no longer matches, so a
   change to `crate/` can't land without its regenerated, committed bundle.
 - The check compares inputs, not output bytes, because the bytes depend on the
-  machine: libdeflate's C compiles with the system clang, and clang-20 and
-  clang-21 emit different wasm. The npm bundle, built on CI's runner, therefore
-  differs in bytes from the committed one built from the same source.
+  machine. `libdeflate-sys` compiles libdeflate's C with the system clang, and
+  clang-20 and clang-21 emit different wasm. The npm bundle, built on CI's
+  runner, therefore differs in bytes from the committed one built from the same
+  source.
 - `crate/rust-toolchain.toml` still pins rustc and `Cargo.lock` pins
   wasm-bindgen, so a rebuild on one machine is repeatable. `build-wasm.sh`
-  remaps `~/.cargo` to `/cargo`, so the panic locations in the wasm carry no
+  remaps `~/.cargo` to `/cargo`, so the panic locations in the wasm contain no
   build machine paths.
 
 ## Packaging notes
@@ -206,10 +210,10 @@ Two decisions here are easy to "fix" and thereby break. Both differ from the
 convention in the shared GMOD notes, deliberately.
 
 **The inlined bundle is `.js`, not `.mjs`.** With `allowJs: true`, tsc compiles
-it per target: real ESM into `esm/`, real CommonJS into `dist/`. Naming it
-`.mjs` would make tsc _copy_ it verbatim instead, leaving the CJS build to reach
-it through `require(ESM)` — which works on modern node, but only because the
-bundle happens to have no top-level await. Compiling is the sturdier option.
+it per target: real ESM into `esm/`, real CommonJS into `dist/`. With a `.mjs`
+name, tsc would _copy_ the bundle verbatim instead, and the CJS build would
+reach it through `require(ESM)`. That works on modern node, but only because the
+bundle happens to have no top-level await, so compiling is the sturdier option.
 
 **Don't co-locate a hand-written `.d.mts` next to the bundle.** tsc reads
 `.mjs` + `.d.mts` as a pre-built package and stops emitting the bundle to the
@@ -217,8 +221,8 @@ output directory, which is how `@gmod/bbi@9.0.11` shipped with a missing wasm
 module. If you ever need richer types than tsc can infer, add a `.ts` wrapper
 that imports the bundle and re-exports it typed.
 
-Because `esm/` and `dist/` each carry a full copy, the ~62KB base64 bundle ships
-twice (three times counting `src/`, which we publish for source maps). A bundle
-that reaches both entry points also instantiates the wasm twice, since init
-state lives at module scope. Going ESM-only would remove both, at the cost of a
-breaking major.
+Because `esm/` and `dist/` each contain a full copy, the ~62KB base64 bundle
+ships twice (three times counting `src/`, which we publish for source maps). A
+bundle that reaches both entry points also instantiates the wasm twice, since
+the module holds init state at module scope. Going ESM-only would remove both
+duplications, at the cost of a breaking major.

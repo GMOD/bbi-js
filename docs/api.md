@@ -8,8 +8,8 @@ Pass exactly one of `path` (a local file, node only), `url` (a remote file), or
 `filehandle` (a `GenericFilehandle` from
 [generic-filehandle2](https://www.npmjs.com/package/generic-filehandle2)).
 
-Use `filehandle` when you need control over how the package fetches bytes — auth
-headers, a custom `fetch`, a `Blob` from a file input:
+Use `filehandle` when you need control over how the package fetches bytes, such
+as auth headers, a custom `fetch` or a `Blob` from a file input:
 
 ```typescript
 const file = new BigWig({
@@ -43,8 +43,9 @@ The feature readers, the byte-size methods and `parseBigWig` take an optional
 `getHeader` and `searchExtraIndex` take `RequestOptions`, which has only
 `signal`. `onProgress` has the type `ProgressCallback`.
 
-`onProgress` reports a determinate fraction — the index supplies every block's
-byte size, so the total is known up front — at block-group granularity:
+The index records every block's byte size, so the reader knows the total up
+front, and `onProgress` reports a determinate fraction at block-group
+granularity:
 
 ```typescript
 await bigwig.getFeatures('chr1', 0, 100_000, {
@@ -52,11 +53,12 @@ await bigwig.getFeatures('chr1', 0, 100_000, {
 })
 ```
 
-Every read fires it at least once, starting at `(0, total)` and ending at
-`(total, total)`. A query that overlaps no blocks — an unknown refName, an empty
-region — reports the single call `(0, 0)`, so guard against a zero total before
-dividing. The fraction only ever grows, but a read that lands out of order can
-make it jump by more than one block group at a time.
+The callback fires at least once per read, starting at `(0, total)` and ending
+at `(total, total)`. For a query that overlaps no blocks, such as one with an
+unknown refName or an empty region, it fires once with `(0, 0)`, so guard
+against a zero total before dividing. The fraction only ever grows, but a read
+that completes out of order can make it jump by more than one block group at a
+time.
 
 ## Reading features
 
@@ -114,9 +116,9 @@ Fetches features for multiple regions in one call, returning
 `regions[i]`). Each `Region` is `{ refName, start, end }`, 0-based half-open.
 Regions may be in any order and may overlap.
 
-Reads for adjacent on-disk blocks coalesce across region boundaries, so a
-whole-genome overview needs far fewer range requests than calling `getFeatures`
-per region — useful for rate-limited remote files.
+The reader merges reads for adjacent on-disk blocks across region boundaries, so
+a whole-genome overview needs far fewer range requests than calling
+`getFeatures` per region, which helps with rate-limited remote files.
 
 ```typescript
 const perRegion = await bigwig.getFeaturesMulti([
@@ -127,9 +129,9 @@ const perRegion = await bigwig.getFeaturesMulti([
 
 ### `getFeaturesAsArrays(refName, start, end, opts?)`
 
-Same parameters as `getFeatures`, but returns typed arrays instead of an array
-of objects — more memory-efficient and lower GC pressure for large datasets.
-BigWig only; see [BigBed](#bigbed).
+Takes the same parameters as `getFeatures`, but returns typed arrays instead of
+an array of objects, which use less memory and put less pressure on the GC for
+large datasets. It works on BigWig only; see [BigBed](#bigbed).
 
 ```typescript
 const result = await bigwig.getFeaturesAsArrays('chr1', 0, 100_000)
@@ -151,11 +153,12 @@ if (result.isSummary) {
 
 ### `getFeaturesAsArraysMulti(regions, opts?)`
 
-Multi-region counterpart of `getFeaturesAsArrays`, with the same cross-region
-read coalescing as `getFeaturesMulti`. Instead of one object per region, all
-regions share one backing set of typed arrays, and `regionOffsets` records where
-each region's half-open slice begins. Pulling a region out is a `subarray` with
-no copy. `regionOffsets` has length `regions.length + 1`.
+`getFeaturesAsArraysMulti` is the multi-region version of `getFeaturesAsArrays`,
+and it merges reads across region boundaries as `getFeaturesMulti` does. Instead
+of one object per region, all regions share one backing set of typed arrays, and
+`regionOffsets` records where each region's half-open slice begins, so
+`subarray` extracts a region without copying. `regionOffsets` has length
+`regions.length + 1`.
 
 ```typescript
 const multi = await bigwig.getFeaturesAsArraysMulti([
@@ -170,8 +173,9 @@ const secondRegionStarts = multi.starts.subarray(
 )
 ```
 
-Returns `BigWigFeatureArraysMulti | SummaryFeatureArraysMulti` — the shapes
-above plus `regionOffsets: number[]`, discriminated by `isSummary` the same way.
+Returns `BigWigFeatureArraysMulti | SummaryFeatureArraysMulti`: the types above
+plus `regionOffsets: number[]`, with `isSummary` as the discriminant in the same
+way.
 
 The typed-array results have the fields below. `SummaryFeatureArrays` and
 `SummaryFeatureArraysMulti` are the summary types.
@@ -192,8 +196,9 @@ The typed-array results have the fields below. `SummaryFeatureArrays` and
 
 Returns the compressed bytes a `getFeatures` call over the same region and zoom
 would read for its data blocks, the same total its `onProgress` reports. It
-reads only the R-tree index and downloads no feature blocks, so it can gate an
-over-large download before it starts. Returns 0 if the refName is not found.
+reads only the R-tree index and downloads no feature blocks, so a caller can use
+it to skip an over-large download before it starts. Returns 0 if the refName is
+not found.
 
 ```typescript
 const bytes = await bigwig.getRegionByteSize('chr1', 0, 100_000)
@@ -204,8 +209,9 @@ if (bytes < 5_000_000) {
 
 ### `getRegionByteSizeMulti(regions, opts?)`
 
-Multi-region counterpart. A block that two overlapping regions share counts
-once, matching the single fetch `getFeaturesMulti` would make.
+`getRegionByteSizeMulti` is the multi-region version of `getRegionByteSize`. A
+block that two overlapping regions share counts once, matching the single fetch
+`getFeaturesMulti` would make.
 
 ## Zoom levels
 
@@ -258,12 +264,12 @@ and zoom level:
 ## BigBed
 
 `BigBed` supports every method above except the typed-array readers.
-`getFeaturesAsArrays` and `getFeaturesAsArraysMulti` throw: BigBed records are
-variable-width and carry a `rest` string, which does not fit a fixed-width typed
-array. Use `getFeatures`/`getFeaturesMulti` instead.
+`getFeaturesAsArrays` and `getFeaturesAsArraysMulti` throw on a BigBed, because
+BigBed records are variable-width and contain a `rest` string, which does not
+fit a fixed-width typed array. Use `getFeatures`/`getFeaturesMulti` instead.
 
-bbi-js always reads BigBed at base resolution, so `scale`/`basesPerSpan` are
-accepted but ignored — any zoom levels `bedToBigBed` wrote are not consulted.
+bbi-js always reads BigBed at base resolution, so it accepts `scale` and
+`basesPerSpan` but ignores them, along with any zoom levels `bedToBigBed` wrote.
 
 ### `searchExtraIndex(name, opts?)`
 
