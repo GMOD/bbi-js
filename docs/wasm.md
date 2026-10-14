@@ -58,15 +58,15 @@ with the same byte-identical assertion as above (`pnpm benchonly inflate`):
 | `ENCFF826FLP.bw`         | 436    | 31   | 86   | 124                   |
 | `variable_step_large.bw` | 489    | 29   | 62   | 109                   |
 
-The file format causes the gap, not codec quality. A bbi file's blocks are
-individually zlib-compressed streams rather than members of one concatenated
-stream, so a caller cannot pass the API a whole buffer and has to make one call
-per block, hundreds per query. The `DecompressionStream` column divided by the
-block count is **220–410 µs of overhead per call**, far more than the inflating
-itself takes. The wasm path calls into wasm **once for the whole block group**,
-through `inflate_raw_batch`, so it pays that cost a single time per query
-instead of once per block, and the gap widens with block count rather than with
-bytes.
+The gap comes from the file format rather than codec quality, because a bbi
+file's blocks are individually zlib-compressed streams instead of members of one
+concatenated stream. A caller therefore cannot pass the API a whole buffer and
+has to make one call per block, hundreds per query. The `DecompressionStream`
+column divided by the block count is **220–410 µs of overhead per call**, far
+more than the inflating itself takes. The wasm path calls into wasm **once for
+the whole block group**, through `inflate_raw_batch`, so it pays that cost a
+single time per query instead of once per block, and the gap widens with block
+count rather than with bytes.
 
 Two structural points apply on top of the timing:
 

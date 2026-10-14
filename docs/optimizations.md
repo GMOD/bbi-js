@@ -18,9 +18,9 @@ reads serialized so the phases add up:
 
 On a local file, inflating blocks and building records split the work almost
 exactly in half, and walking the index takes a negligible fraction of either.
-Behind a network, `fetch` dominates. A 24-region query over `cDC.bw` spends
-0.9-4.1 seconds on round trips issued one at a time, or 0.4-1.5 seconds issued
-concurrently, against the tens of milliseconds of work above
+Behind a network, `fetch` dominates, since a 24-region query over `cDC.bw`
+spends 0.9-4.1 seconds on round trips issued one at a time, or 0.4-1.5 seconds
+issued concurrently, against the tens of milliseconds of work above
 ([concurrency.md](concurrency.md)).
 
 The library therefore optimizes for two different bottlenecks: **fewer, larger,
@@ -113,9 +113,9 @@ leave the other in-flight rejections unhandled.
 The limit is six because a browser runs at most six requests per origin on
 HTTP/1.1. A request beyond what the transport runs in parallel lowers no
 latency, and it keeps another group's compressed bytes, decompression output and
-parsed arrays alive. The limit is deliberately not a constructor option. It
-multiplies with whatever fan-out the caller puts above it, so this module cannot
-see the number that matters.
+parsed arrays alive. The limit is deliberately not a constructor option, because
+it multiplies with whatever fan-out the caller puts above it, so this module
+cannot see the number that matters.
 
 Read-ahead makes a multi-region BigWig query ~2.5× faster and a multi-region
 BigBed query ~4× faster, at every latency tested, with byte-identical traffic.
@@ -204,11 +204,11 @@ same single-region query through it and through the multi path (wasm inflate,
 then JS array parse), alternating three runs each on `cDC.bw`, `ENCFF826FLP.bw`
 and `variable_step_large.bw`, and the wall-clock times matched.
 
-The fused entry points save memory, not time. The decompressed bytes never enter
-the JS heap, and the fused call never allocates records outside the query
-window. The JS array path, by contrast, allocates `itemCount` slots per block
-and `subarray`s them down afterwards. The typed-array table above measures the
-parse optimization, and the fused call reduces the allocation behind it.
+The fused entry points save memory, though not time, by keeping the decompressed
+bytes out of the JS heap and never allocating records outside the query window.
+The JS array path, by contrast, allocates `itemCount` slots per block and
+`subarray`s them down afterwards. The typed-array table above measures the parse
+optimization, and the fused call reduces the allocation behind it.
 
 The matching wall-clock times also explain the routing in
 [parser-selection.md](parser-selection.md). A multi-region call has one filter

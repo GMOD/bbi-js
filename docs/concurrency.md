@@ -3,7 +3,7 @@
 A single query issues up to six byte-range reads at once, either for the index
 nodes at one level of the R-tree or for the groups of adjacent data blocks it
 reads as one. Its wall-clock time is therefore the longest of those reads rather
-than their sum. The reader still returns features in file order.
+than their sum, and the reader still returns features in file order.
 
 The gain from overlapping reads depends on whether a query is latency-bound or
 bandwidth-bound. `scripts/network-bench.sh` measures it by serving a real file
