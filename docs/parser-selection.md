@@ -68,7 +68,7 @@ A call with two or more regions therefore inflates raw and parses in JS, once
 per region tag. A call with one region takes the single-region path rather than
 a multi-region path with one entry. Every single-locus consumer sends that
 request, and the multi-region path would cost it the fused parse, the per-block
-chunk allocations and the `packChunks` copy, with nothing to dedupe, merge or
+chunk allocations and the `packChunks` copy, with nothing to dedupe, coalesce or
 pack across.
 
 ### 4. Compressed or not — `uncompressBufSize`

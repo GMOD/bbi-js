@@ -104,7 +104,7 @@ decoding from truncated bytes.
 ### A query's independent reads go out together
 
 Two loops issue several reads: one over the R-tree nodes at a level, and one
-over the merged block groups. Both run six reads at a time via
+over the coalesced block groups. Both run six reads at a time via
 `forEachWithReadahead`, so a query's wall-clock time is the longest of its reads
 rather than their sum. `forEachWithReadahead` still passes results on in input
 order, so no later step has to re-sort. It stores a rejection in that read's
@@ -121,12 +121,12 @@ cannot see the number that matters.
 Read-ahead makes a multi-region BigWig query ~2.5× faster and a multi-region
 BigBed query ~4× faster, at every latency tested, with byte-identical traffic.
 [concurrency.md](concurrency.md) has the measurements, and explains why a query
-whose blocks already merge into a handful of reads gains nothing.
+that already coalesces to a handful of reads gains nothing.
 
 ### Many regions in one pass
 
 `getFeaturesMulti` walks every region's index concurrently, dedupes the blocks
-by file offset, and merges the reads for the union. A block that two regions
+by file offset, and coalesces the reads for the union. A block that two regions
 need is therefore fetched once and parsed once per region, and blocks from
 _different_ regions merge into one read when they are adjacent on disk. The
 table compares twenty adjacent 100kb windows on `cDC.bw` chr1, the layout a
@@ -141,9 +141,9 @@ The single call makes one read in place of 21 and halves the byte count, because
 with separate calls, both windows that touch a boundary block download and
 inflate it.
 
-### `getRegionByteSize` reads no data blocks
+### Forecasting a query costs no data blocks
 
-`getRegionByteSize` totals the merged block reads a query would make, reading
+`getRegionByteSize` totals the coalesced block reads a query would make, reading
 only index nodes. Its cost is the `index` column of the table at the top, tenths
 of a millisecond, against a download that may be megabytes, so a caller can use
 it to decide whether to issue the query at all. The multi-region form dedupes by
@@ -250,8 +250,8 @@ last.
 - **`searchExtraIndex` dedupes before reading.** Many index entries for one name
   point into the same data block, because a block packs several records
   together. `searchExtraIndex` therefore dedupes the blocks by offset and passes
-  them to `readFeatures` in one call per field, which merges their reads the
-  same way as for a coordinate query.
+  them to `readFeatures` in one call per field, which puts them through the same
+  coalescing as a coordinate query.
 - **The truncated-block check is per block, not per record.** A section declares
   its item count and a zoom block is a whole number of 32-byte records, so one
   comparison against the declared count covers the whole block and the parse
@@ -264,7 +264,7 @@ last.
 
 ## What the consumer has to do
 
-Some of the largest gains are outside this library, because they depend on
+Some of the biggest wins are outside this library, because they depend on
 decisions about the calling process rather than the file.
 
 - **Put a caching, coalescing filehandle underneath.** bbi-js caches the header
@@ -272,9 +272,9 @@ decisions about the calling process rather than the file.
   and re-inflates. `RemoteFileWithRangeCache` from
   [`@gmod/range-cache-filehandle`](https://github.com/GMOD/range-cache-filehandle),
   the filehandle in the README's example, fetches in aligned blocks, joins
-  contiguous runs and dedups in flight. It works alongside the block merging
-  above rather than conflicting with it, because the filehandle dedups bytes
-  while bbi-js decides which bytes to ask for.
+  contiguous runs and dedups in flight. It composes with the coalescing above
+  rather than conflicting with it, because the filehandle dedups bytes while
+  bbi-js decides which bytes to ask for.
 - **Ask for arrays when you can.** For a caller that does not need one object
   per record, the table above shows 1.7-1.9× the speed with 5× less memory.
   `getFeaturesAsArraysMulti` packs every region into one backing buffer per
@@ -282,7 +282,7 @@ decisions about the calling process rather than the file.
   parser, whose three arrays are views into _one_ buffer, so a `postMessage`
   transfer list must name each distinct buffer once.
 - **Batch regions into one call.** `getFeaturesMulti` dedupes the blocks and
-  merges reads across regions, as measured above, which a loop over
+  coalesces reads across regions, as measured above, which a loop over
   `getFeatures` cannot do.
 - **Pass `scale` or `basesPerSpan`.** BigWig zoom levels are pre-computed
   summaries. For the same 24 × 2Mb view of `cDC.bw`, a zoomed query reads 73

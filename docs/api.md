@@ -8,8 +8,8 @@ Pass exactly one of `path` (a local file, node only), `url` (a remote file), or
 `filehandle` (a `GenericFilehandle` from
 [generic-filehandle2](https://www.npmjs.com/package/generic-filehandle2)).
 
-Use `filehandle` when you need control over how the package fetches bytes, such
-as auth headers, a custom `fetch` or a `Blob` from a file input:
+Use `filehandle` when you need control over how the package fetches bytes — auth
+headers, a custom `fetch`, a `Blob` from a file input:
 
 ```typescript
 const file = new BigWig({
@@ -116,8 +116,8 @@ Fetches features for multiple regions in one call, returning
 `regions[i]`). Each `Region` is `{ refName, start, end }`, 0-based half-open.
 Regions may be in any order and may overlap.
 
-The reader merges reads for adjacent on-disk blocks across region boundaries, so
-a whole-genome overview needs far fewer range requests than calling
+The reader coalesces reads for adjacent on-disk blocks across region boundaries,
+so a whole-genome overview needs far fewer range requests than calling
 `getFeatures` per region, which helps with rate-limited remote files.
 
 ```typescript
@@ -153,12 +153,12 @@ if (result.isSummary) {
 
 ### `getFeaturesAsArraysMulti(regions, opts?)`
 
-`getFeaturesAsArraysMulti` is the multi-region version of `getFeaturesAsArrays`,
-and it merges reads across region boundaries as `getFeaturesMulti` does. Instead
-of one object per region, all regions share one backing set of typed arrays, and
-`regionOffsets` records where each region's half-open slice begins, so
-`subarray` extracts a region without copying. `regionOffsets` has length
-`regions.length + 1`.
+`getFeaturesAsArraysMulti` is the multi-region counterpart of
+`getFeaturesAsArrays`, with the same cross-region read coalescing as
+`getFeaturesMulti`. Instead of one object per region, all regions share one
+backing set of typed arrays, and `regionOffsets` records where each region's
+half-open slice begins, so `subarray` extracts a region without copying.
+`regionOffsets` has length `regions.length + 1`.
 
 ```typescript
 const multi = await bigwig.getFeaturesAsArraysMulti([
@@ -174,8 +174,7 @@ const secondRegionStarts = multi.starts.subarray(
 ```
 
 Returns `BigWigFeatureArraysMulti | SummaryFeatureArraysMulti`: the types above
-plus `regionOffsets: number[]`, with `isSummary` as the discriminant in the same
-way.
+plus `regionOffsets: number[]`, discriminated by `isSummary` the same way.
 
 The typed-array results have the fields below. `SummaryFeatureArrays` and
 `SummaryFeatureArraysMulti` are the summary types.
@@ -209,9 +208,9 @@ if (bytes < 5_000_000) {
 
 ### `getRegionByteSizeMulti(regions, opts?)`
 
-`getRegionByteSizeMulti` is the multi-region version of `getRegionByteSize`. A
-block that two overlapping regions share counts once, matching the single fetch
-`getFeaturesMulti` would make.
+`getRegionByteSizeMulti` is the multi-region counterpart of `getRegionByteSize`.
+A block that two overlapping regions share counts once, matching the single
+fetch `getFeaturesMulti` would make.
 
 ## Zoom levels
 

@@ -62,11 +62,11 @@ A Rust/WebAssembly [libdeflater](https://github.com/ebiggers/libdeflate) module
 inflates the blocks, at ~2.5–3× a pure-JS inflate and roughly 4–11× the
 browser's own
 [`DecompressionStream`](docs/wasm.md#why-not-the-platforms-decompressionstream).
-The build inlines the module into the bundle as base64, and the module loads on
-first use, so there is nothing extra to install or configure. bbi-js then reads
-the records with one of four parsers that all produce the same features, picking
-one by the file's compression, the reader you called and the region count. Two
-of the parsers run in JS, and two run inside the wasm call that inflates the
+The build inlines the module into the bundle as base64, and the module loads
+lazily, so there is nothing extra to install or configure. bbi-js then reads the
+records with one of four parsers that all produce the same features, picking one
+by the file's compression, the reader you called and the region count. Two of
+the parsers run in JS, and two run inside the wasm call that inflates the
 blocks.
 
 ## Migrating to v10

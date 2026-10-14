@@ -19,9 +19,9 @@ table compares against `v11.1.0`, on `cDC.bw`:
 | one locus × 1Mb, base resolution    | 4     | 124 → 121ms     | 287 → 273ms      | 626 → 631ms       |
 
 Every row reads the same bytes in the same number of requests, and only the
-scheduling differs. A query whose blocks already merge into a handful of reads
-has no round trips to overlap, so its time is unchanged. A query that touches
-many block groups runs ~2.5× faster, at every latency, because bandwidth never
+scheduling differs. A query that already coalesces to a handful of reads has no
+round trips to overlap, so its time is unchanged. A query that touches many
+block groups runs ~2.5× faster, at every latency, because bandwidth never
 limited it.
 
 BigBed gains more, ~4× on the same multi-region rows
@@ -34,7 +34,7 @@ spread across the file rather than a compact run of summary records.
 
 Read-ahead **reschedules** reads and adds none, so a query issues the same range
 requests as it did without read-ahead. The number of requests depends on the
-index, because the reader merges adjacent on-disk blocks into one read. A
+index, because the reader coalesces adjacent on-disk blocks into one read. A
 whole-genome overview therefore makes a handful, and a multi-region
 base-resolution query makes tens.
 
