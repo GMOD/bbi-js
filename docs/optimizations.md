@@ -310,9 +310,9 @@ already depends on that package for the header, index and R-tree node caches, so
 a block cache would add no new dependency. `@gmod/bam` and `@gmod/tabix` both
 pool their decompressed-chunk caches through a `SharedBudget`, and
 `@gmod/tabix`'s
-[ADR 0001](https://github.com/GMOD/tabix-js/blob/main/agent-docs/adr/0001-bound-the-chunk-cache-by-decompressed-bytes.md)
+[ADR 0001](https://github.com/GMOD/tabix-js/blob/main/agent-docs/architecture-decision-records/0001-bound-the-chunk-cache-by-decompressed-bytes.md)
 and
-[ADR 0002](https://github.com/GMOD/tabix-js/blob/main/agent-docs/adr/0002-size-the-chunk-cache-above-one-query.md)
+[ADR 0002](https://github.com/GMOD/tabix-js/blob/main/agent-docs/architecture-decision-records/0002-size-the-chunk-cache-above-one-query.md)
 are the two things to read before sizing one. They bound a cache by decompressed
 bytes rather than entries, and size it above one query's working set or not at
 all.
