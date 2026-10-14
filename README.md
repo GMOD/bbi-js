@@ -15,34 +15,23 @@ npm install @gmod/bbi
 
 ```typescript
 import { BigWig } from '@gmod/bbi'
-import { RemoteFile } from 'generic-filehandle2'
+import { RemoteFileWithRangeCache } from '@gmod/range-cache-filehandle'
 
 const local = new BigWig({ path: 'volvox.bw' }) // node only
-const remote = new BigWig({ url: 'https://example.com/file.bw' })
-const custom = new BigWig({
-  filehandle: new RemoteFile('https://example.com/file.bw'),
+
+const remote = new BigWig({
+  filehandle: new RemoteFileWithRangeCache('https://example.com/file.bw'),
 })
 
 const header = await remote.getHeader()
 const features = await remote.getFeatures('chr1', 0, 100_000)
 ```
 
-A query makes many small reads, often near the previous query's, and over HTTP
-each read costs a request.
+The
 [`@gmod/range-cache-filehandle`](https://github.com/GMOD/range-cache-filehandle)
 fetches the file in 256 KiB chunks, merges adjacent reads into one request, and
-answers repeat reads from memory:
-
-```typescript
-import { RemoteFileWithRangeCache } from '@gmod/range-cache-filehandle'
-
-const cached = new BigWig({
-  filehandle: new RemoteFileWithRangeCache('https://example.com/file.bw'),
-})
-```
-
-Its `CachedFilehandle` wraps a local file or `Blob` the same way, but matters
-less there, since local reads are cheap and the OS caches them.
+answers repeat reads from memory. There is a simpler usage
+`new BigWig({ url: '...' })` but generally recommend using the range cache.
 
 ### Browser (CDN)
 
