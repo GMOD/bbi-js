@@ -46,9 +46,9 @@ so bbi-js never reads the zoom levels `bedToBigBed` wrote.
 allocate no per-record object.
 
 The typed-array readers reject BigBed rather than mis-parsing it. Their parsers
-handle only the fixed-width layouts, and a `rest` string does not fit a
-fixed-width column. The BigWig parser, given BigBed bytes, returns records that
-look plausible and are garbage, so `assertNotBigBed` throws instead.
+handle only the fixed-width layouts, and given BigBed bytes the BigWig parser
+returns records that look plausible and are garbage, so `assertNotBigBed` throws
+instead.
 
 `BigBed.searchExtraIndex` is a fifth entry point, which starts from a name
 lookup rather than a coordinate query. It calls `readFeatures` directly, so it

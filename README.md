@@ -27,11 +27,9 @@ const header = await remote.getHeader()
 const features = await remote.getFeatures('chr1', 0, 100_000)
 ```
 
-The
 [`@gmod/range-cache-filehandle`](https://github.com/GMOD/range-cache-filehandle)
-fetches the file in 256 KiB chunks, merges adjacent reads into one request, and
-answers repeat reads from memory. There is a simpler usage
-`new BigWig({ url: '...' })` but generally recommend using the range cache.
+merges adjacent reads and answers repeat reads from memory.
+`new BigWig({ url })` also works, without that cache.
 
 ### Browser (CDN)
 
@@ -49,16 +47,10 @@ See the [example](./example/) folder for a complete working demo.
 
 ## Decompression
 
-A Rust/WebAssembly [libdeflater](https://github.com/ebiggers/libdeflate) module
-inflates the blocks, at ~2.5–3× a pure-JS inflate and roughly 4–11× the
-browser's own
-[`DecompressionStream`](docs/wasm.md#why-not-the-platforms-decompressionstream).
-The build inlines the module into the bundle as base64, and the module loads
-lazily, so there is nothing extra to install or configure. bbi-js then reads the
-records with one of four parsers that all produce the same features, picking one
-by the file's compression, the reader you called and the region count. Two of
-the parsers run in JS, and two run inside the wasm call that inflates the
-blocks.
+A Rust/WebAssembly [libdeflater](https://github.com/ebiggers/libdeflate) module,
+inlined in the bundle as base64, inflates the blocks at ~2.5–3× a pure-JS
+inflate, so there is nothing extra to install or configure. See
+[docs/wasm.md](docs/wasm.md).
 
 ## Migrating to v10
 

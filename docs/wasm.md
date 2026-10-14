@@ -66,9 +66,8 @@ concatenated stream. A caller therefore cannot pass the API a whole buffer and
 has to make one call per block, hundreds per query. The `DecompressionStream`
 column divided by the block count is **220–410 µs of overhead per call**, far
 more than the inflating itself takes. The wasm path calls into wasm **once for
-the whole block group**, through `inflate_raw_batch`, so it pays that cost a
-single time per query instead of once per block, and the gap widens with block
-count rather than with bytes.
+the whole block group**, through `inflate_raw_batch`, so the gap widens with
+block count rather than with bytes.
 
 Two structural points apply on top of the timing:
 
@@ -85,14 +84,9 @@ The table shows Node numbers, where `DecompressionStream` is zlib with
 comparatively little code around it. A browser adds the `Blob` → stream →
 `Response` path on top, so read the column as the API's best case.
 
-The `DecompressionStream` comparison comes out much closer for a sibling library
-with a different block structure.
 [`@gmod/bgzf-filehandle`](https://github.com/GMOD/bgzf-filehandle/blob/main/docs/optimizations.md)
 decompresses concatenated gzip members, so a whole buffer goes through **one**
-call and pays the per-call overhead once. There the same API comes within about
-2× of wasm rather than 4–11×. The API and the codec underneath are the same in
-both libraries; the difference is entirely how many times a caller has to invoke
-the API.
+call, and there the same API comes within about 2× of wasm rather than 4–11×.
 
 ## What runs in Rust
 
@@ -118,8 +112,7 @@ a fresh allocation hundreds of times per query.
 records, returning packed `starts`/`ends`/`scores` arrays. `getFeaturesAsArrays`
 returns those arrays as they are, so a base-resolution BigWig read allocates no
 per-record JS object at all. BigBed records are variable-width and contain a
-`rest` string, so bbi-js inflates them in wasm and parses them in JS. The same
-layout is why the typed-array readers reject BigBed.
+`rest` string, so bbi-js inflates them in wasm and parses them in JS.
 
 **Blocks are zlib streams, but the inflate is raw.** Each BBI block starts with
 the 2-byte zlib header. `deflate_block` skips those two bytes and uses
@@ -140,10 +133,8 @@ from a plain `npm install`, with no separate asset to fetch, copy or configure a
 bundler for.
 
 `crate/src/wrapper.ts` **instantiates the module lazily** on first use and
-caches the instance. Every read method is already `async`, so lazy loading adds
-nothing to the API, and callers have no `init()` to remember. In exchange, the
-module holds instance state at module scope, which is one reason to avoid
-shipping two copies of it (see below).
+caches the instance. Every read method is already `async`, so callers have no
+`init()` to remember.
 
 ## Benchmarking
 
@@ -155,9 +146,7 @@ The benchmark pulls every base-resolution block out of a fixture's R-tree, packs
 them the way `readBlocks` does, and times `unzipBatch` against pako and against
 `DecompressionStream` over the same bytes. The benchmark gives pako a
 `chunkSize` hint so that pako's time excludes growing its output buffer, and
-**asserts that both paths produce byte-identical output before timing**, because
-a decompression benchmark whose paths decode different bytes measures nothing
-useful.
+**asserts that both paths produce byte-identical output before timing**.
 
 `pnpm bench` builds two git branches into `esm_branch1/` and `esm_branch2/` and
 compares them against each other, to judge a change to this library rather than

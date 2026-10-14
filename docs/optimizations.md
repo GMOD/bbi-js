@@ -119,9 +119,8 @@ it multiplies with whatever fan-out the caller puts above it, so this module
 cannot see the number that matters.
 
 Read-ahead makes a multi-region BigWig query ~2.5× faster and a multi-region
-BigBed query ~4× faster, at every latency tested, with byte-identical traffic.
-[concurrency.md](concurrency.md) has the measurements, and explains why a query
-that already coalesces to a handful of reads gains nothing.
+BigBed query ~4× faster, at every latency tested, with byte-identical traffic
+([concurrency.md](concurrency.md)).
 
 ### Many regions in one pass
 
@@ -152,13 +151,9 @@ fetch it once.
 
 ## Decompression
 
-Every data block on disk is individually zlib-compressed, so every read has to
-inflate, and the table at the top shows that inflating takes half of a local
-query. A Rust/WebAssembly libdeflater module does the inflating, ~2.5-3× faster
-than a pure-JS inflate and 4-11× faster than the platform's
-`DecompressionStream`. [wasm.md](wasm.md) has the fixtures and the numbers, and
-explains why the platform API does so much worse on this file format than on
-bgzf.
+Inflating takes half of a local query. A Rust/WebAssembly libdeflater module
+does it, ~2.5-3× faster than a pure-JS inflate and 4-11× faster than the
+platform's `DecompressionStream`; [wasm.md](wasm.md) has the numbers.
 
 **JS calls into wasm once per block group, not once per block**.
 `inflate_raw_batch` takes the whole fetched group plus a `Uint32Array` of
@@ -167,11 +162,6 @@ for one call, one allocation and one copy out of wasm memory instead of 896 of
 each. The output buffer is reserved at the true upper bound
 (`blocks × uncompressBufSize`), so it never reallocates inside the grow-only
 wasm heap.
-
-Each block starts with a 2-byte zlib header, which `deflate_block` skips before
-inflating with libdeflater's raw path. The raw path also skips the trailing
-adler32 check, so a benchmark against this path has to skip it too to measure
-the same work.
 
 ## Parsing records
 
@@ -192,10 +182,8 @@ live. `ArrayFeatureView` wraps the arrays in a JBrowse-style `get(i, key)`
 interface for consumers that want feature-style access without paying for the
 objects.
 
-The typed-array readers reject BigBed rather than mis-parsing it. Their parsers
-handle only fixed-width layouts, and the BigWig parser, given a variable-width
-record with a trailing `rest` string, returns records that look plausible and
-are garbage.
+The typed-array readers reject BigBed rather than mis-parsing it
+([parser-selection.md](parser-selection.md#2-objects-or-typed-arrays--which-reader-the-caller-used)).
 
 ### The fused wasm call lowers memory use, not wall-clock time
 
@@ -205,17 +193,14 @@ same single-region query through it and through the multi path (wasm inflate,
 then JS array parse), alternating three runs each on `cDC.bw`, `ENCFF826FLP.bw`
 and `variable_step_large.bw`, and the wall-clock times matched.
 
-The fused entry points save memory, though not time, by keeping the decompressed
-bytes out of the JS heap and never allocating records outside the query window.
-The JS array path, by contrast, allocates `itemCount` slots per block and
-`subarray`s them down afterwards. The typed-array table above measures the parse
-optimization, and the fused call reduces the allocation behind it.
+The fused entry points save memory instead, by keeping the decompressed bytes
+out of the JS heap and never allocating records outside the query window. The JS
+array path allocates `itemCount` slots per block and `subarray`s them down
+afterwards.
 
-The matching wall-clock times also explain the routing in
-[parser-selection.md](parser-selection.md). A multi-region call has one filter
-per region and one shared set of blocks, so there is no single range to pass to
-wasm, and the call takes the JS array parse instead. On these fixtures the JS
-parse is no slower, which makes the multi path worth having.
+The matching times also justify the routing in
+[parser-selection.md](parser-selection.md): a multi-region call, which has no
+single range to pass to wasm, loses nothing by taking the JS array parse.
 
 ### BigBed decodes `rest` only for records that survive the filter
 
@@ -333,9 +318,8 @@ because the fixture is; a dense BigBed at base resolution has no fused path to
 fall back on.
 
 **bbi-js ignores BigBed zoom levels.** `BigBed.getView` returns the unzoomed
-view at every scale, so bbi-js never reads the zoom levels `bedToBigBed` wrote.
-For the same reason, BigBed gains more than BigWig from concurrent reads,
-because every BigBed query reads unzoomed blocks spread across the file.
+view at every scale, which is also why BigBed gains more than BigWig from
+concurrent reads.
 
 ## Further reading
 
