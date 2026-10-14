@@ -36,9 +36,10 @@ magnitude, not a spec.
 
 **This multiplier measures the decompression step in isolation, not a whole
 query.** A query also spends time fetching bytes, walking the R-tree, and
-building results. When a query reads a whole chromosome from a local file with a
-warm page cache, inflate takes about half the time and building records the
-other half; behind a network, fetching dominates
+building results. When `getFeatures` reads a whole chromosome from a local file
+with a warm page cache, inflate takes about half the time and building records
+the other half. `getFeaturesAsArrays` builds no record objects, so inflate takes
+most of its time. Behind a network, fetching dominates
 ([optimizations.md](optimizations.md)). Don't quote 2.5–3× as a library-level
 speedup.
 
