@@ -6,7 +6,7 @@ and parses BigWig records from them. The API does not expose the module, and it
 needs no setup or bundler config, so this page is for contributors and for
 anyone wondering why the package contains wasm.
 
-- [Why](#why)
+- [libdeflater inflates blocks ~2.5–3× faster than pako](#libdeflater-inflates-blocks-253-faster-than-pako)
 - [Why not the platform's `DecompressionStream`?](#why-not-the-platforms-decompressionstream)
 - [What runs in Rust](#what-runs-in-rust)
 - [How it loads](#how-it-loads)
@@ -14,7 +14,7 @@ anyone wondering why the package contains wasm.
 - [Building](#building)
 - [Packaging notes](#packaging-notes)
 
-## Why
+## libdeflater inflates blocks ~2.5–3× faster than pako
 
 Every data block on disk is individually zlib-compressed, so every read has to
 decompress, and a wide query inflates hundreds of blocks before it can return a
