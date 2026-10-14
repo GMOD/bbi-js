@@ -43,6 +43,10 @@ merges adjacent reads and answers repeat reads from memory.
 </script>
 ```
 
+Note that such CDN usage makes you reliant on a third party service, esm.sh,
+staying up, so it's not necessarily recommended for production usage, but it
+does work
+
 See the [example](./example/) folder for a complete working demo.
 
 ## Decompression
