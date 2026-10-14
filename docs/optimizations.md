@@ -85,7 +85,7 @@ abut the query and contribute no features.
 
 `groupBlocks` sorts the R-tree's blocks by file offset and joins any two within
 2KB of each other into one range request. BBI writes a chromosome's blocks
-contiguously, so hundreds of blocks merge into one read or a few:
+contiguously, so the blocks merge into far fewer reads:
 
 | query                                     | blocks | reads |
 | ----------------------------------------- | -----: | ----: |
@@ -117,8 +117,8 @@ parsed arrays alive. The limit is deliberately not a constructor option. It
 multiplies with whatever fan-out the caller puts above it, so this module cannot
 see the number that matters.
 
-Read-ahead makes a multi-region BigWig query ~2.5× faster and a BigBed query ~4×
-faster, at every latency tested, with byte-identical traffic.
+Read-ahead makes a multi-region BigWig query ~2.5× faster and a multi-region
+BigBed query ~4× faster, at every latency tested, with byte-identical traffic.
 [concurrency.md](concurrency.md) has the measurements, and explains why a query
 whose blocks already merge into a handful of reads gains nothing.
 
