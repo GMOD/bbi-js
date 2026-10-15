@@ -56,15 +56,6 @@ inlined in the bundle as base64, inflates the blocks at ~2.5–3× a pure-JS
 inflate, so there is nothing extra to install or configure. See
 [docs/wasm.md](docs/wasm.md).
 
-## Migrating to v10
-
-- **`renameRefSeqs` is gone.** Map chromosome names at the call site instead;
-  see [docs/api.md](docs/api.md#constructor).
-- **`RequestOptions.headers` is gone.** It only ever applied to header and index
-  reads, never to feature blocks, and per-request headers do not fit the
-  block-level caching. Set headers on the filehandle instead; see
-  [docs/api.md](docs/api.md#constructor).
-
 ## Docs
 
 - [docs/api.md](docs/api.md) — constructor, options, methods, types,
