@@ -67,15 +67,16 @@ inflate, so there is nothing extra to install or configure. See
 
 ## Docs
 
-- [docs/api.md](docs/api.md) — constructor, options, every read method, the
-  `Feature` type, BigBed and the helpers
-- [docs/optimizations.md](docs/optimizations.md) — where a query's time goes,
-  and the decisions that follow from it
+- [docs/api.md](docs/api.md) — constructor, options, methods, types,
+  BigWig/BigBed and helpers
+- [docs/optimizations.md](docs/optimizations.md) — decisions we made to improve
+  performance
 - [docs/concurrency.md](docs/concurrency.md) — how many range requests a query
-  makes, and the measured effect of overlapping them
-- [docs/parser-selection.md](docs/parser-selection.md) — which of the four
-  record parsers a call reaches, and why each exists
-- [docs/wasm.md](docs/wasm.md) — the Rust/WebAssembly decompressor
+  makes
+- [docs/parser-selection.md](docs/parser-selection.md) — decision tree showing
+  decoding workflow
+- [docs/wasm.md](docs/wasm.md) — description of the Rust/WebAssembly
+  decompressor
 - [CONTRIBUTING.md](CONTRIBUTING.md) — development, release and publishing
 
 ## Academic Use
