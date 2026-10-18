@@ -256,8 +256,8 @@ decisions about the calling process rather than the file.
   and the index but never a decompressed data block, so a repeat query re-reads
   and re-inflates. `RemoteFileWithRangeCache` from
   [`@gmod/range-cache-filehandle`](https://github.com/GMOD/range-cache-filehandle),
-  the filehandle in the README's example, fetches in aligned blocks, joins
-  contiguous runs and dedups in flight. It composes with the coalescing above
+  the filehandle in the README's example, stores the byte extents it fetched,
+  merges the gaps nearby reads leave into one request and dedups in flight. It composes with the coalescing above
   rather than conflicting with it, because the filehandle dedups bytes while
   bbi-js decides which bytes to ask for.
 - **Ask for arrays when you can.** For a caller that does not need one object
