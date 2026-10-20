@@ -12,18 +12,21 @@ test('ArrayFeatureView + BigWigFeature wrap getFeaturesAsArrays (non-summary)', 
   expect(view.start(0)).toBe(arrays.starts[0])
   expect(view.end(0)).toBe(arrays.ends[0])
   expect(view.score(0)).toBeCloseTo(arrays.scores[0]!)
-  expect(view.minScore(0)).toBeUndefined()
-  expect(view.maxScore(0)).toBeUndefined()
+  expect(view.minScore(0)).toBe(view.score(0))
+  expect(view.maxScore(0)).toBe(view.score(0))
 
   const f = new BigWigFeature(view, 0)
   expect(f.get('refName')).toBe('ctgA')
   expect(f.get('source')).toBe('volvox')
   expect(f.get('start')).toBe(view.start(0))
   expect(f.get('summary')).toBe(false)
+  expect(f.get('maxScore')).toBe(f.get('score'))
   expect(f.toJSON()).toMatchObject({
     refName: 'ctgA',
     source: 'volvox',
     summary: false,
+    minScore: view.score(0),
+    maxScore: view.score(0),
   })
 })
 

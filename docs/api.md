@@ -369,20 +369,21 @@ feature.toJSON()
 
 `ArrayFeatureView.get(i, key)` reads one field of feature `i`. Valid keys for
 either `get`: `start`, `end`, `score`, `refName`, `source`, `summary`,
-`minScore`, `maxScore`.
+`minScore`, `maxScore`. A base-resolution record is its own bin, so its
+`minScore` and `maxScore` are its `score`.
 
 `ArrayFeatureView` members:
 
-| Member                                                         | Description                                                 |
-| -------------------------------------------------------------- | ----------------------------------------------------------- |
-| `starts`, `ends`, `scores`                                     | The wrapped typed arrays                                    |
-| `minScores`, `maxScores`                                       | The wrapped summary arrays; `undefined` for base resolution |
-| `isSummary`                                                    | Copied from the wrapped result                              |
-| `source`, `refName`                                            | The constructor arguments                                   |
-| `length`                                                       | Number of features                                          |
-| `start(i)`, `end(i)`, `score(i)`, `minScore(i)`, `maxScore(i)` | One field of feature `i`                                    |
-| `id(i)`                                                        | The string `source:refName:start-end` for feature `i`       |
-| `get(i, key)`                                                  | One field of feature `i`, by key                            |
+| Member                                                         | Description                                              |
+| -------------------------------------------------------------- | -------------------------------------------------------- |
+| `starts`, `ends`, `scores`                                     | The wrapped typed arrays                                 |
+| `minScores`, `maxScores`                                       | The wrapped summary arrays; `scores` for base resolution |
+| `isSummary`                                                    | Copied from the wrapped result                           |
+| `source`, `refName`                                            | The constructor arguments                                |
+| `length`                                                       | Number of features                                       |
+| `start(i)`, `end(i)`, `score(i)`, `minScore(i)`, `maxScore(i)` | One field of feature `i`                                 |
+| `id(i)`                                                        | The string `source:refName:start-end` for feature `i`    |
+| `get(i, key)`                                                  | One field of feature `i`, by key                         |
 
 `BigWigFeature` members:
 
