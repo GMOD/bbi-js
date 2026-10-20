@@ -257,9 +257,9 @@ decisions about the calling process rather than the file.
   and re-inflates. `RemoteFileWithRangeCache` from
   [`@gmod/range-cache-filehandle`](https://github.com/GMOD/range-cache-filehandle),
   the filehandle in the README's example, stores the byte extents it fetched,
-  merges the gaps nearby reads leave into one request and dedups in flight. It composes with the coalescing above
-  rather than conflicting with it, because the filehandle dedups bytes while
-  bbi-js decides which bytes to ask for.
+  merges the gaps nearby reads leave into one request and dedups in flight. It
+  composes with the coalescing above rather than conflicting with it, because
+  the filehandle dedups bytes while bbi-js decides which bytes to ask for.
 - **Ask for arrays when you can.** For a caller that does not need one object
   per record, the table above shows 1.7-1.9× the speed with 5× less memory.
   `getFeaturesAsArraysMulti` packs every region into one backing buffer per
