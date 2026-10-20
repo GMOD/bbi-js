@@ -1,3 +1,50 @@
+## [12.0.0](https://github.com/GMOD/bbi-js/compare/v11.3.2...v12.0.0) (2026-10-20)
+
+### Bug Fixes
+
+- Find every searchExtraIndex hit when a name's run crosses leaves ([0cdd13b](https://github.com/GMOD/bbi-js/commit/0cdd13be2419cbdba311b3d54407483a14527f47))
+- Treat an Object.prototype key as an unknown refName ([bfdeb27](https://github.com/GMOD/bbi-js/commit/bfdeb275adb37b2634f62f2b473bb98d789de97f))
+- Count coalesced-read gaps in getRegionByteSize ([ceff332](https://github.com/GMOD/bbi-js/commit/ceff332c58f94cee5c7cb8067f9b3005ffa1aa84))
+- Keep multi-region typed arrays in exact-size buffers ([509e6ae](https://github.com/GMOD/bbi-js/commit/509e6aeef3814da62194568cbc15b337f37d2d78))
+
+### Chores
+
+- Keep wasm-bindgen output out of src/ ([ce028a1](https://github.com/GMOD/bbi-js/commit/ce028a193e007f555d6cf78c41ff068203164035))
+- Fail when the committed wasm bundle is stale ([d1a0b9e](https://github.com/GMOD/bbi-js/commit/d1a0b9e91427cde0f74158448e73ee13596ecbd7))
+- Check the wasm bundle against a hash of crate/, not a rebuild ([d533dd7](https://github.com/GMOD/bbi-js/commit/d533dd7f1c66bb0e347072cd5e2f18ca4757c7d3))
+
+### Documentation
+
+- Say why rustc is pinned now that check:wasm hashes inputs ([268217c](https://github.com/GMOD/bbi-js/commit/268217caeafc1dff35a39ddbbedf3ac4d1828bcd))
+
+### Other Changes
+
+- Rewrite AI-writing tropes in README and docs ([96ca292](https://github.com/GMOD/bbi-js/commit/96ca29286954a46ab4bcb012aada6466b47f519c))
+- Restore claims changed by the tropes rewrite ([8b0030b](https://github.com/GMOD/bbi-js/commit/8b0030be6079537bde09bb0e569892080a76cec1))
+- Point ADR links at agent-docs/architecture-decision-records ([547f0c8](https://github.com/GMOD/bbi-js/commit/547f0c884c2ee1f645069ab537a2b758cd6cb960))
+- Fold short verdict sentences into their neighbours ([de530ee](https://github.com/GMOD/bbi-js/commit/de530ee65f90355759404bdf536df6d3296c3e7e))
+- Fix doc errors found in the tropes audit ([a9250c9](https://github.com/GMOD/bbi-js/commit/a9250c9146b794db4a71b21f82c0f6d8b19cd85e))
+- Fix the maxNodeSize comment: an internal item can be wider than a leaf item ([b1cd62f](https://github.com/GMOD/bbi-js/commit/b1cd62f2ac449d826a796f614eca3367923d0833))
+- Restore wording the tropes rewrite changed without a trope ([aacf8b9](https://github.com/GMOD/bbi-js/commit/aacf8b91e022c5c2c5f370e14ef642e96dbc0afd))
+- State the section's finding in vague headings ([008edf0](https://github.com/GMOD/bbi-js/commit/008edf06a8be8f0eff1effa92f4f9c63eb012b4b))
+- Cut the README's range-cache paragraph to one sentence ([61e25a9](https://github.com/GMOD/bbi-js/commit/61e25a93523205435f98f48fbf69f106e1ae69a1))
+- Cut the README's range-cache paragraph to one sentence ([e80888a](https://github.com/GMOD/bbi-js/commit/e80888a8aa146e69de0b2380c012bf98e9814102))
+- Scope the inflate share to getFeatures; it is most of getFeaturesAsArrays ([3ebe885](https://github.com/GMOD/bbi-js/commit/3ebe88579150f657f63273ba65013a8789359504))
+- Trim wordiness in README and docs ([0761d27](https://github.com/GMOD/bbi-js/commit/0761d2757d6f006125232e988f57396ac8fe2d1d))
+- Sidenote on CDN usage ([ab1626b](https://github.com/GMOD/bbi-js/commit/ab1626b40bac64d537dc7033bc59716e37a95946))
+- Bump deps ([ce5a06f](https://github.com/GMOD/bbi-js/commit/ce5a06f2dae582bfb0d5fb5aee920c0e7bc2aa8d))
+- Bump deps ([5fa9b52](https://github.com/GMOD/bbi-js/commit/5fa9b5290be0271526d58d1e5242297562b43f31))
+- Rm migration notes ([6accdaa](https://github.com/GMOD/bbi-js/commit/6accdaa3a914c6350b363f20f184fbc6e05fac52))
+- Rebuild wasm bundle from updated source ([886be24](https://github.com/GMOD/bbi-js/commit/886be2445a351de4f830fb804adb305d6e39f34b))
+- Describe @gmod/range-cache-filehandle 2.0, which stores fetched extents rather than 256 KiB chunks ([2878007](https://github.com/GMOD/bbi-js/commit/287800714dafbb15df53b34a55ec475d4ca9a273))
+- Format docs/optimizations.md ([e135d99](https://github.com/GMOD/bbi-js/commit/e135d999ebfa0cdd0f0d050229828e88eb4597fc))
+- A base-resolution record answers its score as its minScore and maxScore ([50e10f5](https://github.com/GMOD/bbi-js/commit/50e10f5183c9c92ac7845d1569471d9a52b771b3))
+
+### Refactoring
+
+- One column reader for both fused-parse unpackers ([2b0ea50](https://github.com/GMOD/bbi-js/commit/2b0ea50477aae47b3ab85b74c6386246908f24bd))
+- One column packer for the typed-array readers ([c96e7aa](https://github.com/GMOD/bbi-js/commit/c96e7aa4165f18413bf260beb8acb2a0c8a867f3))
+
 ## [11.3.2](https://github.com/GMOD/bbi-js/compare/v11.3.1...v11.3.2) (2026-10-11)
 
 ### Tests
