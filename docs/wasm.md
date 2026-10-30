@@ -20,7 +20,7 @@ Every data block on disk is individually zlib-compressed, so every read has to
 decompress, and a wide query inflates hundreds of blocks before it can return a
 single feature.
 
-`benchmarks/inflate.bench.ts` times the wasm path against
+`pnpm bench:inflate` times the wasm path against
 [pako](https://github.com/nodeca/pako), the pure-JS baseline, over the real
 blocks of four fixtures. libdeflater is consistently **~2.5–3× faster**:
 
@@ -32,7 +32,9 @@ blocks of four fixtures. libdeflater is consistently **~2.5–3× faster**:
 | `variable_step_large.bw` | 3.3MB      | 489    | 2.7–3.0×        |
 
 Ranges are across three runs on one machine; treat them as an order of
-magnitude, not a spec.
+magnitude, not a spec. These numbers and the `DecompressionStream` table below
+came from an earlier vitest bench harness, since removed. `pnpm bench:inflate`
+runs the same arms over the same blocks, one process per arm.
 
 **This multiplier measures the decompression step in isolation, not a whole
 query.** A query also spends time fetching bytes, walking the R-tree, and
@@ -51,7 +53,7 @@ delete this module and its ~65KB bundle. `DecompressionStream` measures
 so the module stays.
 
 The table gives the best of three runs, as mean ms, over the same blocks and
-with the same byte-identical assertion as above (`pnpm benchonly inflate`):
+with the same byte-identical assertion as above (`pnpm bench:inflate`):
 
 | Fixture                  | Blocks | wasm | pako | `DecompressionStream` |
 | ------------------------ | ------ | ---- | ---- | --------------------- |
@@ -139,18 +141,15 @@ caches the instance. Every read method is already `async`, so callers have no
 ## Benchmarking
 
 ```bash
-pnpm benchonly inflate
+pnpm bench:inflate
 ```
 
-The benchmark pulls every base-resolution block out of a fixture's R-tree, packs
-them the way `readBlocks` does, and times `unzipBatch` against pako and against
-`DecompressionStream` over the same bytes. The benchmark gives pako a
-`chunkSize` hint so that pako's time excludes growing its output buffer, and
-**asserts that both paths produce byte-identical output before timing**.
-
-`pnpm bench` builds two git branches into `esm_branch1/` and `esm_branch2/` and
-compares them against each other, to judge a change to this library rather than
-wasm against JS.
+`scripts/bench-inflate.ts` pulls every base-resolution block out of a fixture's
+R-tree, packs them the way `readBlocks` does, and times `unzipBatch` against
+pako and against `DecompressionStream` over the same bytes. The script gives
+pako a `chunkSize` hint so that pako's time excludes growing its output buffer,
+**asserts that all three paths produce byte-identical output before timing**,
+and runs each arm in its own process. It prints mean and min ms per arm.
 
 ## Building
 

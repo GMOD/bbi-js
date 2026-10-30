@@ -331,7 +331,7 @@ concurrent reads.
   reaches, and how they are held to agreement
 - [api.md](api.md) — the read methods these decisions are visible through
 
-To reproduce the tables, `pnpm benchonly` runs the inflate and BigWig
-benchmarks, and `scripts/network-bench.sh` runs the latency ones. The phase
-breakdown and the block and read counts came from temporary instrumentation in
+To reproduce the tables, `pnpm bench:inflate` runs the inflate benchmark, and
+`scripts/network-bench.sh` runs the latency ones. The phase breakdown and the
+block and read counts came from temporary instrumentation in
 `src/block-view.ts`, which is not committed.
