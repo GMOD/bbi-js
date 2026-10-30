@@ -152,7 +152,7 @@ fetch it once.
 ## Decompression
 
 Inflating takes half of a local query. A Rust/WebAssembly libdeflater module
-does it, ~2.5-3× faster than a pure-JS inflate and 4-11× faster than the
+does it, ~2.5-3× faster than a pure-JS inflate and ~4-5× faster than the
 platform's `DecompressionStream`; [wasm.md](wasm.md) has the numbers.
 
 **JS calls into wasm once per block group, not once per block**.

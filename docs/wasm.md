@@ -49,26 +49,29 @@ speedup.
 
 The browser has had a built-in inflate since 2023, which looks like a way to
 delete this module and its ~65KB bundle. `DecompressionStream` measures
-**roughly 4–11× slower than the wasm path, and 1.4–3.3× slower than even pako**,
-so the module stays.
+**roughly 4–5.5× slower than the wasm path, and 1.3–1.8× slower than even
+pako**, so the module stays.
 
 The table gives the best of three runs, as mean ms, over the same blocks and
-with the same byte-identical assertion as above (`pnpm bench:inflate`):
+with the same byte-identical assertion as above (`pnpm bench:inflate`, Node
+24.21 on an i9-12900K, October 2026):
 
 | Fixture                  | Blocks | wasm | pako | `DecompressionStream` |
 | ------------------------ | ------ | ---- | ---- | --------------------- |
-| `volvox.bw`              | 49     | 1.9  | 6.0  | 20.0                  |
-| `cow.bw`                 | 125    | 5.4  | 16.6 | 38.2                  |
-| `ENCFF826FLP.bw`         | 436    | 31   | 86   | 124                   |
-| `variable_step_large.bw` | 489    | 29   | 62   | 109                   |
+| `volvox.bw`              | 49     | 1.1  | 3.2  | 5.9                   |
+| `cow.bw`                 | 125    | 3.4  | 9.7  | 15.2                  |
+| `ENCFF826FLP.bw`         | 436    | 12.2 | 34.0 | 51.3                  |
+| `variable_step_large.bw` | 489    | 13.7 | 37.5 | 50.2                  |
+
+An earlier vitest harness, on another machine, measured 4–11× and 1.4–3.3×.
 
 The gap comes from the file format rather than codec quality, because a bbi
 file's blocks are individually zlib-compressed streams instead of members of one
 concatenated stream. A caller therefore cannot pass the API a whole buffer and
 has to make one call per block, hundreds per query. The `DecompressionStream`
-column divided by the block count is **220–410 µs of overhead per call**, far
-more than the inflating itself takes. The wasm path calls into wasm **once for
-the whole block group**, through `inflate_raw_batch`, so the gap widens with
+column divided by the block count is **about 100–120 µs per call**, several
+times what the wasm path spends per block. The wasm path calls into wasm **once
+for the whole block group**, through `inflate_raw_batch`, so the gap widens with
 block count rather than with bytes.
 
 Two structural points apply on top of the timing:
@@ -87,8 +90,9 @@ comparatively little code around it. A browser adds the `Blob` → stream →
 `Response` path on top, so read the column as the API's best case.
 
 [`@gmod/bgzf-filehandle`](https://github.com/GMOD/bgzf-filehandle/blob/main/docs/optimizations.md)
-decompresses concatenated gzip members, so a whole buffer goes through **one**
-call, and there the same API comes within about 2× of wasm rather than 4–11×.
+decompresses concatenated gzip members. Under Node 24.13 a whole buffer went
+through **one** call, within about 2× of wasm; Node 24.22 rejects the second
+member, as browsers do, so that shape is gone too.
 
 ## What runs in Rust
 
