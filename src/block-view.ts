@@ -25,6 +25,7 @@ import type {
   SummaryFeatureArraysMulti,
 } from './types.ts'
 import type { Block } from './util.ts'
+import type { Budget } from '@gmod/shared-read-cache'
 import type { GenericFilehandle } from 'generic-filehandle2'
 
 const CIR_TREE_MAGIC = 0x2468ace0
@@ -40,6 +41,13 @@ const CIR_TREE_MAGIC = 0x2468ace0
 // has sixty reads outstanding), so the number that matters is not one this
 // module can see, and a knob is a support surface forever.
 const READ_CONCURRENCY = 6
+
+// Per zoom level per file. Weighed in bytes: a node read is one 8 KiB node or a
+// merged span of several, so an entry count bounded nothing in particular. 8 MiB
+// is what the old 1000-entry cap came to on hg38.phyloP100way.bw, whose
+// unzoomed index alone is 93 MB; a typical ENCODE bigWig's whole index is
+// 0.3 MB and never reaches it.
+const RTREE_NODE_CACHE_MAX_BYTES = 8 * 1024 * 1024
 
 interface CoordRequest {
   chrId: number
@@ -524,14 +532,7 @@ export class BlockView {
   // reads, so the cache aggregates their abort signals: the underlying read is
   // only aborted once EVERY consumer has aborted, and one caller giving up
   // cannot reject the others. Also holds the R-tree header (see _collectBlocks).
-  private rTreeNodeCache = new SharedReadCache<NodeRead, Uint8Array>({
-    maxSize: 1000,
-    // `tag` keeps the R-tree header in its own entry rather than sharing one
-    // with a node read that happens to be the same length at the same offset.
-    cacheKey: ({ length, offset, tag }) => tag ?? `${length}_${offset}`,
-    fill: ({ length, offset }, signal) =>
-      this.bbi.read(length, offset, { signal }),
-  })
+  private rTreeNodeCache: SharedReadCache<NodeRead, Uint8Array>
 
   private bbi: GenericFilehandle
   private refsByName: Record<string, number>
@@ -548,10 +549,21 @@ export class BlockView {
     rTreeOffset: number,
     uncompressBufSize: number,
     blockType: BlockType,
+    cacheOptions: { idleTimeoutMs?: number; budget?: Budget } = {},
   ) {
     if (!(rTreeOffset >= 0)) {
       throw new Error('invalid rTreeOffset!')
     }
+    this.rTreeNodeCache = new SharedReadCache<NodeRead, Uint8Array>({
+      maxSize: RTREE_NODE_CACHE_MAX_BYTES,
+      sizeOf: buffer => buffer.byteLength,
+      // `tag` keeps the R-tree header in its own entry rather than sharing one
+      // with a node read that happens to be the same length at the same offset.
+      cacheKey: ({ length, offset, tag }) => tag ?? `${length}_${offset}`,
+      fill: ({ length, offset }, signal) =>
+        this.bbi.read(length, offset, { signal }),
+      ...cacheOptions,
+    })
     this.bbi = bbi
     this.refsByName = refsByName
     this.rTreeOffset = rTreeOffset

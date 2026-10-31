@@ -20,7 +20,14 @@ import type {
   SummaryFeatureArraysMulti,
   ZoomLevel,
 } from './types.ts'
+import type { Budget } from '@gmod/shared-read-cache'
 import type { GenericFilehandle } from 'generic-filehandle2'
+
+/**
+ * Drop an R-tree node nothing has read for three minutes, the window
+ * `@gmod/bam` and `@gmod/tabix` use for their parsed chunks.
+ */
+export const DEFAULT_CACHE_IDLE_TIMEOUT_MS = 3 * 60 * 1000
 
 const BIG_WIG_MAGIC = -2003829722
 const BIG_BED_MAGIC = -2021002517
@@ -50,17 +57,37 @@ export abstract class BBI {
     return this.headerCache.get(undefined, opts?.signal)
   }
 
+  private cacheOptions: { idleTimeoutMs: number; budget?: Budget }
+
   /**
    * @param args.filehandle - a filehandle from generic-filehandle2
    * @param args.path - path to a local file
    * @param args.url - URL of a remote file
+   * @param args.cacheIdleTimeoutMs - drop a cached R-tree node nothing has
+   * read for this long; `0` keeps nodes until the byte cap evicts them
+   * @param args.cacheBudget - a budget shared with other caches, in bytes,
+   * evicted least-recently-used across all of them. Each zoom level's index
+   * cache is otherwise bounded only on its own, so a consumer holding many
+   * files open has no bound on their sum.
    */
   public constructor(args: {
     filehandle?: GenericFilehandle
     path?: string
     url?: string
+    cacheIdleTimeoutMs?: number
+    cacheBudget?: Budget
   }) {
-    const { filehandle, path, url } = args
+    const {
+      filehandle,
+      path,
+      url,
+      cacheIdleTimeoutMs = DEFAULT_CACHE_IDLE_TIMEOUT_MS,
+      cacheBudget,
+    } = args
+    this.cacheOptions = {
+      idleTimeoutMs: cacheIdleTimeoutMs,
+      budget: cacheBudget,
+    }
     if (filehandle) {
       this.bbi = filehandle
     } else if (url) {
@@ -285,6 +312,7 @@ export abstract class BBI {
         rTreeOffset,
         uncompressBufSize,
         blockType,
+        this.cacheOptions,
       )
       this.viewCache.set(key, view)
     }

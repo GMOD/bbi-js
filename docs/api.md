@@ -28,6 +28,20 @@ const toFileName = (name: string) => name.replace('chr', '')
 const feats = await bigwig.getFeatures(toFileName('chr1'), 0, 100_000)
 ```
 
+### Cache
+
+The file keeps the R-tree index nodes it has read, per zoom level, up to 8 MiB
+each. Two constructor options shape that:
+
+| Option               | Description                                                                                                                                 |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `cacheIdleTimeoutMs` | Drop a node nothing has read for this long. Defaults to three minutes; `0` keeps nodes until the byte cap evicts them                       |
+| `cacheBudget`        | A `Budget` from [@gmod/shared-read-cache](https://www.npmjs.com/package/@gmod/shared-read-cache), in bytes, shared with other files' caches |
+
+Each cache is bounded on its own, so the caps add up across zoom levels and open
+files. A consumer holding many files open passes one `SharedBudget` to all of
+them, and nodes are then evicted least-recently-used across every file.
+
 ## Options
 
 The feature readers, the byte-size methods and `parseBigWig` take an optional
