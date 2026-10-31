@@ -571,6 +571,10 @@ export class BlockView {
     this.blockType = blockType
   }
 
+  public clearCache() {
+    this.rTreeNodeCache.clear()
+  }
+
   private async _collectBlocks(
     chrName: string,
     start: number,

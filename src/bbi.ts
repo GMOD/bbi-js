@@ -27,7 +27,7 @@ import type { GenericFilehandle } from 'generic-filehandle2'
  * Drop an R-tree node nothing has read for three minutes, the window
  * `@gmod/bam` and `@gmod/tabix` use for their parsed chunks.
  */
-export const DEFAULT_CACHE_IDLE_TIMEOUT_MS = 3 * 60 * 1000
+const DEFAULT_CACHE_IDLE_TIMEOUT_MS = 3 * 60 * 1000
 
 const BIG_WIG_MAGIC = -2003829722
 const BIG_BED_MAGIC = -2021002517
@@ -296,6 +296,16 @@ export abstract class BBI {
   }
 
   private viewCache = new Map<string, BlockView>()
+
+  /**
+   * Drops every cached R-tree node, crediting their bytes back to a
+   * `cacheBudget` at once rather than when the file is collected.
+   */
+  public clearCache() {
+    for (const view of this.viewCache.values()) {
+      view.clearCache()
+    }
+  }
 
   protected getOrCreateBlockView(
     refsByName: Record<string, number>,

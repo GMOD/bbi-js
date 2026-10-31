@@ -62,3 +62,24 @@ test('an index node nothing reads for the idle timeout is dropped', async () => 
   vi.advanceTimersByTime(120_000)
   expect(await indexReads(bw, file)).toBeGreaterThan(0)
 })
+
+test('nodes idle out after three minutes by default', async () => {
+  vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] })
+  const file = new CountingFile('test/data/volvox.bw')
+  const bw = new BigWig({ filehandle: file })
+  await bw.getFeatures('ctgA', 0, 1000)
+  vi.advanceTimersByTime(2 * 60_000)
+  expect(await indexReads(bw, file)).toBe(0)
+  vi.advanceTimersByTime(4 * 60_000)
+  expect(await indexReads(bw, file)).toBeGreaterThan(0)
+})
+
+test('clearing the cache credits its bytes back to the budget', async () => {
+  const budget = new SharedBudget(Infinity)
+  const file = new CountingFile('test/data/volvox.bw')
+  const bw = new BigWig({ filehandle: file, cacheBudget: budget })
+  await bw.getFeatures('ctgA', 0, 1000)
+  bw.clearCache()
+  expect(budget.total).toBe(0)
+  expect(await indexReads(bw, file)).toBeGreaterThan(0)
+})

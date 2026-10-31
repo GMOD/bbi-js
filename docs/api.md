@@ -31,7 +31,8 @@ const feats = await bigwig.getFeatures(toFileName('chr1'), 0, 100_000)
 ### Cache
 
 The file keeps the R-tree index nodes it has read, per zoom level, up to 8 MiB
-each. Two constructor options shape that:
+each; a single read larger than that is kept on its own. Two constructor options
+shape that:
 
 | Option               | Description                                                                                                                                 |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -41,6 +42,9 @@ each. Two constructor options shape that:
 Each cache is bounded on its own, so the caps add up across zoom levels and open
 files. A consumer holding many files open passes one `SharedBudget` to all of
 them, and nodes are then evicted least-recently-used across every file.
+
+`clearCache()` drops every cached node and credits its bytes back to the budget
+at once, for a consumer closing a file it may hold on to.
 
 ## Options
 
