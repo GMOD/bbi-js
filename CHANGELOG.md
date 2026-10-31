@@ -1,3 +1,9 @@
+## [12.2.0](https://github.com/GMOD/bbi-js/compare/v12.1.0...v12.2.0) (2026-10-31)
+
+### Features
+
+- ClearCache() credits the R-tree nodes back to a shared budget at once ([1f42cd4](https://github.com/GMOD/bbi-js/commit/1f42cd4b6d14ff9564ed8318242bfd528a87110a))
+
 ## [12.1.0](https://github.com/GMOD/bbi-js/compare/v12.0.0...v12.1.0) (2026-10-31)
 
 ### Chores
