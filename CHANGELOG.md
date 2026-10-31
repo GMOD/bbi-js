@@ -1,3 +1,17 @@
+## [12.1.0](https://github.com/GMOD/bbi-js/compare/v12.0.0...v12.1.0) (2026-10-31)
+
+### Chores
+
+- Replace the vitest benchmarks with a node inflate script ([9b6bd32](https://github.com/GMOD/bbi-js/commit/9b6bd32fc24cbd07a6bee57a9a7e88566ddd6e4e))
+
+### Documentation
+
+- DecompressionStream figures from bench:inflate on an idle host ([9f1a9a6](https://github.com/GMOD/bbi-js/commit/9f1a9a6d367ba3ef3cb20a4d8c5a8620422ec900))
+
+### Features
+
+- The R-tree node cache weighs bytes, idles out, and takes a shared budget ([5849e0c](https://github.com/GMOD/bbi-js/commit/5849e0ca129b989a99af0aa19420f447e823c605))
+
 ## [12.0.0](https://github.com/GMOD/bbi-js/compare/v11.3.2...v12.0.0) (2026-10-20)
 
 ### Bug Fixes
