@@ -68,7 +68,6 @@ inflate, so there is nothing extra to install or configure. See
   decoding workflow
 - [docs/wasm.md](docs/wasm.md) — description of the Rust/WebAssembly
   decompressor
-- [CONTRIBUTING.md](CONTRIBUTING.md) — development, release and publishing
 
 ## Academic Use
 
