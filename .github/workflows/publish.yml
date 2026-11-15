@@ -5,7 +5,11 @@ on: push
 jobs:
   test:
     name: Lint, build, and test
-    runs-on: ubuntu-latest
+    # Not ubuntu-latest: libdeflate's C compiles with the image's clang, and
+    # the bundle npm ships is the one built here, so an image change alters the
+    # published wasm with no source change and check:wasm cannot see it. Bump
+    # deliberately, as with crate/rust-toolchain.toml.
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
     steps:
@@ -13,13 +17,11 @@ jobs:
       # installs the channel and wasm target crate/rust-toolchain.toml pins
       - run: rustup toolchain install
         working-directory: crate
+      # crate/build-wasm.sh installs the wasm-bindgen-cli that Cargo.lock pins
+      # through binstall, as a prebuilt binary, when binstall is on PATH.
+      # Without it the script falls back to `cargo install`, which compiles the
+      # CLI from source on every run.
       - uses: cargo-bins/cargo-binstall@e00d2c94cc0067b77737821097a62d91c0301baa # v1.21.1
-      - name: Install wasm-bindgen-cli matching Cargo.lock
-        run: |
-          VERSION=$(cargo metadata --format-version 1 --manifest-path crate/Cargo.toml \
-            | jq -r '.packages[] | select(.name=="wasm-bindgen") | .version')
-          echo "Installing wasm-bindgen-cli@$VERSION"
-          cargo binstall wasm-bindgen-cli@$VERSION --no-confirm
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -29,7 +31,6 @@ jobs:
       # before the build, which rewrites the bundle: fails when crate/ changed
       # without a regenerated, committed bundle
       - run: pnpm check:wasm
-      - run: pnpm build
       - run: pnpm lint
       # eslint doesn't enforce formatting, so without this the tree drifts out
       # of prettier's shape silently and the next person to touch a file gets
@@ -39,6 +40,7 @@ jobs:
       # which is otherwise never type-checked: a test can call a renamed option
       # or a changed signature and go on passing by testing nothing.
       - run: pnpm typecheck
+      - run: pnpm build
       - run: pnpm test --run
       - run: pnpm test:pack
 
@@ -46,7 +48,7 @@ jobs:
     name: Publish to npm
     needs: test
     if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04 # same image as the test job, for the same reason
     permissions:
       id-token: write
       contents: read
@@ -55,13 +57,11 @@ jobs:
       # installs the channel and wasm target crate/rust-toolchain.toml pins
       - run: rustup toolchain install
         working-directory: crate
+      # crate/build-wasm.sh installs the wasm-bindgen-cli that Cargo.lock pins
+      # through binstall, as a prebuilt binary, when binstall is on PATH.
+      # Without it the script falls back to `cargo install`, which compiles the
+      # CLI from source on every run.
       - uses: cargo-bins/cargo-binstall@e00d2c94cc0067b77737821097a62d91c0301baa # v1.21.1
-      - name: Install wasm-bindgen-cli matching Cargo.lock
-        run: |
-          VERSION=$(cargo metadata --format-version 1 --manifest-path crate/Cargo.toml \
-            | jq -r '.packages[] | select(.name=="wasm-bindgen") | .version')
-          echo "Installing wasm-bindgen-cli@$VERSION"
-          cargo binstall wasm-bindgen-cli@$VERSION --no-confirm
       - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
