@@ -2,8 +2,8 @@ import { SharedBudget } from '@gmod/shared-read-cache'
 import { LocalFile } from 'generic-filehandle2'
 import { afterEach, expect, test, vi } from 'vitest'
 
-import { FilehandleDouble } from './filehandle-double.ts'
 import { BigWig } from '../src/index.ts'
+import { FilehandleDouble } from './filehandle-double.ts'
 
 import type { FilehandleOptions } from 'generic-filehandle2'
 

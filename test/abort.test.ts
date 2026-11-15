@@ -1,8 +1,8 @@
 import { LocalFile } from 'generic-filehandle2'
 import { expect, test } from 'vitest'
 
-import { FilehandleDouble } from './filehandle-double.ts'
 import { BigBed, BigWig } from '../src/index.ts'
+import { FilehandleDouble } from './filehandle-double.ts'
 
 import type { FilehandleOptions, GenericFilehandle } from 'generic-filehandle2'
 

@@ -1,9 +1,9 @@
 import { LocalFile } from 'generic-filehandle2'
 import { expect, test } from 'vitest'
 
-import { FilehandleDouble } from './filehandle-double.ts'
 import { BigWig } from '../src/index.ts'
 import { forEachWithReadahead } from '../src/util.ts'
+import { FilehandleDouble } from './filehandle-double.ts'
 
 import type { FilehandleOptions, GenericFilehandle } from 'generic-filehandle2'
 
