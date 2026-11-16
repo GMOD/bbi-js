@@ -280,28 +280,68 @@ test('typed-array reads reject bigbed data instead of misparsing it', async () =
   ).rejects.toThrow(/not supported for BigBed/)
 })
 
-test('reads indexed BigBed coverage without falling back to raw features', async () => {
-  const reader = new BigBed({ path: 'test/data/hg18.bb' })
+test('shares indexed coverage reads and enforces their exact byte budget', async () => {
+  const filehandle = new LocalFile('test/data/hg18.bb')
+  const reader = new BigBed({ filehandle })
+  const { zoomLevels, unzoomedDataOffset, unzoomedIndexOffset } =
+    await reader.getHeader()
+  const { dataOffset, indexOffset, reductionLevel } = zoomLevels.find(
+    level => level.reductionLevel === 63500,
+  )!
+  const read = vi.spyOn(filehandle, 'read')
   const regions = [
     { refName: 'chr7', start: 55000, end: 60000 },
+    { refName: 'chr7', start: 58000, end: 65000 },
     { refName: 'absent', start: 0, end: 100 },
   ]
-  const level = 63500
-  const progress = vi.fn()
-
-  expect(
-    await reader.getCoverageMulti(regions, level, {
-      maxBytes: 0,
-      onProgress: progress,
-    }),
-  ).toBeUndefined()
-  expect(progress).not.toHaveBeenCalled()
-  expect(
-    await reader.getCoverageMulti(regions, 1, { maxBytes: 100000 }),
-  ).toBeUndefined()
+  const dataReads = () =>
+    read.mock.calls.filter(
+      ([length, offset = 0]) =>
+        offset < indexOffset && offset + length > dataOffset,
+    )
 
   // UCSC bigBedSummary reports 0.954094 for the full bin [54028, 117528).
+  const bin = { start: 54028, end: 117528, coveredBases: 60585 }
   expect(
-    await reader.getCoverageMulti(regions, level, { maxBytes: 100000 }),
-  ).toEqual([[{ start: 54028, end: 117528, coveredBases: 60585 }], []])
+    await reader.getCoverageMulti(regions.slice(0, 1), reductionLevel, {
+      maxBytes: 100000,
+    }),
+  ).toEqual([[bin]])
+  const sharedReads = dataReads()
+  expect(sharedReads).not.toEqual([])
+  expect(
+    sharedReads.every(
+      ([length, offset = 0]) =>
+        offset >= dataOffset && offset + length <= indexOffset,
+    ),
+  ).toBe(true)
+  const exactBudget = sharedReads.reduce((bytes, [length]) => bytes + length, 0)
+
+  read.mockClear()
+  expect(
+    await reader.getCoverageMulti(regions, reductionLevel, {
+      maxBytes: exactBudget,
+    }),
+  ).toEqual([[bin], [bin], []])
+  expect(dataReads()).toEqual(sharedReads)
+  expect(
+    read.mock.calls.some(
+      ([length, offset = 0]) =>
+        offset < unzoomedIndexOffset && offset + length > unzoomedDataOffset,
+    ),
+  ).toBe(false)
+
+  read.mockClear()
+  expect(
+    await reader.getCoverageMulti(regions, reductionLevel, {
+      maxBytes: exactBudget - 1,
+    }),
+  ).toBeUndefined()
+  expect(dataReads()).toEqual([])
+
+  read.mockClear()
+  expect(
+    await reader.getCoverageMulti(regions, 1, { maxBytes: exactBudget }),
+  ).toBeUndefined()
+  expect(read).not.toHaveBeenCalled()
 })

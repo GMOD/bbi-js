@@ -290,18 +290,19 @@ query an indexed overview.
 
 ### `getCoverageMulti(regions, reductionLevel, opts)`
 
-Returns `CoverageBin[][] | undefined` in region order. Each bin contains the
-original half-open `start` and `end` and the number of `coveredBases`. Divide by
-`end - start` to obtain the covered fraction. Overlapping intervals count each
-base once.
+Returns `CoverageBin[][] | undefined` in region order. Each result contains the
+whole indexed bins that intersect that region. Each bin has its original
+half-open `start` and `end` and the number of `coveredBases`. Divide by
+`end - start` for the full bin's covered fraction. Overlapping intervals count
+each base once.
 
 Choose an exact `reductionLevel` from the header's `zoomLevels` and specify
-`maxBytes`, the compressed data budget across all requested regions. The reader
-checks the zoom index before fetching data blocks. The budget applies to data
-blocks, while header and index reads remain separate. The request returns
-`undefined` if the level is unavailable or the budget is exceeded, and an empty
-array for an individual region with no bins. Pass a `signal` to cancel the
-query.
+`maxBytes`, the on-disk data-read budget across all requested regions. It
+includes gaps between blocks fetched together. Header and index reads are
+outside this budget. The request returns `undefined` if the level is unavailable
+or the data reads would exceed the budget, and an empty array for a region with
+no bins. The reader queries only the selected zoom level. Pass a `signal` to
+cancel the query.
 
 ### `searchExtraIndex(name, opts?)`
 

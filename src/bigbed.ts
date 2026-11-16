@@ -140,8 +140,8 @@ export class BigBed extends BBI {
 
   /**
    * Reads coverage bins from the exact indexed reduction level, in region order.
-   * Returns undefined when the level is absent or its compressed data blocks
-   * exceed maxBytes. It never reads the raw feature index or raw feature blocks.
+   * Returns undefined when the level is absent or its on-disk data reads
+   * exceed maxBytes. It never falls back to querying raw features.
    */
   public async getCoverageMulti(
     regions: Region[],
