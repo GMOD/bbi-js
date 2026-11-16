@@ -18,6 +18,7 @@ import type {
   BigWigFeatureArrays,
   BigWigFeatureArraysMulti,
   BlockType,
+  CoverageBin,
   Feature,
   ProgressCallback,
   Region,
@@ -160,8 +161,19 @@ function assertBigWigBlockFits(
   }
 }
 
-function parseSummaryBlock(b: Uint8Array, request?: CoordRequest) {
-  const features: Feature[] = []
+function parseSummaryRecords<T>(
+  b: Uint8Array,
+  request: CoordRequest | undefined,
+  record: (
+    start: number,
+    end: number,
+    validCnt: number,
+    min: number,
+    max: number,
+    sum: number,
+  ) => T,
+) {
+  const features: T[] = []
   const count = summaryRecordCount(b)
   let offset = 0
   const dataView = getDataView(b)
@@ -186,17 +198,25 @@ function parseSummaryBlock(b: Uint8Array, request?: CoordRequest) {
       (chromId === request.chrId &&
         coordFilter(start, end, request.start, request.end))
     ) {
-      features.push({
-        start,
-        end,
-        maxScore,
-        minScore,
-        summary: true,
-        score: summaryScore(sumData, validCnt),
-      })
+      features.push(record(start, end, validCnt, minScore, maxScore, sumData))
     }
   }
   return features
+}
+
+function parseSummaryBlock(b: Uint8Array, request?: CoordRequest): Feature[] {
+  return parseSummaryRecords(
+    b,
+    request,
+    (start, end, validCnt, minScore, maxScore, sumData) => ({
+      start,
+      end,
+      maxScore,
+      minScore,
+      summary: true,
+      score: summaryScore(sumData, validCnt),
+    }),
+  )
 }
 
 function parseBigBedBlock(
@@ -801,17 +821,56 @@ export class BlockView {
     regions: Region[],
     opts: Options = {},
   ): Promise<Feature[][]> {
-    const results: Feature[][] = regions.map(() => [])
     const collected = await this._collectBlocksMulti(regions, opts)
+    return this._readMulti(
+      regions.length,
+      collected,
+      opts,
+      (data, blockOffset, request) =>
+        parseBlock(this.blockType, data, blockOffset, request),
+    )
+  }
 
-    const { blockType } = this
+  public async readCoverageMulti(
+    regions: Region[],
+    opts: Options,
+    maxBytes: number,
+  ): Promise<CoverageBin[][] | undefined> {
+    const collected = await this._collectBlocksMulti(regions, opts)
+    const groups = groupBlocks([...collected.blockByOffset.values()])
+    if (totalLength(groups) > maxBytes) {
+      return
+    }
+    return this._readMulti(
+      regions.length,
+      collected,
+      opts,
+      (data, _, request) =>
+        parseSummaryRecords(data, request, (start, end, coveredBases) => ({
+          start,
+          end,
+          coveredBases,
+        })),
+    )
+  }
+
+  private async _readMulti<T>(
+    regionCount: number,
+    collected: CollectedBlocksMulti,
+    opts: Options,
+    parse: (
+      data: Uint8Array,
+      blockOffset: number,
+      request: CoordRequest,
+    ) => T[],
+  ): Promise<T[][]> {
+    const results: T[][] = Array.from({ length: regionCount }, () => [])
     await this._forEachTaggedBlock(
       collected,
       opts,
       (data, blockOffset, { regionIndex, request }) => {
-        const features = parseBlock(blockType, data, blockOffset, request)
-        for (const f of features) {
-          results[regionIndex]!.push(f)
+        for (const feature of parse(data, blockOffset, request)) {
+          results[regionIndex]!.push(feature)
         }
       },
     )

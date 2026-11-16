@@ -279,3 +279,29 @@ test('typed-array reads reject bigbed data instead of misparsing it', async () =
     ti.getFeaturesAsArraysMulti([{ refName: 'chr7', start: 0, end: 100000 }]),
   ).rejects.toThrow(/not supported for BigBed/)
 })
+
+test('reads indexed BigBed coverage without falling back to raw features', async () => {
+  const reader = new BigBed({ path: 'test/data/hg18.bb' })
+  const regions = [
+    { refName: 'chr7', start: 55000, end: 60000 },
+    { refName: 'absent', start: 0, end: 100 },
+  ]
+  const level = 63500
+  const progress = vi.fn()
+
+  expect(
+    await reader.getCoverageMulti(regions, level, {
+      maxBytes: 0,
+      onProgress: progress,
+    }),
+  ).toBeUndefined()
+  expect(progress).not.toHaveBeenCalled()
+  expect(
+    await reader.getCoverageMulti(regions, 1, { maxBytes: 100000 }),
+  ).toBeUndefined()
+
+  // UCSC bigBedSummary reports 0.954094 for the full bin [54028, 117528).
+  expect(
+    await reader.getCoverageMulti(regions, level, { maxBytes: 100000 }),
+  ).toEqual([[{ start: 54028, end: 117528, coveredBases: 60585 }], []])
+})

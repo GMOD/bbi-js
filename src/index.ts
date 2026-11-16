@@ -8,6 +8,7 @@ export type {
   BigWigHeader,
   BigWigHeaderWithRefNames,
   BlockType,
+  CoverageBin,
   Feature,
   ProgressCallback,
   RefInfo,

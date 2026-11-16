@@ -3,7 +3,12 @@ import { SharedReadCache } from '@gmod/shared-read-cache'
 import { BBI } from './bbi.ts'
 import { getDataView, getUint64, parseKey } from './util.ts'
 
-import type { RequestOptions } from './types.ts'
+import type {
+  CoverageBin,
+  Region,
+  RequestOptions2,
+  RequestOptions,
+} from './types.ts'
 import type { GenericFilehandle } from 'generic-filehandle2'
 
 interface Loc {
@@ -110,8 +115,8 @@ async function findInBPlusTree(
  * `getFeaturesMulti` from `BBI`.
  *
  * Features have an additional `rest` field containing raw tab-delimited BED
- * columns 4+, and a `uniqueId` derived from the file offset. No zoom levels
- * are used for BigBed data.
+ * columns 4+, and a `uniqueId` derived from the file offset. Feature queries
+ * read raw records. Use `getCoverageMulti` for indexed coverage bins.
  */
 export class BigBed extends BBI {
   // Signal-aggregating rather than a bare memoized promise, for the same reason
@@ -131,6 +136,37 @@ export class BigBed extends BBI {
    */
   protected async getView(_scale: number, opts?: RequestOptions) {
     return this.getUnzoomedView(opts)
+  }
+
+  /**
+   * Reads coverage bins from the exact indexed reduction level, in region order.
+   * Returns undefined when the level is absent or its compressed data blocks
+   * exceed maxBytes. It never reads the raw feature index or raw feature blocks.
+   */
+  public async getCoverageMulti(
+    regions: Region[],
+    reductionLevel: number,
+    opts: Pick<RequestOptions2, 'signal' | 'onProgress'> & { maxBytes: number },
+  ): Promise<CoverageBin[][] | undefined> {
+    const { maxBytes, ...request } = opts
+    if (!Number.isSafeInteger(maxBytes) || maxBytes < 0) {
+      throw new RangeError('maxBytes must be a non-negative safe integer')
+    }
+    const { zoomLevels, refsByName, uncompressBufSize } =
+      await this.getHeader(request)
+    const zoom = zoomLevels.find(
+      level => level.reductionLevel === reductionLevel,
+    )
+    if (!zoom) {
+      return
+    }
+    const view = this.getOrCreateBlockView(
+      refsByName,
+      zoom.indexOffset,
+      uncompressBufSize,
+      'summary',
+    )
+    return view.readCoverageMulti(regions, request, maxBytes)
   }
 
   /*

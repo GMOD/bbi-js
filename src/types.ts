@@ -37,6 +37,13 @@ export interface Feature {
   refName?: string
 }
 
+/** An indexed BigBed bin. Overlapping features cover a base once. */
+export interface CoverageBin {
+  start: number
+  end: number
+  coveredBases: number
+}
+
 /** A query region for the multi-region readers: 0-based, half-open. */
 export interface Region {
   refName: string

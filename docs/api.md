@@ -285,8 +285,23 @@ and zoom level:
 BigBed records are variable-width and contain a `rest` string, which does not
 fit a fixed-width typed array. Use `getFeatures`/`getFeaturesMulti` instead.
 
-bbi-js always reads BigBed at base resolution, so it accepts `scale` and
-`basesPerSpan` but ignores them, along with any zoom levels `bedToBigBed` wrote.
+BigBed feature queries read base-resolution records. Use `getCoverageMulti` to
+query an indexed overview.
+
+### `getCoverageMulti(regions, reductionLevel, opts)`
+
+Returns `CoverageBin[][] | undefined` in region order. Each bin contains the
+original half-open `start` and `end` and the number of `coveredBases`. Divide by
+`end - start` to obtain the covered fraction. Overlapping intervals count each
+base once.
+
+Choose an exact `reductionLevel` from the header's `zoomLevels` and specify
+`maxBytes`, the compressed data budget across all requested regions. The reader
+checks the zoom index before fetching data blocks. The budget applies to data
+blocks, while header and index reads remain separate. The request returns
+`undefined` if the level is unavailable or the budget is exceeded, and an empty
+array for an individual region with no bins. Pass a `signal` to cancel the
+query.
 
 ### `searchExtraIndex(name, opts?)`
 
